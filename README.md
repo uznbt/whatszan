@@ -27,20 +27,24 @@ Saya membuat *fork* dari [elecwhat](https://github.com/piec/elecwhat) ini untuk 
 ## Instalasi
 
 ### Ubuntu/Kubuntu:
+
 * [Snap](#)
 * **atau** file `.deb` di tab [Releases](https://github.com/uznbt/whatszan/releases/latest) dengan `--no-sandbox` karena ada [isu Electron]
 * **atau** file `AppImage` di tab [Releases](https://github.com/uznbt/whatszan/releases/latest) dengan `--no-sandbox` karena ada [isu Electron]
 
 ### Arch Linux:
-* Paket AUR: `yay -S whatszan-bin` *(jika tersedia)*
+
+* Paket AUR: `yay -S whatszan-bin` *(akan hadir)*
 * **atau** paket Pacman di tab [Releases](https://github.com/uznbt/whatszan/releases/latest)
 * **atau** file `AppImage` di tab [Releases](https://github.com/uznbt/whatszan/releases/latest)
 
 ### Debian:
+
 * file `.deb` di tab [Releases](https://github.com/uznbt/whatszan/releases/latest)
 * **atau** file `AppImage` di tab [Releases](https://github.com/uznbt/whatszan/releases/latest)
 
 ### Fedora:
+
 * file `.rpm` di tab [Releases](https://github.com/uznbt/whatszan/releases/latest)
 * **atau** file `AppImage` di tab [Releases](https://github.com/uznbt/whatszan/releases/latest)
 
