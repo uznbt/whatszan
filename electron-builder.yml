@@ -1,5 +1,7 @@
 appId: "org.uznbt.whatszan"
 
+afterPack: "build/afterPack.cjs"
+
 # https://sharp.pixelplumbing.com/install/#electron-builder
 asar: true
 asarUnpack:
