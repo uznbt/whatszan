@@ -39,7 +39,6 @@ snap:
     Lightweight WhatsApp desktop client for Linux
   publish:
     - github
-    - snapStore
   slots:
     dbus-svc:
       interface: dbus
