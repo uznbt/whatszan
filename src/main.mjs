@@ -1,5 +1,6 @@
 import { app, BrowserWindow, session, Menu, MenuItem, Tray, ipcMain, shell, Notification, dialog, nativeTheme } from "electron";
 import { readFileSync } from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import {
   addAboutMenuItem,
@@ -107,12 +108,17 @@ function main() {
     state.showAtStartup = true;
   }
 
+
   const createWindow = async () => {
     // Create the browser window.
+    const activeAccount = persistState.get("active-account", "default");
+    const partitionString = activeAccount === "default" ? undefined : `persist:${activeAccount}`;
+
     const mainWindow = new BrowserWindow({
       webPreferences: {
         preload: path.join(import.meta.dirname, "..", "src-web", "preload.js"),
         spellcheck: config.get("spellcheck", true),
+        partition: partitionString,
       },
       show: state.showAtStartup,
       autoHideMenuBar: config.get("menu-bar-auto-hide", true),
@@ -143,7 +149,7 @@ function main() {
     consola.debug("spellLangs", spellLangs);
 
     try {
-      session.defaultSession.setSpellCheckerLanguages(spellLangs);
+      mainWindow.webContents.session.setSpellCheckerLanguages(spellLangs);
     } catch (err) {
       consola.error("setSpellCheckerLanguages", err);
     }
@@ -160,7 +166,7 @@ function main() {
       labels: translations,
     });
 
-    session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    mainWindow.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
       details.requestHeaders["User-Agent"] = state.userAgent;
       callback({ cancel: false, requestHeaders: details.requestHeaders });
     });
@@ -217,7 +223,13 @@ function main() {
         }
       }
       
-      monitorSystemTheme(nativeTheme);
+      // Apply last known theme immediately to prevent flash on QR page
+      const lastTheme = persistState.get("last-theme-source", null);
+      if (lastTheme) nativeTheme.themeSource = lastTheme;
+
+      monitorSystemTheme(nativeTheme, (source) => {
+        persistState.set("last-theme-source", source);
+      });
 
       let dbus;
       if (config.get("dbus", true)) {
@@ -262,29 +274,195 @@ function main() {
       ipcMain.handle("windowToggle", () => {
         toggleVisibility(mainWindow);
       });
+      ipcMain.handle("isDarkMode", () => {
+        return nativeTheme.shouldUseDarkColors;
+      });
+
+
+
+      // Settings IPC
+      let settingsWindow = null;
+      const openSettingsWindow = () => {
+        if (settingsWindow && !settingsWindow.isDestroyed()) {
+          settingsWindow.focus();
+          return;
+        }
+        settingsWindow = new BrowserWindow({
+          width: 480, height: 700,
+          parent: mainWindow, modal: false,
+          resizable: false, minimizable: false, maximizable: false,
+          autoHideMenuBar: true,
+          title: 'Pengaturan',
+          webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false,
+          },
+        });
+        settingsWindow.loadFile(path.join(import.meta.dirname, '..', 'static', 'settings.html'));
+        settingsWindow.on('closed', () => { settingsWindow = null; });
+      };
+
+      ipcMain.handle('settings-get', () => {
+        return {
+          'notification-prefix': config.get('notification-prefix', ''),
+          'auto-run': persistState.get('auto-run', false),
+          'hide-on-start': !config.get('show-at-startup', true),
+          'quit-on-close': config.get('quit-on-close', false),
+          'esc-toggle-window': config.get('esc-toggle-window', false),
+          'spellcheck': config.get('spellcheck', true),
+          'menu-bar': config.get('menu-bar', true),
+          'menu-bar-auto-hide': config.get('menu-bar-auto-hide', true),
+          'user-agent': config.get('user-agent', ''),
+        };
+      });
+
+      ipcMain.handle('accounts-get', () => persistState.get('accounts', []));
+      ipcMain.handle('active-account-get', () => persistState.get('active-account', 'default'));
+
+      ipcMain.handle('account-remove', (ev, id) => {
+        const accounts = persistState.get('accounts', []).filter(a => a.id !== id);
+        persistState.set('accounts', accounts);
+        // If removed account is currently active, switch to default
+        if (persistState.get('active-account', 'default') === id) {
+          persistState.set('active-account', 'default');
+          app.relaunch();
+          app.quit();
+        }
+      });
+
+      ipcMain.handle('account-add', () => {
+        const accounts = persistState.get('accounts', []);
+        const newId = `account_${Date.now()}`;
+        const newName = `Akun ${accounts.length + 2}`;
+        // Mark as pending — will only be permanently saved after QR scan
+        persistState.set('pending-account', { id: newId, name: newName });
+        persistState.set('active-account', newId);
+        app.relaunch();
+        app.quit();
+      });
+
+      ipcMain.handle('settings-save', (ev, newSettings) => {
+        config.set('notification-prefix', newSettings['notification-prefix'] || '');
+        config.set('show-at-startup', !newSettings['hide-on-start']);
+        config.set('quit-on-close', newSettings['quit-on-close']);
+        config.set('esc-toggle-window', newSettings['esc-toggle-window']);
+        config.set('spellcheck', newSettings['spellcheck']);
+        config.set('menu-bar', newSettings['menu-bar']);
+        config.set('menu-bar-auto-hide', newSettings['menu-bar-auto-hide']);
+        if (newSettings['user-agent']) config.set('user-agent', newSettings['user-agent']);
+        else config.delete('user-agent');
+        const autoRun = newSettings['auto-run'];
+        persistState.set('auto-run', autoRun);
+        app.setLoginItemSettings({
+          openAtLogin: autoRun,
+          args: autoRun ? ['--hide'] : []
+        });
+        if (settingsWindow && !settingsWindow.isDestroyed()) {
+          settingsWindow.webContents.send('settings-saved');
+        }
+        setTimeout(() => { app.relaunch(); app.quit(); }, 1200);
+      });
 
       const trayIcon = getUserIcon("app", state) || path.join(import.meta.dirname, "..", "static", "app.png");
       const tray = new Tray(trayIcon);
-      const trayContextMenu = Menu.buildFromTemplate([
-        {
-          label: translations?.show_hide ?? "Show/Hide",
-          type: "normal",
-          click: () => {
-            toggleVisibility(mainWindow);
+      
+      const activeAccount = persistState.get("active-account", "default");
+
+      const switchAccountHandler = (accountId) => {
+        if (persistState.get("active-account", "default") !== accountId) {
+          persistState.set("active-account", accountId);
+          app.relaunch();
+          app.quit();
+        }
+      };
+
+      const buildAccountSubmenu = () => {
+        const current = persistState.get("active-account", "default");
+        const items = [
+          { label: translations?.account_main ?? "Akun Utama", type: "radio", checked: current === "default", click: () => switchAccountHandler("default") },
+          { label: "Akun 2", type: "radio", checked: current === "account_2", click: () => switchAccountHandler("account_2") },
+          { label: "Akun 3", type: "radio", checked: current === "account_3", click: () => switchAccountHandler("account_3") }
+        ];
+        return items;
+      };
+
+      const updateMenus = () => {
+        const accountSubmenu = buildAccountSubmenu();
+        
+        // Update Tray Menu
+        const trayContextMenu = Menu.buildFromTemplate([
+          {
+            label: translations?.show_hide ?? "Show/Hide",
+            type: "normal",
+            click: () => toggleVisibility(mainWindow),
           },
-        },
-        {
-          label: translations?.quit ?? "Quit",
-          type: "normal",
-          click: () => {
-            consola.debug("quit");
-            app.isQuiting = true;
-            app.quit();
+          {
+            label: translations?.switch_account ?? "Switch Account",
+            submenu: accountSubmenu
           },
-        },
-      ]);
-      tray.setToolTip(pkg.name);
-      tray.setContextMenu(trayContextMenu);
+          { type: "separator" },
+          {
+            label: translations?.settings ?? "Settings",
+            click: () => openSettingsWindow(),
+          },
+          {
+            label: translations?.quit ?? "Quit",
+            type: "normal",
+            click: () => {
+              consola.debug("quit");
+              app.isQuiting = true;
+              app.quit();
+            },
+          },
+        ]);
+
+        const current = persistState.get("active-account", "default");
+        let accountName = translations?.account_main ?? "Akun Utama";
+        if (current === "account_2") accountName = "Akun 2";
+        if (current === "account_3") accountName = "Akun 3";
+
+        tray.setToolTip(`whatszan - ${accountName}`);
+        if (process.platform !== 'win32') {
+          tray.setTitle(` ${accountName}`);
+        }
+        tray.setContextMenu(trayContextMenu);
+
+        // Update App Menu
+        const appMenu = Menu.getApplicationMenu();
+        if (appMenu) {
+          const windowMenu = appMenu.items.find(item => item.role === 'windowmenu' || item.label === 'Window' || item.label === 'Jendela');
+          if (windowMenu) {
+            const switchAccountItem = windowMenu.submenu.items.find(item => item.label === (translations?.switch_account ?? "Switch Account"));
+            if (switchAccountItem) {
+              // Replace the entire Application Menu by rebuilding it from the current template
+              // but since we don't have the full template easily, we can just replace the App Menu completely
+              // Wait, Electron doesn't allow dynamic submenu mutation on Mac/Linux sometimes, 
+              // but we can try setting the submenu property, or just rebuilding the AppMenu.
+              // Actually, since we already built `appMenu` initially, we can just set its items.
+              // Electron allows re-setting the application menu:
+              const template = appMenu.items.map(item => {
+                if (item.role === 'windowmenu' || item.label === 'Window' || item.label === 'Jendela') {
+                  const subItems = item.submenu.items.map(sub => {
+                    if (sub.label === (translations?.switch_account ?? "Switch Account")) {
+                      return { label: sub.label, submenu: buildAccountSubmenu() };
+                    }
+                    if (sub.id === 'auto_run_appmenu') return { id: sub.id, label: sub.label, type: sub.type, checked: sub.checked, click: sub.click };
+                    if (sub.id === 'settings_appmenu') return { id: sub.id, label: sub.label, accelerator: sub.accelerator, click: sub.click };
+                    return sub.type === 'separator' ? { type: 'separator' } : { label: sub.label, role: sub.role, click: sub.click };
+                  });
+                  return { role: item.role, label: item.label, submenu: subItems };
+                }
+                return { role: item.role, label: item.label, submenu: item.submenu };
+              });
+              Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+            }
+          }
+        }
+      };
+
+      updateMenus();
+
+
       tray.on("click", () => {
         toggleVisibility(mainWindow);
       });
@@ -294,6 +472,12 @@ function main() {
         const windowMenu = appMenu.items.find(item => item.role === 'windowmenu' || item.label === 'Window' || item.label === 'Jendela');
         if (windowMenu && !windowMenu.submenu.items.some(i => i.id === 'auto_run_appmenu')) {
           windowMenu.submenu.append(new MenuItem({ type: 'separator' }));
+          
+          windowMenu.submenu.append(new MenuItem({
+            label: translations?.switch_account ?? "Switch Account",
+            submenu: Menu.buildFromTemplate(buildAccountSubmenu())
+          }));
+
           windowMenu.submenu.append(new MenuItem({
             id: 'auto_run_appmenu',
             label: translations?.auto_run ?? "Auto Run & Minimize",
@@ -308,8 +492,25 @@ function main() {
               });
             }
           }));
+
+          windowMenu.submenu.append(new MenuItem({ type: 'separator' }));
+          windowMenu.submenu.append(new MenuItem({
+            id: 'settings_appmenu',
+            label: translations?.settings ?? "Settings",
+            accelerator: 'Alt+S',
+            click: () => openSettingsWindow(),
+          }));
         }
       }
+
+      ipcMain.handle("getActiveAccountName", () => {
+        const current = persistState.get("active-account", "default");
+        if (current === "default") return translations?.account_main ?? "Akun Utama";
+        if (current === "account_2") return "Akun 2";
+        if (current === "account_3") return "Akun 3";
+        return translations?.account_main ?? "Akun Utama";
+      });
+
 
       const notif = (options) => {
         const n = new Notification({
@@ -327,6 +528,33 @@ function main() {
           consola.error("executeJavaScript", err);
         }
       }
+      // Track injected CSS key for dynamic theme updates
+      let injectedThemeCssKey = null;
+
+      const applyThemeCss = async () => {
+        if (injectedThemeCssKey) {
+          try { await mainWindow.webContents.removeInsertedCSS(injectedThemeCssKey); } catch(e) {}
+          injectedThemeCssKey = null;
+        }
+        if (nativeTheme.shouldUseDarkColors) {
+          const darkCSS = `
+            body:not(.dark) { background-color: #0d1418 !important; }
+            body:not(.dark) #app { filter: invert(1) hue-rotate(180deg); }
+            body:not(.dark) img, body:not(.dark) video, body:not(.dark) canvas { filter: invert(1) hue-rotate(180deg); }
+          `;
+          try { injectedThemeCssKey = await mainWindow.webContents.insertCSS(darkCSS); } catch(e) {}
+        }
+      };
+
+      mainWindow.webContents.on("dom-ready", async () => {
+        await applyThemeCss();
+      });
+
+      nativeTheme.on("updated", async () => {
+        await applyThemeCss();
+      });
+
+
       mainWindow.webContents.on("did-finish-load", async (ev) => {
         consola.debug("did-finish-load");
         // builtin scripts

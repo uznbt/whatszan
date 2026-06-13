@@ -218,27 +218,32 @@ export async function getBadgedTrayIcon(iconInput, unreadCount) {
 
 import { exec } from 'child_process';
 
-export function monitorSystemTheme(nativeTheme) {
+export function monitorSystemTheme(nativeTheme, onThemeChange) {
+  const applyTheme = (source) => {
+    nativeTheme.themeSource = source;
+    onThemeChange?.(source);
+  };
+
   const checkTheme = () => {
     // 1. Freedesktop Portal (Modern GNOME, KDE, Hyprland via xdg-desktop-portal)
     exec('dbus-send --session --print-reply=literal --dest=org.freedesktop.portal.Desktop /org/freedesktop/portal/desktop org.freedesktop.portal.Settings.Read string:"org.freedesktop.appearance" string:"color-scheme"', (err, stdout) => {
       if (!err && stdout) {
-        if (stdout.includes('uint32 1')) { nativeTheme.themeSource = 'dark'; return; }
-        if (stdout.includes('uint32 2')) { nativeTheme.themeSource = 'light'; return; }
+        if (stdout.includes('uint32 1')) { applyTheme('dark'); return; }
+        if (stdout.includes('uint32 2')) { applyTheme('light'); return; }
         // If uint32 0 (No preference), fall through to the next checks
       }
 
       // 2. GNOME / Cinnamon / GTK (gsettings)
       exec('gsettings get org.gnome.desktop.interface color-scheme', (err2, stdout2) => {
         if (!err2 && stdout2) {
-          if (stdout2.includes('prefer-dark')) { nativeTheme.themeSource = 'dark'; return; }
-          if (stdout2.includes('prefer-light')) { nativeTheme.themeSource = 'light'; return; }
+          if (stdout2.includes('prefer-dark')) { applyTheme('dark'); return; }
+          if (stdout2.includes('prefer-light')) { applyTheme('light'); return; }
           // If 'default', fall through to the next checks
         }
 
         exec('gsettings get org.gnome.desktop.interface gtk-theme', (err3, stdout3) => {
           if (!err3 && stdout3 && stdout3.toLowerCase().includes('dark') && !stdout3.toLowerCase().includes('adw-gtk3')) { 
-            nativeTheme.themeSource = 'dark'; 
+            applyTheme('dark'); 
             return; 
           }
 
@@ -248,13 +253,13 @@ export function monitorSystemTheme(nativeTheme) {
               const parts = stdout4.trim().split(',');
               if (parts.length === 3) {
                 const [r, g, b] = parts.map(Number);
-                if (r + g + b < 384) { nativeTheme.themeSource = 'dark'; return; }
-                else { nativeTheme.themeSource = 'light'; return; }
+                if (r + g + b < 384) { applyTheme('dark'); return; }
+                else { applyTheme('light'); return; }
               }
             }
             
             // Absolute fallback
-            nativeTheme.themeSource = 'system';
+            applyTheme('system');
           });
         });
       });

@@ -9,5 +9,9 @@
   "inspect": "Element untersuchen",
   "show_hide": "Anzeigen / Ausblenden",
   "quit": "Beenden",
-  "auto_run": "Automatisch ausführen & minimieren"
+  "auto_run": "Automatisch ausführen & Minimieren",
+  "switch_account": "Konto wechseln",
+  "account_main": "Hauptkonto",
+  "account_label": "Konto",
+  "add_account": "+ Konto hinzufügen"
 }

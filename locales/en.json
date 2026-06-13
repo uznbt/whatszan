@@ -1,5 +1,10 @@
 {
   "show_hide": "Show/Hide",
   "quit": "Quit",
-  "auto_run": "Auto Run & Minimize"
+  "auto_run": "Auto Run & Minimize",
+  "switch_account": "Switch Account",
+  "account_main": "Main Account",
+  "account_label": "Account",
+  "add_account": "+ Add Account",
+  "settings": "Settings"
 }

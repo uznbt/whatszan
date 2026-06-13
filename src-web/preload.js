@@ -9,6 +9,9 @@ contextBridge.exposeInMainWorld("ipc", {
   open: (url) => ipcRenderer.invoke("open", url),
   stateGet: (name) => ipcRenderer.invoke("stateGet", name),
   windowToggle: () => ipcRenderer.invoke("windowToggle"),
+  isDarkMode: () => ipcRenderer.invoke("isDarkMode"),
+  accountLoginConfirmed: () => ipcRenderer.invoke("account-login-confirmed"),
+  getActiveAccountName: () => ipcRenderer.invoke("getActiveAccountName"),
   ...(isDebug && {
     ping: () => ipcRenderer.invoke("ping"),
   }),

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pengaturan — WhatsZan</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #111b21;
+      --surface: #1f2c34;
+      --surface2: #2a3942;
+      --border: #374a56;
+      --accent: #00a884;
+      --accent-hover: #00c49a;
+      --text: #e9edef;
+      --text-muted: #8696a0;
+      --danger: #f15c6d;
+      --radius: 10px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      -webkit-app-region: no-drag;
+      user-select: none;
+      overflow-x: hidden;
+    }
+
+    header {
+      -webkit-app-region: drag;
+      padding: 16px 20px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    header svg { flex-shrink: 0; }
+    header h1 { font-size: 16px; font-weight: 600; }
+
+    main { padding: 20px; display: flex; flex-direction: column; gap: 6px; }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 14px;
+      margin-bottom: 4px;
+    }
+
+    .row {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 13px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.15s;
+    }
+    .row:hover { background: var(--surface2); }
+
+    .row-info { flex: 1; min-width: 0; }
+    .row-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* Toggle switch */
+    .toggle { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0;
+      background: var(--border);
+      border-radius: 24px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .slider::before {
+      content: '';
+      position: absolute;
+      width: 18px; height: 18px;
+      left: 3px; top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle input:checked + .slider { background: var(--accent); }
+    .toggle input:checked + .slider::before { transform: translateX(18px); }
+
+    /* Text input */
+    .text-input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+      padding: 6px 10px;
+      width: 180px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .text-input:focus { border-color: var(--accent); }
+
+    .accounts-section { display: flex; flex-direction: column; gap: 6px; }
+
+    .account-row {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 11px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .account-row:hover { background: var(--surface2); }
+
+    .account-avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 600; color: #fff; flex-shrink: 0;
+    }
+    .account-avatar.inactive { background: var(--border); }
+
+    .account-name { flex: 1; font-weight: 500; }
+    .account-status { font-size: 11px; color: var(--text-muted); }
+    .active-badge {
+      font-size: 10px; font-weight: 600;
+      background: var(--accent);
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    .btn-icon {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); padding: 4px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      transition: color 0.15s, background 0.15s;
+    }
+    .btn-icon:hover { color: var(--danger); background: rgba(241,92,109,0.12); }
+
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius);
+      padding: 10px 18px; font-size: 13px; font-weight: 600;
+      font-family: inherit; cursor: pointer;
+      transition: background 0.15s;
+      width: 100%;
+      margin-top: 6px;
+    }
+    .btn:hover { background: var(--accent-hover); }
+
+    footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      display: flex; gap: 10px; justify-content: flex-end;
+    }
+
+    .btn-save {
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 8px;
+      padding: 8px 22px; font-size: 13px; font-weight: 600;
+      font-family: inherit; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-save:hover { background: var(--accent-hover); }
+
+    .btn-cancel {
+      background: var(--surface2); color: var(--text-muted);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 18px; font-size: 13px; font-weight: 500;
+      font-family: inherit; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-cancel:hover { background: var(--border); color: var(--text); }
+
+    .toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 20px;
+      font-size: 13px; color: var(--text);
+      opacity: 0; transition: opacity 0.3s; pointer-events: none;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<header>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="11" stroke="#00a884" stroke-width="2"/>
+    <path d="M12 8v4l3 3" stroke="#00a884" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+  <h1>Pengaturan WhatsZan</h1>
+</header>
+
+<main id="main">
+  <!-- Accounts -->
+  <div class="section-label">Manajemen Akun</div>
+  <div class="accounts-section" id="accounts-list"></div>
+  <button class="btn" id="btn-add-account">
+    <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+    Tambah Akun
+  </button>
+
+  <!-- Notifikasi -->
+  <div class="section-label">Notifikasi</div>
+  <div class="row">
+    <div class="row-info">
+      <div class="row-title">Awalan Notifikasi</div>
+      <div class="row-desc">Tambahkan teks di depan nama notifikasi</div>
+    </div>
+    <input id="notif-prefix" class="text-input" type="text" placeholder="Kosong" />
+  </div>
+
+  <!-- Tampilan -->
+  <div class="section-label">Tampilan & Perilaku</div>
+  <div class="row">
+    <div class="row-info">
+      <div class="row-title">Jalankan Otomatis saat Startup</div>
+      <div class="row-desc">Nyalakan aplikasi saat komputer dinyalakan</div>
+    </div>
+    <label class="toggle"><input type="checkbox" id="auto-run" /><span class="slider"></span></label>
+  </div>
+  <div class="row">
+    <div class="row-info">
+      <div class="row-title">Mulai Tersembunyi</div>
+      <div class="row-desc">Langsung ke tray saat startup (butuh Auto Run aktif)</div>
+    </div>
+    <label class="toggle"><input type="checkbox" id="hide-on-start" /><span class="slider"></span></label>
+  </div>
+  <div class="row">
+    <div class="row-info">
+      <div class="row-title">Tutup ke Tray</div>
+      <div class="row-desc">Tombol tutup menyembunyikan, bukan keluar</div>
+    </div>
+    <label class="toggle"><input type="checkbox" id="quit-on-close" /><span class="slider"></span></label>
+  </div>
+  <div class="row">
+    <div class="row-info">
+      <div class="row-title">Sembunyikan dengan ESC</div>
+      <div class="row-desc">Tekan ESC untuk menyembunyikan jendela</div>
+    </div>
+    <label class="toggle"><input type="checkbox" id="esc-toggle" /><span class="slider"></span></label>
+  </div>
+  <div class="row">
+    <div class="row-info">
+      <div class="row-title">Spellcheck / Periksa Ejaan</div>
+      <div class="row-desc">Garis bawah merah pada kata yang salah</div>
+    </div>
+    <label class="toggle"><input type="checkbox" id="spellcheck" /><span class="slider"></span></label>
+  </div>
+  <div class="row">
+    <div class="row-info">
+      <div class="row-title">Tampilkan Menu Bar</div>
+      <div class="row-desc">Menu bar di bagian atas jendela</div>
+    </div>
+    <label class="toggle"><input type="checkbox" id="menu-bar" /><span class="slider"></span></label>
+  </div>
+  <div class="row">
+    <div class="row-info">
+      <div class="row-title">Sembunyikan Menu Bar Otomatis</div>
+      <div class="row-desc">Menu bar muncul saat Alt ditekan</div>
+    </div>
+    <label class="toggle"><input type="checkbox" id="menu-bar-auto-hide" /><span class="slider"></span></label>
+  </div>
+
+  <!-- User Agent -->
+  <div class="section-label">Lanjutan</div>
+  <div class="row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+    <div class="row-info">
+      <div class="row-title">User Agent</div>
+      <div class="row-desc">String identifikasi browser. Kosongkan untuk gunakan default.</div>
+    </div>
+    <input id="user-agent" class="text-input" type="text" style="width:100%;" placeholder="Default (otomatis)" />
+  </div>
+</main>
+
+<footer>
+  <button class="btn-cancel" id="btn-cancel">Batal</button>
+  <button class="btn-save" id="btn-save">Simpan &amp; Restart</button>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const { ipcRenderer } = require('electron');
+
+  let settings = {};
+  let accounts = [];
+  let activeAccount = 'default';
+
+  async function load() {
+    settings = await ipcRenderer.invoke('settings-get');
+    accounts = await ipcRenderer.invoke('accounts-get');
+    activeAccount = await ipcRenderer.invoke('active-account-get');
+
+    document.getElementById('notif-prefix').value = settings['notification-prefix'] || '';
+    document.getElementById('auto-run').checked = settings['auto-run'] || false;
+    document.getElementById('hide-on-start').checked = settings['hide-on-start'] || false;
+    document.getElementById('quit-on-close').checked = settings['quit-on-close'] || false;
+    document.getElementById('esc-toggle').checked = settings['esc-toggle-window'] || false;
+    document.getElementById('spellcheck').checked = settings['spellcheck'] !== false;
+    document.getElementById('menu-bar').checked = settings['menu-bar'] !== false;
+    document.getElementById('menu-bar-auto-hide').checked = settings['menu-bar-auto-hide'] !== false;
+    document.getElementById('user-agent').value = settings['user-agent'] || '';
+
+    renderAccounts();
+  }
+
+  function renderAccounts() {
+    const list = document.getElementById('accounts-list');
+    list.innerHTML = '';
+
+    const allAccounts = [
+      { id: 'default', name: 'Akun Utama' },
+      ...accounts
+    ];
+
+    allAccounts.forEach(acc => {
+      const isActive = acc.id === activeAccount;
+      const letter = acc.name.charAt(0).toUpperCase();
+
+      const row = document.createElement('div');
+      row.className = 'account-row';
+      row.innerHTML = `
+        <div class="account-avatar ${isActive ? '' : 'inactive'}">${letter}</div>
+        <div class="row-info">
+          <div class="account-name">${acc.name}</div>
+        </div>
+        ${isActive ? '<span class="active-badge">Aktif</span>' : ''}
+        ${acc.id !== 'default' ? `
+          <button class="btn-icon" title="Hapus Akun" data-id="${acc.id}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        ` : ''}
+      `;
+      list.appendChild(row);
+    });
+
+    list.querySelectorAll('.btn-icon[data-id]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        await ipcRenderer.invoke('account-remove', id);
+        accounts = accounts.filter(a => a.id !== id);
+        renderAccounts();
+        showToast('Akun dihapus');
+      });
+    });
+  }
+
+  document.getElementById('btn-add-account').addEventListener('click', async () => {
+    await ipcRenderer.invoke('account-add');
+  });
+
+  document.getElementById('btn-save').addEventListener('click', async () => {
+    const newSettings = {
+      'notification-prefix': document.getElementById('notif-prefix').value,
+      'auto-run': document.getElementById('auto-run').checked,
+      'hide-on-start': document.getElementById('hide-on-start').checked,
+      'quit-on-close': document.getElementById('quit-on-close').checked,
+      'esc-toggle-window': document.getElementById('esc-toggle').checked,
+      'spellcheck': document.getElementById('spellcheck').checked,
+      'menu-bar': document.getElementById('menu-bar').checked,
+      'menu-bar-auto-hide': document.getElementById('menu-bar-auto-hide').checked,
+      'user-agent': document.getElementById('user-agent').value || null,
+    };
+    await ipcRenderer.invoke('settings-save', newSettings);
+  });
+
+  document.getElementById('btn-cancel').addEventListener('click', () => {
+    window.close();
+  });
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  ipcRenderer.on('settings-saved', () => {
+    showToast('Pengaturan disimpan, aplikasi akan restart...');
+    setTimeout(() => window.close(), 1200);
+  });
+
+  load();
+</script>
+</body>
+</html>
