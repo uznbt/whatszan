@@ -1,0 +1,13 @@
+{
+  "cut": "Ausschneiden",
+  "copy": "Kopieren",
+  "paste": "Einfügen",
+  "saveImageAs": "Bild speichern unter...",
+  "saveVideoAs": "Video speichern unter...",
+  "copyImage": "Bild kopieren",
+  "copyLink": "Link kopieren",
+  "inspect": "Element untersuchen",
+  "show_hide": "Anzeigen / Ausblenden",
+  "quit": "Beenden",
+  "auto_run": "Automatisch ausführen & minimieren"
+}

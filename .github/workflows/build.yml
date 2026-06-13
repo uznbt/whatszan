@@ -1,0 +1,36 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  release:
+    permissions:
+      contents: write # Dibutuhkan agar bisa mengupload ke tab Releases
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+
+      # Install dependensi sistem yang dibutuhkan untuk build AppImage / pacman / rpm / deb
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y libarchive-tools fakeroot dpkg rpm
+
+      - run: npm ci
+
+      # Build and publish ke GitHub Releases
+      - name: Build & Publish Release
+        run: npm run release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

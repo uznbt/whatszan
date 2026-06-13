@@ -1,0 +1,35 @@
+{
+  "name": "whatszan",
+  "desktopName": "whatszan",
+  "description": "Lightweight WhatsApp desktop client for Linux",
+  "author": {
+    "name": "uznbt",
+    "email": "uznbt@cachyos.org"
+  },
+  "homepage": "https://github.com/uznbt/whatszan",
+  "version": "1.0.0",
+  "main": "src/main.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "electron .",
+    "debug": "electron --inspect-brk=9229 .",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "release": "electron-builder",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "license": "GPL-3.0-or-later",
+  "devDependencies": {
+    "electron": "^40.1.0",
+    "electron-builder": "^26.7.0",
+    "prettier": "^3.8.1"
+  },
+  "dependencies": {
+    "@homebridge/dbus-native": "^0.7.2",
+    "consola": "^3.4.2",
+    "electron-context-menu": "^4.1.1",
+    "lodash-es": "^4.17.23",
+    "sharp": "^0.34.5"
+  }
+}

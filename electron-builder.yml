@@ -1,0 +1,69 @@
+appId: "org.uznbt.whatszan"
+
+# https://sharp.pixelplumbing.com/install/#electron-builder
+asar: true
+asarUnpack:
+  - "**/node_modules/sharp/**/*"
+  - "**/node_modules/@img/**/*"
+
+linux:
+  syncDesktopName: true
+  # https://www.electron.build/app-builder-lib.interface.linuxconfiguration#target
+  # AppImage, flatpak, snap, deb, rpm, freebsd, pacman, p5p, apk, 7z, zip, tar.xz, tar.lz, tar.gz, tar.bz2, dir.
+  target:
+    - AppImage
+    - pacman
+    - deb
+    - snap
+    - rpm
+    - tar.xz
+  category: "Network;Chat;InstantMessaging;X-WhatsApp;"
+  desktop:
+    entry:
+      Name: WhatsZan
+      GenericName: WhatsApp Client
+      Comment: Lightweight WhatsApp desktop client
+
+  # Register "whatsapp:" url scheme
+  mimeTypes:
+    - x-scheme-handler/whatsapp
+
+publish:
+  - github
+
+snap:
+  title: WhatsZan
+  description: |
+    Lightweight WhatsApp desktop client for Linux
+  publish:
+    - github
+    - snapStore
+  slots:
+    dbus-svc:
+      interface: dbus
+      bus: session
+      name: "org.uznbt.whatszan"
+  plugs:
+    # Electron app from https://snapcraft.io/docs/desktop-interfaces
+    desktop:
+    desktop-legacy:
+    wayland:
+    unity7:
+    # alsa:
+    # avahi-observe:
+    browser-support:
+    camera:
+    # cups-control:
+    gsettings:
+    home:
+    network:
+    opengl:
+    audio-playback:
+    # screen-inhibit-control:
+    # upower-observe:
+
+    # additional
+    dbus:
+    x11:
+    pulseaudio:
+    audio-record:
