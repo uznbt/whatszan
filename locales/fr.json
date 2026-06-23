@@ -9,9 +9,5 @@
   "inspect": "Inspecter l'élément",
   "show_hide": "Afficher / Masquer",
   "quit": "Quitter",
-  "auto_run": "Exécution automatique et minimisation",
-  "switch_account": "Changer de compte",
-  "account_main": "Compte principal",
-  "account_label": "Compte",
-  "add_account": "+ Ajouter un compte"
+  "auto_run": "Exécution automatique et réduction"
 }

@@ -30,11 +30,6 @@ export class JsonConfig {
     this.#save();
   }
 
-  delete(key) {
-    delete this.#data[key];
-    this.#save();
-  }
-
   #load(defaultData) {
     if (!existsSync(this.#filePath)) {
       this.#data = { ...defaultData };

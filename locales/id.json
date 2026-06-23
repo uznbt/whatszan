@@ -9,10 +9,5 @@
   "inspect": "Inspeksi elemen",
   "show_hide": "Tampilkan / Sembunyikan",
   "quit": "Keluar",
-  "auto_run": "Jalankan Otomatis & Minimalkan",
-  "switch_account": "Ganti Akun",
-  "account_main": "Akun Utama",
-  "account_label": "Akun",
-  "add_account": "+ Tambah Akun",
-  "settings": "Pengaturan"
+  "auto_run": "Jalankan Otomatis & Minimalkan"
 }

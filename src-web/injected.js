@@ -138,48 +138,8 @@ async function ewSetup() {
   const prefix = await window?.ipc?.stateGet?.("notifPrefix");
   ewHijackNotif(prefix);
 
-  // Enforce system dark mode using main process nativeTheme (reliable across all partitions)
-  const isDark = await window?.ipc?.isDarkMode?.();
-
-  const enforceSystemTheme = () => {
-    if (isDark) {
-      if (!document.body.classList.contains('dark')) document.body.classList.add('dark');
-      if (!document.documentElement.classList.contains('dark')) document.documentElement.classList.add('dark');
-      if (localStorage.getItem('theme') !== '"dark"') localStorage.setItem('theme', '"dark"');
-    } else {
-      if (document.body.classList.contains('dark')) document.body.classList.remove('dark');
-      if (document.documentElement.classList.contains('dark')) document.documentElement.classList.remove('dark');
-      if (localStorage.getItem('theme') !== '"light"') localStorage.setItem('theme', '"light"');
-    }
-  };
-  enforceSystemTheme();
-
-  const themeObserver = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      if (mutation.attributeName === 'class') {
-        enforceSystemTheme();
-      }
-    }
-  });
-  themeObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-
-  // Also respond to system theme changes in real-time via matchMedia
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-    if (e.matches) {
-      document.body.classList.add('dark');
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', '"dark"');
-    } else {
-      if (document.body.classList.contains('dark')) document.body.classList.remove('dark');
-      if (document.documentElement.classList.contains('dark')) document.documentElement.classList.remove('dark');
-      if (localStorage.getItem('theme') !== '"light"') localStorage.setItem('theme', '"light"');
-    }
-  });
-
-
-
   await ewSetupKeys();
+
   if (await window?.ipc?.stateGet("escToggle")) {
     addEventListener(
       "keydown",
@@ -204,4 +164,3 @@ void ewSetup();
 function ewCloseChat() {
   ewDoWhatsappAction("CLOSE_CHAT");
 }
-
