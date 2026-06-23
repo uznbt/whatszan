@@ -165,6 +165,14 @@ function main() {
       callback({ cancel: false, requestHeaders: details.requestHeaders });
     });
 
+    session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+      callback(true);
+    });
+
+    session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+      return true;
+    });
+
     const saveBounds = () => {
       if (!isDebug) {
         persistState.set("window-bounds", mainWindow.getBounds());
@@ -264,30 +272,35 @@ function main() {
       });
 
       const trayIcon = getUserIcon("app", state) || path.join(import.meta.dirname, "..", "static", "app.png");
-      const tray = new Tray(trayIcon);
-      const trayContextMenu = Menu.buildFromTemplate([
-        {
-          label: translations?.show_hide ?? "Show/Hide",
-          type: "normal",
-          click: () => {
-            toggleVisibility(mainWindow);
+      let tray;
+      try {
+        tray = new Tray(trayIcon);
+        const trayContextMenu = Menu.buildFromTemplate([
+          {
+            label: translations?.show_hide ?? "Show/Hide",
+            type: "normal",
+            click: () => {
+              toggleVisibility(mainWindow);
+            },
           },
-        },
-        {
-          label: translations?.quit ?? "Quit",
-          type: "normal",
-          click: () => {
-            consola.debug("quit");
-            app.isQuiting = true;
-            app.quit();
+          {
+            label: translations?.quit ?? "Quit",
+            type: "normal",
+            click: () => {
+              consola.debug("quit");
+              app.isQuiting = true;
+              app.quit();
+            },
           },
-        },
-      ]);
-      tray.setToolTip(pkg.name);
-      tray.setContextMenu(trayContextMenu);
-      tray.on("click", () => {
-        toggleVisibility(mainWindow);
-      });
+        ]);
+        tray.setToolTip(pkg.name);
+        tray.setContextMenu(trayContextMenu);
+        tray.on("click", () => {
+          toggleVisibility(mainWindow);
+        });
+      } catch (err) {
+        consola.error("Failed to load tray icon", err);
+      }
 
       const appMenu = Menu.getApplicationMenu();
       if (appMenu) {
@@ -392,7 +405,7 @@ function main() {
 
             getBadgedTrayIcon(trayIcon, unreadCount).then(icon => {
               if (icon && lastFaviconUrl === newestIcon) {
-                tray.setImage(icon);
+                tray?.setImage(icon);
               }
             });
           }
@@ -402,6 +415,14 @@ function main() {
       const url = config.get("url", "https://web.whatsapp.com/");
 
       mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+        if (url === 'about:blank' || url.startsWith('https://web.whatsapp.com/')) {
+          return { 
+            action: 'allow', 
+            overrideBrowserWindowOptions: {
+              autoHideMenuBar: true,
+            }
+          };
+        }
         handleOpenUrl(url);
         return { action: "deny" };
       });
