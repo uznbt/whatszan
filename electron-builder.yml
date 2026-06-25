@@ -1,4 +1,5 @@
 appId: "org.uznbt.whatszan"
+generateUpdatesFilesForAllChannels: false
 
 afterPack: "build/afterPack.cjs"
 
@@ -14,13 +15,11 @@ win:
     - target: nsis
       arch:
         - x64
-    - target: portable
-      arch:
-        - x64
 
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  differentialPackage: false
   installerIcon: build/icon.ico
   uninstallerIcon: build/icon.ico
   createDesktopShortcut: true
