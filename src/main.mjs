@@ -1,5 +1,5 @@
-import { app, BrowserWindow, session, Menu, MenuItem, Tray, ipcMain, shell, Notification, dialog, nativeTheme } from "electron";
-import { readFileSync } from "node:fs";
+import { app, BrowserWindow, session, Menu, MenuItem, Tray, ipcMain, shell, Notification, dialog, nativeTheme, desktopCapturer } from "electron";
+import { readFileSync, existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import {
   addAboutMenuItem,
@@ -85,6 +85,9 @@ function main() {
     notifPrefix: config.get("notification-prefix", ""),
     showAtStartup: (isDebug || config.get("show-at-startup", true)) && !isHiddenStartup,
     escToggle: config.get("esc-toggle-window", false),
+    get textReplacements() {
+      return config.get("text-replacements", {});
+    },
     get windowBounds() {
       const bounds = persistState.get("window-bounds", { width: 1099, height: 800 });
       if (isDebug) {
@@ -107,6 +110,20 @@ function main() {
     state.showAtStartup = true;
   }
 
+  // Auto-load saved extensions on startup
+  const savedExtensions = persistState.get("extensions", []);
+  if (savedExtensions.length > 0) {
+    import('electron-extension-installer').then(({ installExtension }) => {
+      installExtension(savedExtensions, {
+        loadExtensionOptions: { allowFileAccess: true }
+      }).then((names) => {
+        consola.info('Loaded extensions:', names);
+      }).catch(err => {
+        consola.error('Failed to load extensions:', err);
+      });
+    }).catch(e => consola.error('Could not load extension installer', e));
+  }
+
   const createWindow = async () => {
     // Create the browser window.
     const mainWindow = new BrowserWindow({
@@ -123,9 +140,17 @@ function main() {
       mainWindow.removeMenu();
     }
 
+
+    // Override navigator.userAgent di JavaScript context (bukan hanya HTTP header).
+    // WhatsApp Web Beta mengecek navigator.userAgent via JS untuk mengaktifkan
+    // fitur seperti panggilan suara/video. Tanpa ini, Windows terdeteksi dan
+    // fitur beta tidak aktif meski HTTP header sudah di-spoof.
+    mainWindow.webContents.setUserAgent(state.userAgent);
+
     if (isDebug || config.get("open-dev-tools", false)) {
       mainWindow.webContents.openDevTools();
     }
+
 
     if (config.get("register-url-scheme", true) && !app.isDefaultProtocolClient(urlScheme)) {
       consola.info(`Registering as default protocol client for ${urlScheme}://`);
@@ -172,6 +197,117 @@ function main() {
     session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
       return true;
     });
+
+    // ── Screen Share Handler ─────────────────────────────────────────────────
+    // ── Screen Share Handler ─────────────────────────────────────────────────
+    // Menangani getDisplayMedia() dari WhatsApp Web saat VC screen share.
+    // Menampilkan custom picker window dengan thumbnail layar/jendela.
+    session.defaultSession.setDisplayMediaRequestHandler(async (request, callback) => {
+      let callbackCalled = false;
+      const safeCallback = (result) => {
+        if (callbackCalled) return;
+        callbackCalled = true;
+        try {
+          callback(result);
+        } catch (e) {
+          // Electron throws jika cancel (video requested tapi tidak ada stream)
+          consola.debug('Screen share callback suppressed:', e.message);
+        }
+      };
+
+      try {
+        // Ambil semua sumber layar dan window dengan thumbnail
+        const sources = await desktopCapturer.getSources({
+          types: ['screen', 'window'],
+          thumbnailSize: { width: 300, height: 200 },
+          fetchWindowIcons: true,
+        });
+
+        if (sources.length === 0) {
+          consola.warn('Screen share: no sources found');
+          safeCallback({});
+          return;
+        }
+
+        // Buka picker window
+        const pickerWin = new BrowserWindow({
+          width: 680,
+          height: 500,
+          resizable: false,
+          minimizable: false,
+          maximizable: false,
+          alwaysOnTop: true,
+          title: 'Bagikan Layar',
+          autoHideMenuBar: true,
+          webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+            preload: path.join(import.meta.dirname, '..', 'src-web', 'preload.js'),
+          },
+        });
+
+        // Deteksi tema dari halaman WA yang sedang berjalan (karena bisa beda dengan tema OS)
+        let isWaDark = nativeTheme.shouldUseDarkColors;
+        try {
+          isWaDark = await mainWindow.webContents.executeJavaScript(`
+            document.documentElement.classList.contains('dark') || document.body.classList.contains('dark')
+          `);
+        } catch (e) {
+          consola.debug('Gagal deteksi tema WA, menggunakan tema OS');
+        }
+
+        pickerWin.loadFile(path.join(import.meta.dirname, '..', 'static', 'screen-picker.html'), {
+          query: { theme: isWaDark ? 'dark' : 'light' },
+        });
+
+        // Kirim daftar sumber ke picker setelah halaman siap
+        pickerWin.webContents.on('did-finish-load', () => {
+          const sourcesData = sources.map(s => ({
+            id: s.id,
+            name: s.name,
+            thumbnail: s.thumbnail?.toDataURL() || null,
+          }));
+          pickerWin.webContents.executeJavaScript(
+            `window.electronAPI?.setSources(${JSON.stringify(sourcesData)}, ${isWaDark})`
+          );
+        });
+
+
+
+        // Terima pilihan dari picker via IPC
+        ipcMain.handleOnce('screen-share-select', (ev, sourceId) => {
+          pickerWin.close();
+          if (sourceId) {
+            const selected = sources.find(s => s.id === sourceId);
+            if (selected) {
+              consola.info('Screen share: user selected', selected.name);
+              safeCallback({ video: selected });
+            } else {
+              safeCallback({});
+            }
+          } else {
+            consola.info('Screen share: user cancelled');
+            safeCallback({});
+          }
+        });
+
+        // Jika picker ditutup paksa (X button)
+        pickerWin.on('closed', () => {
+          safeCallback({});
+        });
+
+        // Tutup otomatis saat kehilangan fokus (klik di luar)
+        pickerWin.on('blur', () => {
+          if (!pickerWin.isDestroyed()) pickerWin.close();
+        });
+
+      } catch (err) {
+        consola.error('Screen share handler error', err);
+        safeCallback({});
+      }
+    });
+    // ────────────────────────────────────────────────────────────────────────
+
 
     const saveBounds = () => {
       if (!isDebug) {
@@ -270,6 +406,140 @@ function main() {
       ipcMain.handle("windowToggle", () => {
         toggleVisibility(mainWindow);
       });
+      
+      // IPC Handler untuk instal ekstensi
+      ipcMain.handle("install-extension", async (ev, extensionId) => {
+        try {
+          const { installExtension } = await import('electron-extension-installer');
+          await installExtension(extensionId, { loadExtensionOptions: { allowFileAccess: true } });
+          
+          const savedExts = persistState.get("extensions", []);
+          if (!savedExts.includes(extensionId)) {
+            savedExts.push(extensionId);
+            persistState.set("extensions", savedExts);
+          }
+          consola.info('Installed extension:', extensionId);
+          
+          dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: 'Ekstensi Terpasang',
+            message: 'Ekstensi berhasil dipasang!',
+            detail: 'Tutup dan buka kembali WhatsZan (Restart) jika ekstensi belum langsung berfungsi di halaman WhatsApp.'
+          });
+          
+          return true;
+        } catch (err) {
+          consola.error('Failed to install extension:', err);
+          dialog.showErrorBox('Gagal Instal', 'Terjadi kesalahan: ' + err.message);
+          return false;
+        }
+      });
+
+      const updateBlurState = (isMasterOn) => {
+        const isContacts = config.get("blur-contacts", true);
+        const isPP = config.get("blur-pp", true);
+        const isMessages = config.get("blur-messages", true);
+        const isMedia = config.get("blur-media", true);
+        const specificStr = config.get("blur-specific", "");
+
+        if (!mainWindow || mainWindow.isDestroyed()) return;
+
+        mainWindow.webContents.executeJavaScript(`
+          (() => {
+            document.body.classList.remove('blur-contacts', 'blur-pp', 'blur-messages', 'blur-media', 'privacy-blur');
+            const oldStyle = document.getElementById('whatszan-blur-specific');
+            if (oldStyle) oldStyle.remove();
+
+            if (${isMasterOn}) {
+              if (${isPP}) document.body.classList.add('blur-pp');
+              if (${isMessages}) document.body.classList.add('blur-messages');
+              if (${isMedia}) document.body.classList.add('blur-media');
+
+              const specific = ${JSON.stringify(specificStr || "")};
+              const names = specific.split(',').map(n => n.trim()).filter(n => n);
+              
+              if (names.length > 0) {
+                 let css = '';
+                 names.forEach(name => {
+                   css += \`[title="\${name}"] { filter: blur(4px); opacity: 0.75; transform: translateZ(0); transition: filter 0.15s ease-out; }\\n\`;
+                   css += \`div[role="row"]:hover [title="\${name}"], div[role="listitem"]:hover [title="\${name}"], header:hover [title="\${name}"], [title="\${name}"]:hover { filter: blur(0px); opacity: 1; transition: filter 0.05s ease-in; }\\n\`;
+                 });
+                 const style = document.createElement('style');
+                 style.id = 'whatszan-blur-specific';
+                 style.innerHTML = css;
+                 document.head.appendChild(style);
+              } else if (${isContacts}) {
+                 document.body.classList.add('blur-contacts');
+              }
+            }
+          })();
+        `).catch(e => consola.error(e));
+      };
+
+      // --- SETTINGS IPC ---
+      ipcMain.handle("settings-get", () => {
+        return {
+          ...config.data,
+          "privacy-blur": persistState.get("privacy-blur", false),
+          "auto-run": persistState.get("auto-run", false)
+        };
+      });
+
+      ipcMain.handle("settings-save", (ev, newSettings) => {
+        const { 'privacy-blur': blur, 'auto-run': autoRun, ...configSettings } = newSettings;
+        
+        persistState.set("privacy-blur", blur);
+        persistState.set("auto-run", autoRun);
+        
+        if (process.platform === 'win32') {
+          const shortcutPath = path.join(process.env.APPDATA || '', 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', 'WhatsZan.lnk');
+          if (autoRun) {
+            const exePath = app.getPath('exe');
+            const workDir = path.dirname(exePath);
+            const ps = `$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('${shortcutPath}'); $s.TargetPath = '${exePath}'; $s.Arguments = '--hide'; $s.WorkingDirectory = '${workDir}'; $s.Save()`;
+            import('child_process').then(({ execSync }) => {
+              try { execSync(`powershell -NoProfile -Command "${ps}"`, { stdio: 'ignore' }); } catch(e){}
+            });
+          } else {
+            try { if (existsSync(shortcutPath)) unlinkSync(shortcutPath); } catch(e){}
+          }
+        } else {
+          app.setLoginItemSettings({ openAtLogin: autoRun, args: autoRun ? ['--hide'] : [] });
+        }
+
+        Object.entries(configSettings).forEach(([k, v]) => {
+          if (v !== null && v !== '') config.set(k, v);
+          else { config.delete(k); }
+        });
+
+        
+        updateBlurState(blur);
+
+        ev.sender.send("settings-saved");
+      });
+
+      ipcMain.handle("accounts-get", () => []);
+      ipcMain.handle("active-account-get", () => "default");
+      ipcMain.handle("account-add", () => {});
+      ipcMain.handle("account-remove", () => {});
+
+      ipcMain.handle("open-webstore", () => {
+        const extWin = new BrowserWindow({
+          width: 1024,
+          height: 768,
+          title: 'Chrome Web Store',
+          webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+            preload: path.join(import.meta.dirname, '..', 'src-web', 'webstore-preload.js'),
+          }
+        });
+        extWin.setMenu(null);
+        const cleanUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+        extWin.webContents.setUserAgent(cleanUA);
+        extWin.loadURL('https://chromewebstore.google.com/');
+      });
+      // --- END SETTINGS IPC ---
 
       const trayIcon = getUserIcon("app", state) || path.join(import.meta.dirname, "..", "static", "app.png");
       let tray;
@@ -306,23 +576,108 @@ function main() {
       if (appMenu) {
         const windowMenu = appMenu.items.find(item => item.role === 'windowmenu' || item.label === 'Window' || item.label === 'Jendela');
         if (windowMenu && !windowMenu.submenu.items.some(i => i.id === 'auto_run_appmenu')) {
-          windowMenu.submenu.append(new MenuItem({ type: 'separator' }));
-          windowMenu.submenu.append(new MenuItem({
-            id: 'auto_run_appmenu',
-            label: translations?.auto_run ?? "Auto Run & Minimize",
-            type: "checkbox",
-            checked: persistState.get("auto-run", false),
-            click: (menuItem) => {
-              const isChecked = menuItem.checked;
-              persistState.set("auto-run", isChecked);
+
+          // Helper: path ke shortcut di folder Startup Windows
+          const getStartupShortcutPath = () => path.join(
+            process.env.APPDATA || '',
+            'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup',
+            'WhatsZan.lnk'
+          );
+
+          // Helper: baca status auto-run saat ini (per-OS)
+          const isAutoRunEnabled = () => {
+            if (process.platform === 'win32') {
+              return existsSync(getStartupShortcutPath());
+            }
+            return app.getLoginItemSettings().openAtLogin;
+          };
+
+          // Helper: set/hapus auto-run (per-OS)
+          const setAutoRun = (enabled) => {
+            if (process.platform === 'win32') {
+              const shortcutPath = getStartupShortcutPath();
+              if (enabled) {
+                // Buat shortcut .lnk di folder Startup via PowerShell
+                const exePath = app.getPath('exe');
+                const workDir = path.dirname(exePath);
+                const ps = [
+                  `$ws = New-Object -ComObject WScript.Shell`,
+                  `$s = $ws.CreateShortcut('${shortcutPath}')`,
+                  `$s.TargetPath = '${exePath}'`,
+                  `$s.Arguments = '--hide'`,
+                  `$s.WorkingDirectory = '${workDir}'`,
+                  `$s.Save()`,
+                ].join('; ');
+                import('child_process').then(({ execSync }) => {
+                  try { execSync(`powershell -NoProfile -Command "${ps}"`, { stdio: 'ignore' }); }
+                  catch (e) { consola.error('AutoRun shortcut error', e); }
+                });
+              } else {
+                // Hapus shortcut
+                try { if (existsSync(shortcutPath)) unlinkSync(shortcutPath); }
+                catch (e) { consola.error('AutoRun remove shortcut error', e); }
+              }
+            } else {
+              // Linux/macOS: gunakan app.setLoginItemSettings (registry/launchd)
               app.setLoginItemSettings({
-                openAtLogin: isChecked,
-                args: isChecked ? ["--hide"] : []
+                openAtLogin: enabled,
+                args: enabled ? ['--hide'] : []
+              });
+            }
+          };
+
+          windowMenu.submenu.append(new MenuItem({ type: 'separator' }));
+          
+          windowMenu.submenu.append(new MenuItem({
+            id: 'settings_appmenu',
+            label: "Pengaturan...",
+            accelerator: 'CmdOrCtrl+,',
+            click: async () => {
+              const setWin = new BrowserWindow({
+                width: 720,
+                height: 600,
+                title: 'Pengaturan WhatsZan',
+                autoHideMenuBar: true,
+                resizable: false,
+                webPreferences: {
+                  nodeIntegration: true,
+                  contextIsolation: false,
+                }
+              });
+              setWin.setMenu(null);
+
+              let isWaDark = nativeTheme.shouldUseDarkColors;
+              try {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                  isWaDark = await mainWindow.webContents.executeJavaScript(`
+                    document.documentElement.classList.contains('dark') || document.body.classList.contains('dark')
+                  `);
+                }
+              } catch (e) {}
+
+              setWin.loadFile(path.join(import.meta.dirname, '..', 'static', 'settings.html'), {
+                query: { theme: isWaDark ? 'dark' : 'light' }
+              });
+
+              // Tutup otomatis saat kehilangan fokus
+              setWin.on('blur', () => {
+                if (!setWin.isDestroyed()) setWin.close();
               });
             }
           }));
+
+          // Tetap pertahankan shortcut untuk Privacy Blur tanpa harus menampilkannya di menu
+          import('electron').then(({ globalShortcut }) => {
+            globalShortcut.register('CommandOrControl+Shift+B', () => {
+              const current = persistState.get("privacy-blur", false);
+              const newState = !current;
+              persistState.set("privacy-blur", newState);
+              updateBlurState(newState);
+            });
+          });
         }
       }
+
 
       const notif = (options) => {
         const n = new Notification({
@@ -350,6 +705,17 @@ function main() {
           const data = readFileSync(filename, "utf-8");
           await executeScript(data);
         }
+
+        // builtin CSS
+        try {
+          const blurCssFile = path.join(import.meta.dirname, "..", "src-web", "privacy-blur.css");
+          const blurCssData = readFileSync(blurCssFile, "utf-8");
+          mainWindow.webContents.insertCSS(blurCssData);
+        } catch(e) {
+          consola.error("error loading privacy-blur.css", e);
+        }
+
+        updateBlurState(persistState.get("privacy-blur", false));
 
         // user scripts
         const userScriptsPath = path.resolve(path.join(app.getPath("userData"), "user-scripts"));
@@ -400,7 +766,8 @@ function main() {
           if (img && lastFaviconUrl === newestIcon) {
             // we could also extract it from the page title, may be more reliable
             const unreadCount = getUnreadCountFromFavicon(lastFaviconUrl);
-            app.setBadgeCount(unreadCount); // libunity
+            app.setBadgeCount(unreadCount); // libunity (Linux & macOS only)
+
             dbus?.setBadgeCount(unreadCount); // gnome, kde
 
             getBadgedTrayIcon(trayIcon, unreadCount).then(icon => {
@@ -476,6 +843,30 @@ function main() {
   // Some APIs can only be used after this event occurs.
   app.whenReady().then(async () => {
     let window = await createWindow();
+
+    // Otomatis arahkan folder unduhan berdasarkan jenis file
+    session.defaultSession.on('will-download', (event, item) => {
+      if (config.get('smart-download', true) === false) return;
+
+      const filename = item.getFilename();
+      const ext = path.extname(filename).toLowerCase();
+      
+      let targetDir = app.getPath('downloads');
+      
+      if (['.mp4', '.mkv', '.avi', '.mov', '.wmv', '.webm'].includes(ext)) {
+        targetDir = app.getPath('videos');
+      } else if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'].includes(ext)) {
+        targetDir = app.getPath('pictures');
+      } else if (['.mp3', '.wav', '.ogg', '.m4a', '.flac'].includes(ext)) {
+        targetDir = app.getPath('music');
+      } else if (['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.zip', '.rar', '.7z'].includes(ext)) {
+        targetDir = app.getPath('documents');
+      }
+
+      item.setSaveDialogOptions({
+        defaultPath: path.join(targetDir, filename)
+      });
+    });
 
     // Check if app was launched with a whatsapp: URL scheme
     const whatsappUrl = process.argv.find((arg) => arg.startsWith(`${urlScheme}:`));

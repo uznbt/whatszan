@@ -7,7 +7,7 @@
     "email": "uznbt@cachyos.org"
   },
   "homepage": "https://github.com/uznbt/whatszan",
-  "version": "1.0.3",
+  "version": "1.1.1",
   "main": "src/main.mjs",
   "type": "module",
   "scripts": {
@@ -21,15 +21,24 @@
   },
   "license": "GPL-3.0-or-later",
   "devDependencies": {
-    "electron": "^40.1.0",
+    "electron": "^40.10.5",
     "electron-builder": "^26.7.0",
     "prettier": "^3.8.1"
   },
   "dependencies": {
-    "@homebridge/dbus-native": "^0.7.2",
     "consola": "^3.4.2",
     "electron-context-menu": "^4.1.1",
+    "electron-extension-installer": "^2.0.1",
     "lodash-es": "^4.17.23",
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "unzip-crx-3": "^0.2.0"
+  },
+  "optionalDependencies": {
+    "@homebridge/dbus-native": "^0.7.2"
+  },
+  "allowScripts": {
+    "electron@40.10.5": true,
+    "electron-builder@26.15.3": true,
+    "sharp@0.34.5": true
   }
 }

@@ -10,7 +10,12 @@ jobs:
     permissions:
       contents: write # Dibutuhkan agar bisa mengupload ke tab Releases
 
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+      fail-fast: false # Biarkan job lain tetap jalan meski salah satu gagal
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Check out Git repository
@@ -23,11 +28,19 @@ jobs:
         with:
           node-version: "22.x"
 
-      # Install dependensi sistem yang dibutuhkan untuk build AppImage / pacman / rpm / deb
-      - run: sudo apt-get update
-      - run: sudo apt-get install -y libarchive-tools fakeroot dpkg rpm
+      # Hanya di Linux: install alat build sistem yang dibutuhkan untuk AppImage / pacman / rpm / deb
+      - name: Install Linux build dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools fakeroot dpkg rpm
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
+
+      # Generate icon.ico (dibutuhkan untuk build Windows)
+      - name: Generate Windows icon
+        run: node build/generate-ico.mjs
 
       # Build and publish ke GitHub Releases
       - name: Build & Publish Release

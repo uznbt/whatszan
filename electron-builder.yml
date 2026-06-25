@@ -8,6 +8,28 @@ asarUnpack:
   - "**/node_modules/sharp/**/*"
   - "**/node_modules/@img/**/*"
 
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: WhatsZan
+  runAfterFinish: true
+  include: build/installer.nsh
+
+
 linux:
   syncDesktopName: true
   # https://www.electron.build/app-builder-lib.interface.linuxconfiguration#target

@@ -217,8 +217,18 @@ export async function getBadgedTrayIcon(iconInput, unreadCount) {
 }
 
 import { exec } from 'child_process';
+import * as os from 'node:os';
 
 export function monitorSystemTheme(nativeTheme) {
+  // Windows & macOS: Electron dapat membaca tema sistem secara native.
+  // Cukup set ke 'system' dan Electron akan mengikuti preferensi OS secara otomatis.
+  if (os.platform() !== 'linux') {
+    nativeTheme.themeSource = 'system';
+    return;
+  }
+
+  // Linux: deteksi manual via dbus-send / gsettings / kreadconfig karena
+  // Electron tidak selalu mendeteksi tema Linux dengan benar di semua DE.
   const checkTheme = () => {
     // 1. Freedesktop Portal (Modern GNOME, KDE, Hyprland via xdg-desktop-portal)
     exec('dbus-send --session --print-reply=literal --dest=org.freedesktop.portal.Desktop /org/freedesktop/portal/desktop org.freedesktop.portal.Settings.Read string:"org.freedesktop.appearance" string:"color-scheme"', (err, stdout) => {

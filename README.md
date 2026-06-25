@@ -6,11 +6,15 @@
 
 ## Fitur
 
-* **[BARU] Deteksi Tema Sistem Universal**: Secara akurat mendeteksi dan mensinkronisasi tema Gelap/Terang (*Dark/Light Mode*) secara *real-time* di berbagai Desktop Environment Linux (bekerja mulus di GNOME/GTK, maupun KDE Plasma/Hyprland berbasis Qt).
-* **[BARU] Jalankan Otomatis & Minimalkan**: Menyala otomatis di latar belakang saat komputer dihidupkan (Dapat diatur melalui Menu Jendela/Window).
-* **[BARU] Routing Link Mulus (Anti-Reload)**: Menangani tautan `chat.whatsapp.com`, `wa.me`, dan `whatsapp://` secara *native* tanpa memuat ulang halaman (*reload*) atau menyebabkan layar putih.
-* **[BARU] Anti Tracker Bypass**: Otomatis membongkar pelacak tautan internal WhatsApp (`l.wl.co`) sehingga mencegah browser eksternal terbuka secara tidak sengaja.
-* **[BARU] Dukungan Multi-Bahasa**: Menu diterjemahkan sepenuhnya ke dalam bahasa Indonesia, Inggris, Jerman, Prancis, Italia, dan Portugis.
+* **[BARU] Jendela Pengaturan Terpusat**: Mengatur seluruh aplikasi dari satu jendela (`Ctrl + ,`) dengan fitur **Simpan Otomatis** (Auto-Save).
+* **[BARU] Mode Rahasia Lanjutan (Privacy Blur)**: Sensor (blur) layar secara otomatis saat ada orang lewat. Dilengkapi pengaturan spesifik untuk blur Foto Profil, Pesan, Media, dan **bahkan hanya untuk kontak tertentu saja**!
+* **[BARU] Integrasi Ekstensi Chrome**: Pasang berbagai ekstensi secara langsung dari Chrome Web Store lewat Jendela Pengaturan.
+* **[BARU] Personalisasi UI**: Merubah logo dan tulisan jendela antarmuka web WhatsApp menjadi identitas "WhatsZan" secara mulus.
+* **Deteksi Tema Sistem Universal**: Secara akurat mendeteksi dan mensinkronisasi tema Gelap/Terang (*Dark/Light Mode*) secara *real-time* di berbagai Desktop Environment Linux (bekerja mulus di GNOME/GTK, maupun KDE Plasma/Hyprland berbasis Qt).
+* **Jalankan Otomatis & Minimalkan**: Menyala otomatis di latar belakang saat komputer dihidupkan (Dapat diatur melalui Menu Jendela/Window).
+* **Routing Link Mulus (Anti-Reload)**: Menangani tautan `chat.whatsapp.com`, `wa.me`, dan `whatsapp://` secara *native* tanpa memuat ulang halaman (*reload*) atau menyebabkan layar putih.
+* **Anti Tracker Bypass**: Otomatis membongkar pelacak tautan internal WhatsApp (`l.wl.co`) sehingga mencegah browser eksternal terbuka secara tidak sengaja.
+* **Dukungan Multi-Bahasa**: Menu diterjemahkan sepenuhnya ke dalam bahasa Indonesia, Inggris, Jerman, Prancis, Italia, dan Portugis.
 * Notifikasi desktop
 * Panggilan Telepon / Video berfungsi (kamu harus bergabung dengan WhatsApp Web Beta)
 * Ikon tray dengan jumlah pesan belum dibaca (AppIndicator), [ikon tray kustom](#ikon-kustom).

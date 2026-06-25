@@ -21,12 +21,21 @@ export class JsonConfig {
     return this.#parseError;
   }
 
+  get data() {
+    return this.#data;
+  }
+
   get(key, defaultValue) {
     return Object.hasOwn(this.#data, key) ? this.#data[key] : defaultValue;
   }
 
   set(key, value) {
     this.#data[key] = value;
+    this.#save();
+  }
+
+  delete(key) {
+    delete this.#data[key];
     this.#save();
   }
 

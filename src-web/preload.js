@@ -14,4 +14,10 @@ contextBridge.exposeInMainWorld("ipc", {
   }),
 });
 
+// Bridge untuk screen-picker.html: kirim pilihan layar ke main process
+contextBridge.exposeInMainWorld("screenPickerIpc", {
+  selectSource: (sourceId) => ipcRenderer.invoke("screen-share-select", sourceId),
+});
+
 webFrame.setVisualZoomLevelLimits(1, 3);
+

@@ -3,89 +3,166 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pengaturan — WhatsZan</title>
+  <title>Pengaturan</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg: #111b21;
-      --surface: #1f2c34;
-      --surface2: #2a3942;
-      --border: #374a56;
-      --accent: #00a884;
-      --accent-hover: #00c49a;
-      --text: #e9edef;
-      --text-muted: #8696a0;
-      --danger: #f15c6d;
-      --radius: 10px;
+      --bg-app:       #f8f5f3;
+      --bg-panel:     #ffffff;
+      --bg-card:      #ffffff;
+      --bg-card-hover:#f5f6f6;
+      --bg-header:    #ffffff;
+      --text-primary: #111b21;
+      --text-secondary:#667781;
+      --text-label:   #3b4a54;
+      --border:       #e9edef;
+      --accent:       #00a884;
+      --accent-hover: #017f62;
+      --accent-bg:    rgba(0,168,132,0.08);
+      --sidebar-w:    220px;
+      --tab-active-bg:    var(--accent-bg);
+      --tab-active-text:  var(--accent);
     }
+
+    html.dark {
+      --bg-app:           #161717;
+      --bg-panel:         #1c1f1f;
+      --bg-card:          #242627;
+      --bg-card-hover:    #2c2f30;
+      --bg-header:        #1c1f1f;
+      --text-primary:     #e9edef;
+      --text-secondary:   #8696a0;
+      --text-label:       #d1d7db;
+      --border:           #2c2f30;
+      --accent:           #00a884;
+      --accent-hover:     #00c49a;
+      --accent-bg:        rgba(0,168,132,0.12);
+      --tab-active-bg:    #2e2f2f;
+      --tab-active-text:  #8a8b8b;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      background: var(--bg-app);
+      color: var(--text-primary);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
       font-size: 14px;
-      -webkit-app-region: no-drag;
       user-select: none;
-      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
     }
 
     header {
-      -webkit-app-region: drag;
-      padding: 16px 20px 12px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      background: var(--bg-header);
       border-bottom: 1px solid var(--border);
-      background: var(--surface);
-    }
-
-    header svg { flex-shrink: 0; }
-    header h1 { font-size: 16px; font-weight: 600; }
-
-    main { padding: 20px; display: flex; flex-direction: column; gap: 6px; }
-
-    .section-label {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--accent);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-top: 14px;
-      margin-bottom: 4px;
-    }
-
-    .row {
-      background: var(--surface);
-      border-radius: var(--radius);
-      padding: 13px 16px;
+      padding: 14px 18px;
       display: flex;
       align-items: center;
       gap: 12px;
-      transition: background 0.15s;
+      -webkit-app-region: drag;
+      flex-shrink: 0;
     }
-    .row:hover { background: var(--surface2); }
+
+    .header-icon {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: var(--accent-bg);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .header-text h1 { font-size: 15px; font-weight: 600; line-height: 1.3; }
+    .header-text p  { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+
+    .main-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 12px 10px;
+      gap: 6px;
+      -webkit-app-region: no-drag;
+    }
+
+    .tab-btn {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px;
+      font-size: 14px; font-weight: 500;
+      color: var(--text-secondary);
+      background: none; border: none; border-radius: 8px;
+      cursor: pointer; text-align: left;
+      transition: background 0.15s, color 0.15s;
+    }
+    .tab-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+    .tab-btn.active { background: var(--tab-active-bg); color: var(--tab-active-text); font-weight: 600; }
+    .tab-btn svg { width: 18px; height: 18px; opacity: 0.8; }
+    .tab-btn.active svg { opacity: 1; stroke: var(--tab-active-text); }
+
+    /* Content */
+    .content-area {
+      flex: 1;
+      background: var(--bg-app);
+      overflow-y: auto;
+      padding: 20px 24px;
+      -webkit-app-region: no-drag;
+    }
+
+    .content-area::-webkit-scrollbar { width: 6px; }
+    .content-area::-webkit-scrollbar-track { background: transparent; }
+    .content-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+
+    .tab-pane { display: none; flex-direction: column; gap: 10px; }
+    .tab-pane.active { display: flex; }
+
+    .section-title {
+      font-size: 18px; font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+
+    .row {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .row:hover { border-color: var(--accent); background: var(--bg-card-hover); }
 
     .row-info { flex: 1; min-width: 0; }
-    .row-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .row-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .row-title { font-weight: 500; font-size: 14px; color: var(--text-primary); }
+    .row-desc { font-size: 12.5px; color: var(--text-secondary); margin-top: 3px; line-height: 1.4; }
 
     /* Toggle switch */
-    .toggle { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+    .toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
     .toggle input { opacity: 0; width: 0; height: 0; }
     .slider {
       position: absolute; inset: 0;
-      background: var(--border);
-      border-radius: 24px;
+      background: var(--text-secondary);
+      border-radius: 22px;
       cursor: pointer;
       transition: background 0.2s;
     }
     .slider::before {
       content: '';
       position: absolute;
-      width: 18px; height: 18px;
+      width: 16px; height: 16px;
       left: 3px; top: 3px;
       background: #fff;
       border-radius: 50%;
@@ -96,294 +173,403 @@
 
     /* Text input */
     .text-input {
-      background: var(--surface2);
+      background: var(--bg-app);
       border: 1px solid var(--border);
       border-radius: 8px;
-      color: var(--text);
+      color: var(--text-primary);
       font-size: 13px;
       font-family: inherit;
-      padding: 6px 10px;
+      padding: 8px 12px;
       width: 180px;
       outline: none;
       transition: border-color 0.15s;
     }
     .text-input:focus { border-color: var(--accent); }
 
-    .accounts-section { display: flex; flex-direction: column; gap: 6px; }
-
-    .account-row {
-      background: var(--surface);
-      border-radius: var(--radius);
-      padding: 11px 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .account-row:hover { background: var(--surface2); }
-
-    .account-avatar {
-      width: 34px; height: 34px;
-      border-radius: 50%;
-      background: var(--accent);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 15px; font-weight: 600; color: #fff; flex-shrink: 0;
-    }
-    .account-avatar.inactive { background: var(--border); }
-
-    .account-name { flex: 1; font-weight: 500; }
-    .account-status { font-size: 11px; color: var(--text-muted); }
-    .active-badge {
-      font-size: 10px; font-weight: 600;
-      background: var(--accent);
-      color: #fff;
-      padding: 2px 8px;
-      border-radius: 20px;
-    }
-
-    .btn-icon {
-      background: none; border: none; cursor: pointer;
-      color: var(--text-muted); padding: 4px; border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      transition: color 0.15s, background 0.15s;
-    }
-    .btn-icon:hover { color: var(--danger); background: rgba(241,92,109,0.12); }
-
     .btn {
       display: flex; align-items: center; justify-content: center; gap: 6px;
       background: var(--accent); color: #fff;
-      border: none; border-radius: var(--radius);
-      padding: 10px 18px; font-size: 13px; font-weight: 600;
+      border: none; border-radius: 8px;
+      padding: 8px 16px; font-size: 13px; font-weight: 600;
       font-family: inherit; cursor: pointer;
       transition: background 0.15s;
-      width: 100%;
-      margin-top: 6px;
     }
     .btn:hover { background: var(--accent-hover); }
 
-    footer {
-      padding: 14px 20px;
-      border-top: 1px solid var(--border);
-      display: flex; gap: 10px; justify-content: flex-end;
-    }
-
-    .btn-save {
-      background: var(--accent); color: #fff;
-      border: none; border-radius: 8px;
-      padding: 8px 22px; font-size: 13px; font-weight: 600;
-      font-family: inherit; cursor: pointer;
-      transition: background 0.15s;
-    }
-    .btn-save:hover { background: var(--accent-hover); }
-
-    .btn-cancel {
-      background: var(--surface2); color: var(--text-muted);
-      border: 1px solid var(--border); border-radius: 8px;
-      padding: 8px 18px; font-size: 13px; font-weight: 500;
-      font-family: inherit; cursor: pointer;
-      transition: background 0.15s;
-    }
-    .btn-cancel:hover { background: var(--border); color: var(--text); }
-
     .toast {
-      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 8px; padding: 10px 20px;
-      font-size: 13px; color: var(--text);
-      opacity: 0; transition: opacity 0.3s; pointer-events: none;
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--bg-panel); border: 1px solid var(--border);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border-radius: 8px; padding: 10px 24px;
+      font-size: 13.5px; font-weight: 500; color: var(--text-primary);
+      opacity: 0; transition: opacity 0.3s, transform 0.3s; pointer-events: none;
       white-space: nowrap;
+      z-index: 1000;
     }
-    .toast.show { opacity: 1; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
   </style>
 </head>
 <body>
 
 <header>
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <circle cx="12" cy="12" r="11" stroke="#00a884" stroke-width="2"/>
-    <path d="M12 8v4l3 3" stroke="#00a884" stroke-width="2" stroke-linecap="round"/>
-  </svg>
-  <h1>Pengaturan WhatsZan</h1>
+  <div class="header-icon">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke="var(--accent)" stroke-width="2"/>
+      <path d="M12 8v4l3 3" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="header-text">
+    <h1>Pengaturan</h1>
+    <p>WhatsZan Desktop Client</p>
+  </div>
 </header>
 
-<main id="main">
-  <!-- Accounts -->
-  <div class="section-label">Manajemen Akun</div>
-  <div class="accounts-section" id="accounts-list"></div>
-  <button class="btn" id="btn-add-account">
-    <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-    Tambah Akun
-  </button>
+<div class="main-container">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <button class="tab-btn active" onclick="switchTab('general')" id="btn-tab-general">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      Umum
+    </button>
+    <button class="tab-btn" onclick="switchTab('privacy')" id="btn-tab-privacy">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Privasi
+    </button>
+    <button class="tab-btn" onclick="switchTab('dictionary')" id="btn-tab-dictionary">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+      Kamus
+    </button>
+    <button class="tab-btn" onclick="switchTab('appearance')" id="btn-tab-appearance">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      Tampilan
+    </button>
+    <button class="tab-btn" onclick="switchTab('advanced')" id="btn-tab-advanced">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Lanjutan
+    </button>
+  </aside>
 
-  <!-- Notifikasi -->
-  <div class="section-label">Notifikasi</div>
-  <div class="row">
-    <div class="row-info">
-      <div class="row-title">Awalan Notifikasi</div>
-      <div class="row-desc">Tambahkan teks di depan nama notifikasi</div>
-    </div>
-    <input id="notif-prefix" class="text-input" type="text" placeholder="Kosong" />
-  </div>
+  <!-- Content -->
+  <main class="content-area">
+    
+    <!-- Tab UMUM -->
+    <div id="tab-general" class="tab-pane active">
+      <div class="section-title">Umum</div>
+      
+      <div class="row">
+        <div class="row-info">
+          <div class="row-title">Jalankan Otomatis saat Startup</div>
+          <div class="row-desc">Nyalakan aplikasi secara otomatis ketika komputer dihidupkan</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="auto-run" /><span class="slider"></span></label>
+      </div>
 
-  <!-- Tampilan -->
-  <div class="section-label">Tampilan & Perilaku</div>
-  <div class="row">
-    <div class="row-info">
-      <div class="row-title">Jalankan Otomatis saat Startup</div>
-      <div class="row-desc">Nyalakan aplikasi saat komputer dinyalakan</div>
-    </div>
-    <label class="toggle"><input type="checkbox" id="auto-run" /><span class="slider"></span></label>
-  </div>
-  <div class="row">
-    <div class="row-info">
-      <div class="row-title">Mulai Tersembunyi</div>
-      <div class="row-desc">Langsung ke tray saat startup (butuh Auto Run aktif)</div>
-    </div>
-    <label class="toggle"><input type="checkbox" id="hide-on-start" /><span class="slider"></span></label>
-  </div>
-  <div class="row">
-    <div class="row-info">
-      <div class="row-title">Tutup ke Tray</div>
-      <div class="row-desc">Tombol tutup menyembunyikan, bukan keluar</div>
-    </div>
-    <label class="toggle"><input type="checkbox" id="quit-on-close" /><span class="slider"></span></label>
-  </div>
-  <div class="row">
-    <div class="row-info">
-      <div class="row-title">Sembunyikan dengan ESC</div>
-      <div class="row-desc">Tekan ESC untuk menyembunyikan jendela</div>
-    </div>
-    <label class="toggle"><input type="checkbox" id="esc-toggle" /><span class="slider"></span></label>
-  </div>
-  <div class="row">
-    <div class="row-info">
-      <div class="row-title">Spellcheck / Periksa Ejaan</div>
-      <div class="row-desc">Garis bawah merah pada kata yang salah</div>
-    </div>
-    <label class="toggle"><input type="checkbox" id="spellcheck" /><span class="slider"></span></label>
-  </div>
-  <div class="row">
-    <div class="row-info">
-      <div class="row-title">Tampilkan Menu Bar</div>
-      <div class="row-desc">Menu bar di bagian atas jendela</div>
-    </div>
-    <label class="toggle"><input type="checkbox" id="menu-bar" /><span class="slider"></span></label>
-  </div>
-  <div class="row">
-    <div class="row-info">
-      <div class="row-title">Sembunyikan Menu Bar Otomatis</div>
-      <div class="row-desc">Menu bar muncul saat Alt ditekan</div>
-    </div>
-    <label class="toggle"><input type="checkbox" id="menu-bar-auto-hide" /><span class="slider"></span></label>
-  </div>
+      <div class="row" id="row-hide-on-start">
+        <div class="row-info">
+          <div class="row-title">Mulai Tersembunyi</div>
+          <div class="row-desc">Aplikasi berjalan langsung ke tray tanpa memunculkan jendela</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="hide-on-start" /><span class="slider"></span></label>
+      </div>
 
-  <!-- User Agent -->
-  <div class="section-label">Lanjutan</div>
-  <div class="row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-    <div class="row-info">
-      <div class="row-title">User Agent</div>
-      <div class="row-desc">String identifikasi browser. Kosongkan untuk gunakan default.</div>
-    </div>
-    <input id="user-agent" class="text-input" type="text" style="width:100%;" placeholder="Default (otomatis)" />
-  </div>
-</main>
+      <div class="row">
+        <div class="row-info">
+          <div class="row-title">Sembunyikan dengan ESC</div>
+          <div class="row-desc">Tekan tombol ESC pada keyboard untuk menyembunyikan jendela</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="esc-toggle" /><span class="slider"></span></label>
+      </div>
 
-<footer>
-  <button class="btn-cancel" id="btn-cancel">Batal</button>
-  <button class="btn-save" id="btn-save">Simpan &amp; Restart</button>
-</footer>
+      <div class="row" id="row-quit-on-close" style="display: none;">
+        <div class="row-info">
+          <div class="row-title">Tutup ke Tray</div>
+          <div class="row-desc">Menekan tombol tutup (X) hanya akan menyembunyikan jendela</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="quit-on-close" /><span class="slider"></span></label>
+      </div>
+
+      <div class="row">
+        <div class="row-info">
+          <div class="row-title">Pilah Unduhan Otomatis</div>
+          <div class="row-desc">Simpan file ke folder Windows yang sesuai (Video, Gambar, dll)</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="smart-download" /><span class="slider"></span></label>
+      </div>
+
+      <div class="row" style="flex-direction: column; align-items: flex-start;">
+        <div class="row-info" style="width: 100%; margin-bottom: 8px;">
+          <div class="row-title">Awalan Notifikasi</div>
+          <div class="row-desc">Teks awalan pada notifikasi sistem (misal: WhatsZan - Pesan Baru)</div>
+        </div>
+        <input id="notif-prefix" class="text-input" type="text" style="width:100%;" placeholder="Kosongkan jika tidak perlu" />
+      </div>
+    </div>
+
+    <!-- Tab PRIVASI -->
+    <div id="tab-privacy" class="tab-pane">
+      <div class="section-title">Privasi</div>
+      
+      <div class="row" style="border-color: var(--accent);">
+        <div class="row-info">
+          <div class="row-title" style="color: var(--accent); font-weight: 600;">Aktifkan Mode Rahasia</div>
+          <div class="row-desc">Mengaktifkan sensor pada layar. Tekan (Ctrl+Shift+B) kapan saja.</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="privacy-blur" /><span class="slider"></span></label>
+      </div>
+
+      <div id="blur-subsettings" style="display: none; flex-direction: column; gap: 10px; margin-top: 4px; padding-left: 20px; border-left: 2px solid var(--border);">
+        <div class="row" style="border: none; padding: 10px 0; background: transparent;">
+          <div class="row-info">
+            <div class="row-title">Blur Daftar Kontak</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="blur-contacts" /><span class="slider"></span></label>
+        </div>
+        <div class="row" style="border: none; padding: 10px 0; background: transparent;">
+          <div class="row-info">
+            <div class="row-title">Blur Foto Profil (PP)</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="blur-pp" /><span class="slider"></span></label>
+        </div>
+        <div class="row" style="border: none; padding: 10px 0; background: transparent;">
+          <div class="row-info">
+            <div class="row-title">Blur Isi Pesan</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="blur-messages" /><span class="slider"></span></label>
+        </div>
+        <div class="row" style="border: none; padding: 10px 0; background: transparent;">
+          <div class="row-info">
+            <div class="row-title">Blur Media (Gambar & Video)</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="blur-media" /><span class="slider"></span></label>
+        </div>
+        
+        <div class="row" style="border: none; padding: 10px 0; background: transparent; flex-direction: column; align-items: flex-start;">
+          <div class="row-info" style="width: 100%; margin-bottom: 8px;">
+            <div class="row-title">Hanya Kontak Spesifik</div>
+            <div class="row-desc">Jika diisi, opsi Daftar Kontak di atas hanya berlaku untuk nama-nama ini. Pisahkan dengan koma.</div>
+          </div>
+          <input id="blur-specific" class="text-input" type="text" style="width:100%;" placeholder="Contoh: Bos, Budi" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab KAMUS -->
+    <div id="tab-dictionary" class="tab-pane">
+      <div class="section-title">Kamus Otomatis</div>
+      <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Ganti kata pintasan menjadi teks panjang secara otomatis saat mengetik di obrolan.</div>
+      
+      <div class="row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+        <div style="display: flex; gap: 10px; width: 100%;">
+          <input id="dict-trigger" class="text-input" style="flex: 1; min-width: 0;" placeholder="Pintasan (misal: npm)" />
+          <input id="dict-replacement" class="text-input" style="flex: 2; min-width: 0;" placeholder="Teks pengganti (misal: 123...)" />
+          <button class="btn" id="btn-dict-add" style="flex-shrink: 0;">Tambah</button>
+        </div>
+      </div>
+
+      <div id="dict-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+        <!-- Dictionary items will be rendered here -->
+      </div>
+    </div>
+
+    <!-- Tab TAMPILAN -->
+    <div id="tab-appearance" class="tab-pane">
+      <div class="section-title">Tampilan</div>
+      
+      <div class="row">
+        <div class="row-info">
+          <div class="row-title">Tampilkan Menu Bar</div>
+          <div class="row-desc">Menampilkan menu aplikasi di bagian atas jendela</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="menu-bar" /><span class="slider"></span></label>
+      </div>
+
+      <div class="row">
+        <div class="row-info">
+          <div class="row-title">Sembunyikan Menu Bar Otomatis</div>
+          <div class="row-desc">Menu bar hanya akan muncul saat tombol Alt ditekan</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="menu-bar-auto-hide" /><span class="slider"></span></label>
+      </div>
+
+      <div class="row">
+        <div class="row-info">
+          <div class="row-title">Pemeriksa Ejaan (Spellcheck)</div>
+          <div class="row-desc">Garis bawah merah akan muncul pada kata yang salah ketik</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="spellcheck" /><span class="slider"></span></label>
+      </div>
+    </div>
+
+    <!-- Tab LANJUTAN -->
+    <div id="tab-advanced" class="tab-pane">
+      <div class="section-title">Lanjutan</div>
+      
+      <div class="row">
+        <div class="row-info">
+          <div class="row-title">Ekstensi Chrome</div>
+          <div class="row-desc">Pasang ekstensi browser seperti AdBlock atau Grammarly</div>
+        </div>
+        <button class="btn" id="btn-open-webstore">Buka Web Store</button>
+      </div>
+
+      <div class="row" style="flex-direction: column; align-items: flex-start;">
+        <div class="row-info" style="width: 100%; margin-bottom: 8px;">
+          <div class="row-title">User Agent Kustom</div>
+          <div class="row-desc">String identifikasi perangkat. Kosongkan untuk menggunakan default.</div>
+        </div>
+        <input id="user-agent" class="text-input" type="text" style="width:100%;" placeholder="Otomatis" />
+      </div>
+    </div>
+
+  </main>
+</div>
 
 <div class="toast" id="toast"></div>
 
 <script>
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('theme') === 'dark') document.documentElement.classList.add('dark');
+
   const { ipcRenderer } = require('electron');
 
   let settings = {};
-  let accounts = [];
-  let activeAccount = 'default';
+  let textReplacements = {};
 
   async function load() {
     settings = await ipcRenderer.invoke('settings-get');
-    accounts = await ipcRenderer.invoke('accounts-get');
-    activeAccount = await ipcRenderer.invoke('active-account-get');
+    textReplacements = settings['text-replacements'] || {};
 
     document.getElementById('notif-prefix').value = settings['notification-prefix'] || '';
     document.getElementById('auto-run').checked = settings['auto-run'] || false;
     document.getElementById('hide-on-start').checked = settings['hide-on-start'] || false;
     document.getElementById('quit-on-close').checked = settings['quit-on-close'] || false;
     document.getElementById('esc-toggle').checked = settings['esc-toggle-window'] || false;
+    document.getElementById('smart-download').checked = settings['smart-download'] !== false;
     document.getElementById('spellcheck').checked = settings['spellcheck'] !== false;
     document.getElementById('menu-bar').checked = settings['menu-bar'] !== false;
     document.getElementById('menu-bar-auto-hide').checked = settings['menu-bar-auto-hide'] !== false;
-    document.getElementById('user-agent').value = settings['user-agent'] || '';
+    document.getElementById('privacy-blur').checked = settings['privacy-blur'] || false;
+    document.getElementById('blur-contacts').checked = settings['blur-contacts'] !== false;
+    document.getElementById('blur-pp').checked = settings['blur-pp'] !== false;
+    document.getElementById('blur-messages').checked = settings['blur-messages'] !== false;
+    document.getElementById('blur-media').checked = settings['blur-media'] !== false;
+    document.getElementById('blur-specific').value = settings['blur-specific'] || '';
 
-    renderAccounts();
+    document.getElementById('blur-specific').value = settings['blur-specific'] || '';
+
+    updateHideOnStartVisibility();
+    updateBlurSubsettingsVisibility();
+    renderDictList();
   }
 
-  function renderAccounts() {
-    const list = document.getElementById('accounts-list');
+  function renderDictList() {
+    const list = document.getElementById('dict-list');
     list.innerHTML = '';
-
-    const allAccounts = [
-      { id: 'default', name: 'Akun Utama' },
-      ...accounts
-    ];
-
-    allAccounts.forEach(acc => {
-      const isActive = acc.id === activeAccount;
-      const letter = acc.name.charAt(0).toUpperCase();
-
+    for (const [trigger, replacement] of Object.entries(textReplacements)) {
       const row = document.createElement('div');
-      row.className = 'account-row';
-      row.innerHTML = `
-        <div class="account-avatar ${isActive ? '' : 'inactive'}">${letter}</div>
-        <div class="row-info">
-          <div class="account-name">${acc.name}</div>
-        </div>
-        ${isActive ? '<span class="active-badge">Aktif</span>' : ''}
-        ${acc.id !== 'default' ? `
-          <button class="btn-icon" title="Hapus Akun" data-id="${acc.id}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-        ` : ''}
+      row.className = 'row';
+      row.style.padding = '8px 12px';
+      
+      const info = document.createElement('div');
+      info.className = 'row-info';
+      info.style.display = 'flex';
+      info.style.gap = '10px';
+      info.style.alignItems = 'center';
+      
+      info.innerHTML = `
+        <span style="font-weight: 600; color: var(--accent); min-width: 80px;">${trigger.startsWith('/') ? trigger : '/' + trigger}</span>
+        <span style="color: var(--text-secondary);">➔</span>
+        <span style="color: var(--text-primary); word-break: break-all;">${replacement}</span>
       `;
+      
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn';
+      delBtn.style.background = '#e74c3c';
+      delBtn.textContent = 'Hapus';
+      delBtn.onclick = () => {
+        delete textReplacements[trigger];
+        renderDictList();
+        autoSave();
+      };
+      
+      row.appendChild(info);
+      row.appendChild(delBtn);
       list.appendChild(row);
-    });
-
-    list.querySelectorAll('.btn-icon[data-id]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.dataset.id;
-        await ipcRenderer.invoke('account-remove', id);
-        accounts = accounts.filter(a => a.id !== id);
-        renderAccounts();
-        showToast('Akun dihapus');
-      });
-    });
+    }
   }
 
-  document.getElementById('btn-add-account').addEventListener('click', async () => {
-    await ipcRenderer.invoke('account-add');
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    
+    document.getElementById('tab-' + tabId).classList.add('active');
+    document.getElementById('btn-tab-' + tabId).classList.add('active');
+  }
+
+  function updateHideOnStartVisibility() {
+    const isAutoRun = document.getElementById('auto-run').checked;
+    document.getElementById('row-hide-on-start').style.display = isAutoRun ? 'flex' : 'none';
+  }
+
+  function updateBlurSubsettingsVisibility() {
+    const isBlurOn = document.getElementById('privacy-blur').checked;
+    document.getElementById('blur-subsettings').style.display = isBlurOn ? 'flex' : 'none';
+  }
+
+  document.getElementById('auto-run').addEventListener('change', () => {
+    updateHideOnStartVisibility();
+    autoSave();
+  });
+  
+  document.getElementById('privacy-blur').addEventListener('change', () => {
+    updateBlurSubsettingsVisibility();
+    autoSave();
   });
 
-  document.getElementById('btn-save').addEventListener('click', async () => {
+  const autoSaveInputs = ['notif-prefix', 'hide-on-start', 'quit-on-close', 'esc-toggle', 'smart-download', 'spellcheck', 'menu-bar', 'menu-bar-auto-hide', 'user-agent', 'blur-contacts', 'blur-pp', 'blur-messages', 'blur-media', 'blur-specific'];
+  autoSaveInputs.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', autoSave);
+  });
+
+  document.getElementById('btn-open-webstore').addEventListener('click', async () => {
+    await ipcRenderer.invoke('open-webstore');
+  });
+
+  document.getElementById('btn-dict-add').addEventListener('click', () => {
+    const trigger = document.getElementById('dict-trigger').value.trim();
+    const replacement = document.getElementById('dict-replacement').value.trim();
+    if (trigger && replacement) {
+      textReplacements[trigger] = replacement;
+      document.getElementById('dict-trigger').value = '';
+      document.getElementById('dict-replacement').value = '';
+      renderDictList();
+      autoSave();
+    }
+  });
+
+  async function autoSave() {
     const newSettings = {
       'notification-prefix': document.getElementById('notif-prefix').value,
       'auto-run': document.getElementById('auto-run').checked,
       'hide-on-start': document.getElementById('hide-on-start').checked,
       'quit-on-close': document.getElementById('quit-on-close').checked,
       'esc-toggle-window': document.getElementById('esc-toggle').checked,
+      'smart-download': document.getElementById('smart-download').checked,
       'spellcheck': document.getElementById('spellcheck').checked,
       'menu-bar': document.getElementById('menu-bar').checked,
       'menu-bar-auto-hide': document.getElementById('menu-bar-auto-hide').checked,
       'user-agent': document.getElementById('user-agent').value || null,
+      'privacy-blur': document.getElementById('privacy-blur').checked,
+      'blur-contacts': document.getElementById('blur-contacts').checked,
+      'blur-pp': document.getElementById('blur-pp').checked,
+      'blur-messages': document.getElementById('blur-messages').checked,
+      'blur-media': document.getElementById('blur-media').checked,
+      'blur-specific': document.getElementById('blur-specific').value || '',
+      'text-replacements': textReplacements,
     };
     await ipcRenderer.invoke('settings-save', newSettings);
-  });
-
-  document.getElementById('btn-cancel').addEventListener('click', () => {
-    window.close();
-  });
+  }
 
   function showToast(msg) {
     const t = document.getElementById('toast');
@@ -393,8 +579,7 @@
   }
 
   ipcRenderer.on('settings-saved', () => {
-    showToast('Pengaturan disimpan, aplikasi akan restart...');
-    setTimeout(() => window.close(), 1200);
+    showToast('Tersimpan otomatis');
   });
 
   load();
