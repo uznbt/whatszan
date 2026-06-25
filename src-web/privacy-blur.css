@@ -3,7 +3,7 @@
 /* 1. Blur Pesan (Di dalam obrolan) */
 body.blur-messages div[data-testid="msg-container"] .copyable-text,
 body.blur-messages div[data-testid="msg-container"] span.selectable-text {
-    filter: blur(4px); opacity: 0.75;
+    filter: blur(var(--wz-blur-amount, 4px)); opacity: 0.75;
     transition: filter 0.15s ease-out, opacity 0.15s ease-out;
     transform: translateZ(0); backface-visibility: hidden; will-change: filter, opacity;
 }
@@ -13,52 +13,58 @@ body.blur-messages div[data-testid="msg-container"]:hover span.selectable-text {
 }
 
 /* 2. Blur Daftar Kontak & Header */
-body.blur-contacts div[data-testid="cell-frame-title"],
-body.blur-contacts div[data-testid="cell-frame-secondary"],
-body.blur-contacts div[data-testid="conversation-info-header-chat-title"],
-body.blur-contacts span[data-testid="conversation-info-header-chat-title"] {
-    filter: blur(4px); opacity: 0.75;
+body.blur-contacts #pane-side div[data-testid="cell-frame-title"],
+body.blur-contacts #pane-side span[data-testid="cell-frame-title"],
+body.blur-contacts #pane-side div[data-testid="cell-frame-secondary"],
+body.blur-contacts #pane-side span[data-testid="cell-frame-secondary"],
+body.blur-contacts #main div[data-testid="conversation-info-header-chat-title"],
+body.blur-contacts #main span[data-testid="conversation-info-header-chat-title"] {
+    filter: blur(var(--wz-blur-amount, 4px)); opacity: 0.75;
     transition: filter 0.15s ease-out, opacity 0.15s ease-out;
     transform: translateZ(0); backface-visibility: hidden; will-change: filter, opacity;
 }
-body.blur-contacts [data-testid="cell-frame-title"]:hover,
-body.blur-contacts [data-testid="cell-frame-secondary"]:hover,
-body.blur-contacts div[role="row"]:hover div[data-testid="cell-frame-title"],
-body.blur-contacts div[role="listitem"]:hover div[data-testid="cell-frame-title"],
-body.blur-contacts div[role="row"]:hover div[data-testid="cell-frame-secondary"],
-body.blur-contacts div[role="listitem"]:hover div[data-testid="cell-frame-secondary"],
-body.blur-contacts header:hover div[data-testid="conversation-info-header-chat-title"],
-body.blur-contacts header:hover span[data-testid="conversation-info-header-chat-title"] {
+body.blur-contacts #pane-side [data-testid="cell-frame-title"]:hover,
+body.blur-contacts #pane-side [data-testid="cell-frame-secondary"]:hover,
+body.blur-contacts #pane-side div[role="row"]:hover div[data-testid="cell-frame-title"],
+body.blur-contacts #pane-side div[role="listitem"]:hover div[data-testid="cell-frame-title"],
+body.blur-contacts #pane-side div[role="row"]:hover span[data-testid="cell-frame-title"],
+body.blur-contacts #pane-side div[role="listitem"]:hover span[data-testid="cell-frame-title"],
+body.blur-contacts #pane-side div[role="row"]:hover div[data-testid="cell-frame-secondary"],
+body.blur-contacts #pane-side div[role="listitem"]:hover div[data-testid="cell-frame-secondary"],
+body.blur-contacts #pane-side div[role="row"]:hover span[data-testid="cell-frame-secondary"],
+body.blur-contacts #pane-side div[role="listitem"]:hover span[data-testid="cell-frame-secondary"],
+body.blur-contacts #main header:hover div[data-testid="conversation-info-header-chat-title"],
+body.blur-contacts #main header:hover span[data-testid="conversation-info-header-chat-title"] {
     filter: blur(0px); opacity: 1; transition: filter 0.05s ease-in, opacity 0.05s ease-in;
 }
 
 /* 3. Blur Foto Profil (PP) */
-body.blur-pp div[role="row"] img,
-body.blur-pp div[role="listitem"] img,
-body.blur-pp header img {
-    filter: blur(4px); opacity: 0.75;
+body.blur-pp #pane-side div[role="listitem"] img,
+body.blur-pp #pane-side div[role="row"] img,
+body.blur-pp #main header img {
+    filter: blur(var(--wz-blur-amount, 4px)); opacity: 0.75;
     transition: filter 0.15s ease-out, opacity 0.15s ease-out;
     transform: translateZ(0); backface-visibility: hidden; will-change: filter, opacity;
 }
-body.blur-pp div[role="row"]:hover img,
-body.blur-pp div[role="listitem"]:hover img,
-body.blur-pp header:hover img,
+body.blur-pp #pane-side div[role="listitem"]:hover img,
+body.blur-pp #pane-side div[role="row"]:hover img,
+body.blur-pp #main header:hover img,
 body.blur-pp img:hover {
     filter: blur(0px); opacity: 1; transition: filter 0.05s ease-in, opacity 0.05s ease-in;
 }
 
 /* 4. Blur Gambar & Media (Di dalam obrolan) */
-body.blur-media div[data-testid="msg-container"] img,
-body.blur-media div[data-testid="audio-play"],
-body.blur-media div[data-testid="ptt-play"],
-body.blur-media [data-testid="media-url-provider"] {
-    filter: blur(6px); opacity: 0.85; /* Media diblur sedikit lebih tebal agar gambar tidak tembus */
+body.blur-media #main div[data-testid="msg-container"] img:not([src*="emoji"]):not([data-plain-text]):not(.selectable-text),
+body.blur-media #main div[data-testid="audio-play"],
+body.blur-media #main div[data-testid="ptt-play"],
+body.blur-media #main [data-testid="media-url-provider"] {
+    filter: blur(var(--wz-blur-media, 6px)); opacity: 0.85; /* Media diblur sedikit lebih tebal agar gambar tidak tembus */
     transition: filter 0.15s ease-out, opacity 0.15s ease-out;
     transform: translateZ(0); backface-visibility: hidden; will-change: filter, opacity;
 }
-body.blur-media div[data-testid="msg-container"]:hover img,
-body.blur-media div[data-testid="audio-play"]:hover,
-body.blur-media div[data-testid="ptt-play"]:hover,
-body.blur-media [data-testid="media-url-provider"]:hover {
+body.blur-media #main div[data-testid="msg-container"]:hover img:not([src*="emoji"]):not([data-plain-text]):not(.selectable-text),
+body.blur-media #main div[data-testid="audio-play"]:hover,
+body.blur-media #main div[data-testid="ptt-play"]:hover,
+body.blur-media #main [data-testid="media-url-provider"]:hover {
     filter: blur(0px); opacity: 1; transition: filter 0.05s ease-in, opacity 0.05s ease-in;
 }

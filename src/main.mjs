@@ -83,7 +83,7 @@ function main() {
 
   const state = {
     notifPrefix: config.get("notification-prefix", ""),
-    showAtStartup: (isDebug || config.get("show-at-startup", true)) && !isHiddenStartup,
+    showAtStartup: isDebug || !isHiddenStartup,
     escToggle: config.get("esc-toggle-window", false),
     get textReplacements() {
       return config.get("text-replacements", {});
@@ -108,6 +108,32 @@ function main() {
 
   if (config.get("quit-on-close", false)) {
     state.showAtStartup = true;
+  }
+
+  // Helper untuk memastikan shortcut startup sesuai dengan kondisi terakhir
+  const applyAutoRun = (autoRun) => {
+    if (process.platform === 'win32') {
+      import('fs').then(({ existsSync, unlinkSync }) => {
+        const shortcutPath = path.join(process.env.APPDATA || '', 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', 'WhatsZan.lnk');
+        if (autoRun) {
+          const exePath = app.getPath('exe');
+          const workDir = path.dirname(exePath);
+          const ps = `$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('${shortcutPath}'); $s.TargetPath = '${exePath}'; $s.Arguments = '--hide'; $s.WorkingDirectory = '${workDir}'; $s.Save()`;
+          import('child_process').then(({ execSync }) => {
+            try { execSync(`powershell -NoProfile -Command "${ps}"`, { stdio: 'ignore' }); } catch(e){}
+          });
+        } else {
+          try { if (existsSync(shortcutPath)) unlinkSync(shortcutPath); } catch(e){}
+        }
+      });
+    } else {
+      app.setLoginItemSettings({ openAtLogin: autoRun, args: autoRun ? ['--hide'] : [] });
+    }
+  };
+
+  // Selalu pastikan setting auto-run aktif saat startup (misal pasca-update)
+  if (!isDebug) {
+    applyAutoRun(persistState.get("auto-run", false));
   }
 
   // Auto-load saved extensions on startup
@@ -140,12 +166,9 @@ function main() {
       mainWindow.removeMenu();
     }
 
-
-    // Override navigator.userAgent di JavaScript context (bukan hanya HTTP header).
-    // WhatsApp Web Beta mengecek navigator.userAgent via JS untuk mengaktifkan
-    // fitur seperti panggilan suara/video. Tanpa ini, Windows terdeteksi dan
-    // fitur beta tidak aktif meski HTTP header sudah di-spoof.
-    mainWindow.webContents.setUserAgent(state.userAgent);
+    if (persistState.get("window-maximized", false)) {
+      mainWindow.maximize();
+    }
 
     if (isDebug || config.get("open-dev-tools", false)) {
       mainWindow.webContents.openDevTools();
@@ -310,8 +333,14 @@ function main() {
 
 
     const saveBounds = () => {
-      if (!isDebug) {
-        persistState.set("window-bounds", mainWindow.getBounds());
+      if (!isDebug && !mainWindow.isDestroyed()) {
+        const isMaximized = mainWindow.isMaximized();
+        persistState.set("window-maximized", isMaximized);
+        if (!isMaximized && !mainWindow.isMinimized()) {
+           persistState.set("window-bounds", mainWindow.getBounds());
+        } else if (isMaximized || mainWindow.isMinimized()) {
+           persistState.set("window-bounds", mainWindow.getNormalBounds());
+        }
       }
     };
     const closeChat = () => {
@@ -406,6 +435,11 @@ function main() {
       ipcMain.handle("windowToggle", () => {
         toggleVisibility(mainWindow);
       });
+      ipcMain.handle("escapePressed", () => {
+        if (config.get("esc-toggle-window", false)) {
+          toggleVisibility(mainWindow);
+        }
+      });
       
       // IPC Handler untuk instal ekstensi
       ipcMain.handle("install-extension", async (ev, extensionId) => {
@@ -441,11 +475,14 @@ function main() {
         const isMessages = config.get("blur-messages", true);
         const isMedia = config.get("blur-media", true);
         const specificStr = config.get("blur-specific", "");
+        const blurAmount = config.get("blur-amount", 4);
 
         if (!mainWindow || mainWindow.isDestroyed()) return;
 
         mainWindow.webContents.executeJavaScript(`
           (() => {
+            document.documentElement.style.setProperty('--wz-blur-amount', '${blurAmount}px');
+            document.documentElement.style.setProperty('--wz-blur-media', '${blurAmount * 1.5}px');
             document.body.classList.remove('blur-contacts', 'blur-pp', 'blur-messages', 'blur-media', 'privacy-blur');
             const oldStyle = document.getElementById('whatszan-blur-specific');
             if (oldStyle) oldStyle.remove();
@@ -461,7 +498,7 @@ function main() {
               if (names.length > 0) {
                  let css = '';
                  names.forEach(name => {
-                   css += \`[title="\${name}"] { filter: blur(4px); opacity: 0.75; transform: translateZ(0); transition: filter 0.15s ease-out; }\\n\`;
+                   css += \`[title="\${name}"] { filter: blur(var(--wz-blur-amount, 4px)); opacity: 0.75; transform: translateZ(0); transition: filter 0.15s ease-out; }\\n\`;
                    css += \`div[role="row"]:hover [title="\${name}"], div[role="listitem"]:hover [title="\${name}"], header:hover [title="\${name}"], [title="\${name}"]:hover { filter: blur(0px); opacity: 1; transition: filter 0.05s ease-in; }\\n\`;
                  });
                  const style = document.createElement('style');
@@ -491,21 +528,7 @@ function main() {
         persistState.set("privacy-blur", blur);
         persistState.set("auto-run", autoRun);
         
-        if (process.platform === 'win32') {
-          const shortcutPath = path.join(process.env.APPDATA || '', 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', 'WhatsZan.lnk');
-          if (autoRun) {
-            const exePath = app.getPath('exe');
-            const workDir = path.dirname(exePath);
-            const ps = `$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('${shortcutPath}'); $s.TargetPath = '${exePath}'; $s.Arguments = '--hide'; $s.WorkingDirectory = '${workDir}'; $s.Save()`;
-            import('child_process').then(({ execSync }) => {
-              try { execSync(`powershell -NoProfile -Command "${ps}"`, { stdio: 'ignore' }); } catch(e){}
-            });
-          } else {
-            try { if (existsSync(shortcutPath)) unlinkSync(shortcutPath); } catch(e){}
-          }
-        } else {
-          app.setLoginItemSettings({ openAtLogin: autoRun, args: autoRun ? ['--hide'] : [] });
-        }
+        applyAutoRun(autoRun);
 
         Object.entries(configSettings).forEach(([k, v]) => {
           if (v !== null && v !== '') config.set(k, v);
@@ -541,6 +564,38 @@ function main() {
       });
       // --- END SETTINGS IPC ---
 
+      const openSettings = async () => {
+        const setWin = new BrowserWindow({
+          width: 720,
+          height: 600,
+          title: 'Pengaturan WhatsZan',
+          autoHideMenuBar: true,
+          resizable: false,
+          webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false,
+          }
+        });
+        setWin.setMenu(null);
+
+        let isWaDark = nativeTheme.shouldUseDarkColors;
+        try {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            isWaDark = await mainWindow.webContents.executeJavaScript(`
+              document.documentElement.classList.contains('dark') || document.body.classList.contains('dark')
+            `);
+          }
+        } catch (e) {}
+
+        setWin.loadFile(path.join(import.meta.dirname, '..', 'static', 'settings.html'), {
+          query: { theme: isWaDark ? 'dark' : 'light' }
+        });
+
+        setWin.on('blur', () => {
+          if (!setWin.isDestroyed()) setWin.close();
+        });
+      };
+
       const trayIcon = getUserIcon("app", state) || path.join(import.meta.dirname, "..", "static", "app.png");
       let tray;
       try {
@@ -551,6 +606,13 @@ function main() {
             type: "normal",
             click: () => {
               toggleVisibility(mainWindow);
+            },
+          },
+          {
+            label: "Pengaturan...",
+            type: "normal",
+            click: () => {
+              openSettings();
             },
           },
           {
@@ -632,38 +694,7 @@ function main() {
             id: 'settings_appmenu',
             label: "Pengaturan...",
             accelerator: 'CmdOrCtrl+,',
-            click: async () => {
-              const setWin = new BrowserWindow({
-                width: 720,
-                height: 600,
-                title: 'Pengaturan WhatsZan',
-                autoHideMenuBar: true,
-                resizable: false,
-                webPreferences: {
-                  nodeIntegration: true,
-                  contextIsolation: false,
-                }
-              });
-              setWin.setMenu(null);
-
-              let isWaDark = nativeTheme.shouldUseDarkColors;
-              try {
-                if (mainWindow && !mainWindow.isDestroyed()) {
-                  isWaDark = await mainWindow.webContents.executeJavaScript(`
-                    document.documentElement.classList.contains('dark') || document.body.classList.contains('dark')
-                  `);
-                }
-              } catch (e) {}
-
-              setWin.loadFile(path.join(import.meta.dirname, '..', 'static', 'settings.html'), {
-                query: { theme: isWaDark ? 'dark' : 'light' }
-              });
-
-              // Tutup otomatis saat kehilangan fokus
-              setWin.on('blur', () => {
-                if (!setWin.isDestroyed()) setWin.close();
-              });
-            }
+            click: openSettings
           }));
 
           // Tetap pertahankan shortcut untuk Privacy Blur tanpa harus menampilkannya di menu
@@ -677,6 +708,14 @@ function main() {
           });
         }
       }
+
+      // Pastikan shortcut Pengaturan tetap berfungsi meskipun Menu Bar disembunyikan
+      mainWindow.webContents.on('before-input-event', (event, input) => {
+        if ((input.control || input.meta || input.alt) && input.key.toLowerCase() === ',') {
+          openSettings();
+          event.preventDefault();
+        }
+      });
 
 
       const notif = (options) => {

@@ -17,8 +17,11 @@ win:
         - x64
 
 nsis:
+  artifactName: "${name} ${version}.${ext}"
+  license: "LICENSE"
   oneClick: false
   allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: true
   differentialPackage: false
   installerIcon: build/icon.ico
   uninstallerIcon: build/icon.ico
@@ -27,6 +30,7 @@ nsis:
   shortcutName: WhatsZan
   runAfterFinish: true
   include: build/installer.nsh
+
 
 
 linux:

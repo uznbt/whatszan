@@ -17,19 +17,19 @@
     ${If} $1 == 1
       ; Installer lebih baru (Update)
       MessageBox MB_YESNOCANCEL|MB_ICONINFORMATION \
-        "WhatsZan versi lama ($0) sudah ada di komputermu.$\n$\nApakah kamu ingin melakukan UPDATE ke versi terbaru (${VERSION})?$\n$\n- Pilih 'Yes' untuk Update.$\n- Pilih 'No' untuk membatalkan instalasi.$\n- Pilih 'Cancel' untuk UNINSTALL versi lama." \
+        "WhatsZan versi lama ($0) terdeteksi.$\n$\nApakah kamu ingin melakukan UPGRADE ke versi terbaru (${VERSION})?$\n$\n- Klik 'Yes' untuk UPGRADE.$\n- Klik 'Cancel' untuk UNINSTALL.$\n- Klik 'No' untuk Batal." \
         IDYES ContinueInstall IDNO AbortInstall
       Goto DoUninstall
     ${ElseIf} $1 == 2
       ; Installer lebih lama (Downgrade)
       MessageBox MB_YESNOCANCEL|MB_ICONEXCLAMATION \
-        "WhatsZan versi LEBIH BARU ($0) sudah terinstal!$\n$\nApakah kamu yakin ingin melakukan DOWNGRADE ke versi lama (${VERSION})?$\n$\n- Pilih 'Yes' untuk Downgrade.$\n- Pilih 'No' untuk membatalkan instalasi.$\n- Pilih 'Cancel' untuk UNINSTALL aplikasi." \
+        "WhatsZan versi LEBIH BARU ($0) terdeteksi!$\n$\nApakah kamu ingin melakukan DOWNGRADE ke versi lama (${VERSION})?$\n$\n- Klik 'Yes' untuk DOWNGRADE.$\n- Klik 'Cancel' untuk UNINSTALL.$\n- Klik 'No' untuk Batal." \
         IDYES ContinueInstall IDNO AbortInstall
       Goto DoUninstall
     ${Else}
       ; Versi sama (Re-install)
       MessageBox MB_YESNOCANCEL|MB_ICONINFORMATION \
-        "WhatsZan versi ${VERSION} sudah terinstal saat ini.$\n$\nApakah kamu ingin melakukan INSTAL ULANG?$\n$\n- Pilih 'Yes' untuk Instal Ulang.$\n- Pilih 'No' untuk membatalkan instalasi.$\n- Pilih 'Cancel' untuk UNINSTALL aplikasi." \
+        "WhatsZan versi ${VERSION} sudah terinstal.$\n$\nApakah kamu ingin melakukan REPAIR (Perbaikan) aplikasi?$\n$\n- Klik 'Yes' untuk REPAIR.$\n- Klik 'Cancel' untuk UNINSTALL.$\n- Klik 'No' untuk Batal." \
         IDYES ContinueInstall IDNO AbortInstall
       Goto DoUninstall
     ${EndIf}
@@ -44,7 +44,8 @@
       ${EndIf}
       
       ${If} $2 != ""
-        ExecWait '"$2" /S'
+        ; Jalankan uninstaller tanpa mode silent (/S) agar UI dan pertanyaan hapus data muncul
+        ExecWait '"$2"'
       ${EndIf}
       Quit
 
@@ -54,25 +55,15 @@
 !macroend
 
 ; ── Setelah Instalasi Selesai ──────────────────────────────────────────────
-; Menampilkan dialog tanya apakah user ingin WhatsZan auto-start saat login.
-; Jika Ya: buat shortcut .lnk di folder Startup Windows agar terlihat di
-;          Task Manager → tab Startup.
-; Jika Tidak: tidak ada perubahan.
+; Secara diam-diam (silent) membuat shortcut di folder Startup Windows.
+; User tidak akan diganggu oleh popup, tapi aplikasi akan otomatis auto-start.
 !macro customInstall
-  ; Tanya user apakah mau auto-start
-  MessageBox MB_ICONQUESTION|MB_YESNO \
-    "Apakah kamu ingin WhatsZan berjalan otomatis saat Windows dinyalakan?$\n$\nJika Ya, WhatsZan akan langsung berjalan di background (system tray) saat login." \
-    IDNO SkipAutorun
-
-    ; Buat shortcut di folder Startup Windows
-    ; $SMSTARTUP = C:\Users\[User]\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
-    CreateShortCut \
-      "$SMSTARTUP\WhatsZan.lnk" \
-      "$INSTDIR\WhatsZan.exe" \
-      "--hide" \
-      "$INSTDIR\WhatsZan.exe" 0
-
-  SkipAutorun:
+  ; $SMSTARTUP = C:\Users\[User]\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
+  CreateShortCut \
+    "$SMSTARTUP\WhatsZan.lnk" \
+    "$INSTDIR\WhatsZan.exe" \
+    "--hide" \
+    "$INSTDIR\WhatsZan.exe" 0
 !macroend
 
 ; ── Saat Uninstalasi ───────────────────────────────────────────────────────

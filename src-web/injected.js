@@ -132,9 +132,29 @@ async function ewSetupKeys() {
 }
 
 function ewReplaceLogo() {
-  setInterval(() => {
-    // 1. Replace aria-label SVGs
-    const svgs = document.querySelectorAll('svg[aria-label="WhatsApp"]');
+  const processTextNode = (node) => {
+    if (node.nodeValue === 'WhatsApp' || node.nodeValue === 'WhatsApp Web') {
+      let parent = node.parentElement;
+      let isMessage = false;
+      while (parent) {
+        // Safe check using getAttribute for elements
+        if (parent.getAttribute && (parent.getAttribute('data-testid') === 'msg-container' || parent.getAttribute('role') === 'row' || parent.id === 'main')) {
+          isMessage = true;
+          break;
+        }
+        parent = parent.parentElement;
+      }
+      if (!isMessage) {
+        node.nodeValue = node.nodeValue.replace('WhatsApp', 'WhatsZan');
+      }
+    }
+  };
+
+  const processElement = (root) => {
+    // 1. Check for SVGs inside this element
+    const svgs = root.querySelectorAll ? root.querySelectorAll('svg[aria-label="WhatsApp"]') : [];
+    if (root.tagName === 'svg' && root.getAttribute('aria-label') === 'WhatsApp') svgs.push(root);
+    
     svgs.forEach(svg => {
       const parent = svg.parentElement;
       if (parent && !parent.querySelector('.whatszan-logo')) {
@@ -149,26 +169,51 @@ function ewReplaceLogo() {
       }
     });
 
-    // 2. Replace exact text nodes in UI (avoiding chat messages)
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
-    let node;
-    while (node = walker.nextNode()) {
-      if (node.nodeValue === 'WhatsApp' || node.nodeValue === 'WhatsApp Web') {
-        let parent = node.parentElement;
-        let isMessage = false;
-        while (parent) {
-          if (parent.getAttribute('data-testid') === 'msg-container' || parent.getAttribute('role') === 'row' || parent.id === 'main') {
-            isMessage = true;
-            break;
+    // 2. Banner Killer
+    const text = root.innerText || "";
+    if ((text.includes('Unduh WhatsApp untuk Windows') || text.includes('Unduh WhatsZan untuk Windows')) && text.includes('fitur ekstra')) {
+      root.style.display = 'none';
+      let parent = root.parentElement;
+      for (let i = 0; i < 3; i++) {
+        if (parent && parent.tagName !== 'BODY') {
+          const rect = parent.getBoundingClientRect();
+          if (rect.height > 60 && rect.height < 250) {
+            parent.style.display = 'none';
           }
           parent = parent.parentElement;
         }
-        if (!isMessage) {
-          node.nodeValue = node.nodeValue.replace('WhatsApp', 'WhatsZan');
-        }
       }
     }
-  }, 2000);
+
+    // 3. Process all text nodes inside this element
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+    let tNode;
+    while (tNode = walker.nextNode()) {
+      processTextNode(tNode);
+    }
+  };
+
+  // Run once immediately on existing body
+  processElement(document.body);
+
+  // Instantly process all new mutations
+  const uiObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type === 'childList') {
+        for (const node of mutation.addedNodes) {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            processElement(node);
+          } else if (node.nodeType === Node.TEXT_NODE) {
+            processTextNode(node);
+          }
+        }
+      } else if (mutation.type === 'characterData') {
+        processTextNode(mutation.target);
+      }
+    }
+  });
+
+  uiObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
 }
 
 function ewHijackTitle() {
@@ -237,6 +282,285 @@ async function ewSetupDictionary() {
   }, { capture: true });
 }
 
+const savedMessages = new Map();
+
+function ewSetupAntiDelete() {
+  console.log("Anti-Delete setup initialized.");
+  
+  const observer = new MutationObserver((mutations) => {
+    for (const mut of mutations) {
+      if (mut.type === 'childList') {
+        mut.addedNodes.forEach(node => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            // Check for new messages
+            const msgs = node.matches && node.matches('div[data-id]') ? [node] : (node.querySelectorAll ? node.querySelectorAll('div[data-id]') : []);
+            msgs.forEach(msg => {
+              const id = msg.getAttribute('data-id');
+              if (!id) return;
+              
+              const isOut = id.startsWith('true_'); 
+              if (isOut) return; // We only care about incoming messages
+              
+              const textNode = msg.querySelector('.copyable-text span.selectable-text');
+              const imgNode = msg.querySelector('img[src^="blob:"]');
+              
+              // Save message if it's new
+              if (!savedMessages.has(id) && (textNode || imgNode)) {
+                savedMessages.set(id, {
+                  text: textNode ? textNode.innerHTML : '',
+                  img: imgNode ? imgNode.src : null,
+                  timestamp: Date.now()
+                });
+              }
+              
+              // Prevent memory leak (max 2000 messages in RAM)
+              if (savedMessages.size > 2000) {
+                const firstKey = savedMessages.keys().next().value;
+                savedMessages.delete(firstKey);
+              }
+              
+              // Check if this is a deleted message tombstone
+              const isDeleted = msg.querySelector('span[data-icon="recalled"]') || 
+                                (msg.innerText && (msg.innerText.includes('telah dihapus') || msg.innerText.includes('was deleted')));
+                                
+              if (isDeleted && savedMessages.has(id)) {
+                const saved = savedMessages.get(id);
+                if (!msg.querySelector('.wz-recovered')) {
+                  const recoveredDiv = document.createElement('div');
+                  recoveredDiv.className = 'wz-recovered';
+                  recoveredDiv.style.cssText = 'color: #ff3b30; font-style: italic; font-size: 0.9em; margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,59,48,0.3); line-height: 1.4;';
+                  
+                  let content = `🚫 <b>Pesan Dipulihkan:</b><br/>${saved.text}`;
+                  if (saved.img) {
+                    content += `<br/><a href="${saved.img}" target="_blank" style="color:#007aff; text-decoration:underline;">[Lihat Media]</a>`;
+                  }
+                  
+                  recoveredDiv.innerHTML = content;
+                  
+                  const innerBox = msg.querySelector('.copyable-text')?.parentElement || msg.firstElementChild;
+                  if (innerBox) {
+                    innerBox.appendChild(recoveredDiv);
+                  }
+                }
+              }
+            });
+          }
+        });
+      }
+    }
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
+function ewSetupStatusSaver() {
+  console.log("Status Saver setup initialized.");
+  const btn = document.createElement('button');
+  btn.innerHTML = 'Simpan Status';
+  btn.style.cssText = 'position: fixed !important; top: 20px !important; right: 80px !important; z-index: 2147483647 !important; padding: 8px 16px !important; background: #25D366 !important; color: white !important; border: none !important; border-radius: 20px !important; font-weight: bold !important; cursor: pointer !important; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important; transition: background 0.2s !important;';
+  
+  btn.onmouseover = () => btn.style.setProperty('background', '#1da851', 'important');
+  btn.onmouseout = () => btn.style.setProperty('background', '#25D366', 'important');
+  
+  document.body.appendChild(btn);
+
+  let activeStatusUrl = null;
+
+  setInterval(() => {
+    let isStatus = false;
+    let targetMedia = null;
+    
+    // Check if we are in status viewer (usually dark background, huge media)
+    // We can just find the largest media on screen. If it takes up > 40% of window height, it's likely a status or full-screen media viewer.
+    const medias = Array.from(document.querySelectorAll('video, img'));
+    let maxArea = 0;
+    
+    for (const m of medias) {
+      const rect = m.getBoundingClientRect();
+      
+      // Ignore tiny icons or avatars
+      if (rect.width < 100 || rect.height < 100) continue;
+      
+      const area = rect.width * rect.height;
+      
+      // If it takes up a significant portion of the screen (height > 40% of innerHeight)
+      if (rect.height > window.innerHeight * 0.4 && area > maxArea) {
+        // Check if the left sidebar is hidden, completely removed, or we are in a modal
+        const paneSide = document.getElementById('pane-side');
+        const isFullscreen = !paneSide || paneSide.getBoundingClientRect().width === 0;
+        const hasStatusTestId = !!document.querySelector('[data-testid*="status"], [data-testid*="story"]');
+        
+        // Also check if it's a blob url (like the reference extension)
+        const isBlob = m.src && m.src.includes('blob:https://web.whatsapp.com');
+        
+        // Check if any ancestor has high z-index
+        let hasHighZIndex = false;
+        let parent = m;
+        while (parent && parent !== document.body) {
+           const z = parseInt(window.getComputedStyle(parent).zIndex);
+           if (z > 50) { hasHighZIndex = true; break; }
+           parent = parent.parentElement;
+        }
+        
+        if (isFullscreen || hasStatusTestId || hasHighZIndex || isBlob) {
+          maxArea = area;
+          targetMedia = m;
+          isStatus = true;
+        }
+      }
+    }
+
+    const currentSrc = targetMedia ? (targetMedia.src || (targetMedia.querySelector('source') && targetMedia.querySelector('source').src) || targetMedia.currentSrc) : null;
+    
+    if (isStatus && targetMedia && currentSrc) {
+      activeStatusUrl = currentSrc;
+      btn.style.setProperty('display', 'block', 'important');
+      btn.onclick = () => downloadMedia(currentSrc);
+    } else {
+      activeStatusUrl = null;
+      btn.style.setProperty('display', 'none', 'important');
+    }
+  }, 1000);
+
+  // Tambahkan shortcut keyboard dengan useCapture = true agar tidak diblokir WhatsApp
+  document.addEventListener('keydown', (e) => {
+    // Jika tombol Alt + S ditekan
+    if (e.altKey && e.key.toLowerCase() === 's') {
+      if (activeStatusUrl) {
+        e.preventDefault(); // Mencegah fungsi browser default
+        e.stopPropagation();
+        console.log("Shortcut Alt+S ditekan! Menyimpan status...");
+        downloadMedia(activeStatusUrl);
+      } else {
+        window?.ipc?.notifyEv?.({title: "WhatsZan", body: "Gagal: Tidak ada status yang terdeteksi di layar."});
+      }
+    }
+  }, true);
+
+  async function downloadMedia(url) {
+    if (!url) return;
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      const isVideo = blob.type.includes('video') || url.includes('.mp4');
+      a.download = `Status_WhatsApp_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      
+      const originalText = btn.innerHTML;
+      btn.innerHTML = 'Tersimpan!';
+      setTimeout(() => btn.innerHTML = originalText, 2000);
+      window?.ipc?.notifyEv?.({title: "WhatsZan", body: `Status berhasil disimpan ke folder Download!`});
+    } catch (e) {
+      console.error("Failed to download status:", e);
+      btn.innerHTML = 'Gagal';
+      setTimeout(() => btn.innerHTML = 'Simpan Status', 2000);
+      window?.ipc?.notifyEv?.({title: "WhatsZan", body: "Gagal mengunduh status. Membuka di tab baru..."});
+      
+      // Fallback
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  }
+}
+
+function ewSetupGhostMode(noRead, noTyping) {
+  if (!noRead && !noTyping) return;
+  console.log("Ghost Mode Webpack hook starting...");
+  
+  // WhatsApp uses window.webpackChunkwhatsapp_web_client
+  let wpRequire;
+  try {
+    if (!window.webpackChunkwhatsapp_web_client) return;
+    
+    window.webpackChunkwhatsapp_web_client.push([
+      [Symbol("ghost_mode")],
+      {},
+      (req) => { wpRequire = req; }
+    ]);
+  } catch (e) {
+    console.error("Failed to extract wpRequire", e);
+    return;
+  }
+  
+  if (!wpRequire || !wpRequire.m) return;
+  
+  const blockFunction = (origFunc, name) => {
+    return function(...args) {
+      console.log(`[Ghost Mode] Blocked ${name}`);
+      return Promise.resolve();
+    };
+  };
+
+  const patchModule = (mod, searchStr, name) => {
+    if (!mod) return;
+    try {
+      // Direct exports
+      for (const key in mod) {
+        if (typeof mod[key] === 'function' && mod[key].toString().includes(searchStr)) {
+          mod[key] = blockFunction(mod[key], name);
+          return true;
+        }
+      }
+      // Webpack 5 getters
+      const descriptors = Object.getOwnPropertyDescriptors(mod);
+      for (const key in descriptors) {
+        const desc = descriptors[key];
+        if (desc.get) {
+          try {
+            const origExport = desc.get();
+            if (typeof origExport === 'function' && origExport.toString().includes(searchStr)) {
+               Object.defineProperty(mod, key, {
+                 get: () => blockFunction(origExport, name),
+                 configurable: true
+               });
+               return true;
+            } else if (typeof origExport === 'object' && origExport !== null) {
+               for (const subKey in origExport) {
+                 if (typeof origExport[subKey] === 'function' && origExport[subKey].toString().includes(searchStr)) {
+                    origExport[subKey] = blockFunction(origExport[subKey], name);
+                    return true;
+                 }
+               }
+            }
+          } catch(e) {}
+        }
+      }
+    } catch(e) {}
+    return false;
+  };
+
+  for (const modId in wpRequire.m) {
+    const modStr = wpRequire.m[modId].toString();
+    
+    // Disable Read Receipts (Blue Ticks)
+    if (noRead && modStr.includes('sendReadReceipt')) {
+      const mod = wpRequire(modId);
+      if (patchModule(mod, 'sendReadReceipt', 'Read Receipt')) {
+         console.log(`[Ghost Mode] Successfully patched Read Receipts in module ${modId}`);
+      }
+    }
+    
+    // Disable Typing Indicator
+    if (noTyping && modStr.includes('sendChatstate')) {
+      const mod = wpRequire(modId);
+      if (patchModule(mod, 'sendChatstate', 'Typing Indicator')) {
+         console.log(`[Ghost Mode] Successfully patched Typing Indicator in module ${modId}`);
+      }
+    }
+  }
+}
+
 async function ewSetup() {
   console.log("ewSetup");
   ewHijackClick();
@@ -246,27 +570,32 @@ async function ewSetup() {
 
   await ewSetupKeys();
   await ewSetupDictionary();
+  const useAntiDelete = await window?.ipc?.stateGet?.("incognito-antidelete");
+  const useStatusSaver = await window?.ipc?.stateGet?.("incognito-statussaver");
+  const useNoRead = await window?.ipc?.stateGet?.("incognito-noread");
+  const useNoTyping = await window?.ipc?.stateGet?.("incognito-notyping");
+  
+  if (useAntiDelete) ewSetupAntiDelete();
+  if (useStatusSaver) ewSetupStatusSaver();
+  ewSetupGhostMode(useNoRead, useNoTyping);
   
   ewReplaceLogo();
   ewHijackTitle();
 
-  if (await window?.ipc?.stateGet("escToggle")) {
-    addEventListener(
-      "keydown",
-      (ev) => {
-        if (ev.key === "Escape") {
-          const chatOpen = document.getElementById("main");
-          if (!chatOpen) {
-            ev.preventDefault();
-            ev.stopPropagation();
-            console.log("esc: toggle window");
-            window?.ipc?.windowToggle?.();
-          }
+  addEventListener(
+    "keydown",
+    (ev) => {
+      if (ev.key === "Escape") {
+        const chatOpen = !!document.getElementById("main");
+        if (!chatOpen) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          window?.ipc?.escapePressed?.();
         }
-      },
-      true,
-    );
-  }
+      }
+    },
+    true
+  );
 }
 
 void ewSetup();

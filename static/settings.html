@@ -95,6 +95,20 @@
       padding: 12px 10px;
       gap: 6px;
       -webkit-app-region: no-drag;
+      flex-shrink: 0;
+    }
+
+    .resizer {
+      width: 4px;
+      cursor: col-resize;
+      background-color: transparent;
+      transition: background-color 0.2s;
+      z-index: 10;
+      margin-left: -2px;
+      margin-right: -2px;
+    }
+    .resizer:hover, .resizer.dragging {
+      background-color: var(--accent);
     }
 
     .tab-btn {
@@ -108,8 +122,13 @@
     }
     .tab-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); }
     .tab-btn.active { background: var(--tab-active-bg); color: var(--tab-active-text); font-weight: 600; }
-    .tab-btn svg { width: 18px; height: 18px; opacity: 0.8; }
+    .tab-btn svg { width: 18px; height: 18px; opacity: 0.8; flex-shrink: 0; }
     .tab-btn.active svg { opacity: 1; stroke: var(--tab-active-text); }
+    .tab-btn span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .sidebar.compact { align-items: center; padding: 12px 6px; }
+    .sidebar.compact .tab-btn { justify-content: center; padding: 10px; width: 44px; }
+    .sidebar.compact .tab-btn span { display: none; }
 
     /* Content */
     .content-area {
@@ -226,26 +245,26 @@
 
 <div class="main-container">
   <!-- Sidebar -->
-  <aside class="sidebar">
-    <button class="tab-btn active" onclick="switchTab('general')" id="btn-tab-general">
+  <aside class="sidebar" id="sidebar-container">
+    <button class="tab-btn active" onclick="switchTab('general')" id="btn-tab-general" title="Umum">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-      Umum
+      <span>Umum</span>
     </button>
-    <button class="tab-btn" onclick="switchTab('privacy')" id="btn-tab-privacy">
+    <button class="tab-btn" onclick="switchTab('privacy')" id="btn-tab-privacy" title="Privasi">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      Privasi
+      <span>Privasi</span>
     </button>
-    <button class="tab-btn" onclick="switchTab('dictionary')" id="btn-tab-dictionary">
+    <button class="tab-btn" onclick="switchTab('dictionary')" id="btn-tab-dictionary" title="Kamus">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-      Kamus
+      <span>Kamus</span>
     </button>
-    <button class="tab-btn" onclick="switchTab('appearance')" id="btn-tab-appearance">
+    <button class="tab-btn" onclick="switchTab('appearance')" id="btn-tab-appearance" title="Tampilan">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-      Tampilan
+      <span>Tampilan</span>
     </button>
-    <button class="tab-btn" onclick="switchTab('advanced')" id="btn-tab-advanced">
+    <button class="tab-btn" onclick="switchTab('advanced')" id="btn-tab-advanced" title="Lanjutan">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      Lanjutan
+      <span>Lanjutan</span>
     </button>
   </aside>
 
@@ -262,14 +281,6 @@
           <div class="row-desc">Nyalakan aplikasi secara otomatis ketika komputer dihidupkan</div>
         </div>
         <label class="toggle"><input type="checkbox" id="auto-run" /><span class="slider"></span></label>
-      </div>
-
-      <div class="row" id="row-hide-on-start">
-        <div class="row-info">
-          <div class="row-title">Mulai Tersembunyi</div>
-          <div class="row-desc">Aplikasi berjalan langsung ke tray tanpa memunculkan jendela</div>
-        </div>
-        <label class="toggle"><input type="checkbox" id="hide-on-start" /><span class="slider"></span></label>
       </div>
 
       <div class="row">
@@ -342,6 +353,17 @@
           </div>
           <label class="toggle"><input type="checkbox" id="blur-media" /><span class="slider"></span></label>
         </div>
+
+        <div class="row" style="border: none; padding: 10px 0; background: transparent; flex-direction: column; align-items: flex-start;">
+          <div class="row-info" style="width: 100%; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div class="row-title">Tingkat Blur</div>
+              <div class="row-desc">Geser untuk mengatur seberapa buram efek sensornya</div>
+            </div>
+            <div id="blur-preview" style="padding: 6px 12px; background: var(--bg-hover); border-radius: 8px; font-size: 13px; filter: blur(4px); transition: filter 0.1s;">Contoh Pesan Rahasia</div>
+          </div>
+          <input type="range" id="blur-amount" min="1" max="15" value="4" oninput="updateBlurPreview(); autoSave()" style="width: 100%;">
+        </div>
         
         <div class="row" style="border: none; padding: 10px 0; background: transparent; flex-direction: column; align-items: flex-start;">
           <div class="row-info" style="width: 100%; margin-bottom: 8px;">
@@ -350,6 +372,40 @@
           </div>
           <input id="blur-specific" class="text-input" type="text" style="width:100%;" placeholder="Contoh: Bos, Budi" />
         </div>
+      </div>
+
+      <div class="section-title" style="margin-top: 24px;">Incognito / Power User</div>
+      
+      <div class="row">
+        <div class="row-info">
+          <div class="row-title">Ghost Mode: Centang Biru</div>
+          <div class="row-desc">Mematikan laporan telah dibaca (Read Receipts). Lawan bicara tidak tahu pesannya sudah kamu baca.</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="incognito-noread" /><span class="slider"></span></label>
+      </div>
+
+      <div class="row">
+        <div class="row-info">
+          <div class="row-title">Ghost Mode: Sembunyikan Mengetik</div>
+          <div class="row-desc">Menghilangkan indikator "Sedang mengetik..." di HP lawan bicaramu.</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="incognito-notyping" /><span class="slider"></span></label>
+      </div>
+
+      <div class="row">
+        <div class="row-info">
+          <div class="row-title">Anti-Hapus Pesan</div>
+          <div class="row-desc">Memulihkan pesan yang ditarik/dihapus oleh pengirim</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="incognito-antidelete" /><span class="slider"></span></label>
+      </div>
+
+      <div class="row">
+        <div class="row-info">
+          <div class="row-title">Pengunduh Status (Status Saver)</div>
+          <div class="row-desc">Tampilkan tombol 'Simpan Status' saat melihat Story teman</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="incognito-statussaver" /><span class="slider"></span></label>
       </div>
     </div>
 
@@ -441,7 +497,6 @@
 
     document.getElementById('notif-prefix').value = settings['notification-prefix'] || '';
     document.getElementById('auto-run').checked = settings['auto-run'] || false;
-    document.getElementById('hide-on-start').checked = settings['hide-on-start'] || false;
     document.getElementById('quit-on-close').checked = settings['quit-on-close'] || false;
     document.getElementById('esc-toggle').checked = settings['esc-toggle-window'] || false;
     document.getElementById('smart-download').checked = settings['smart-download'] !== false;
@@ -454,12 +509,30 @@
     document.getElementById('blur-messages').checked = settings['blur-messages'] !== false;
     document.getElementById('blur-media').checked = settings['blur-media'] !== false;
     document.getElementById('blur-specific').value = settings['blur-specific'] || '';
+    document.getElementById('blur-amount').value = settings['blur-amount'] !== undefined ? settings['blur-amount'] : 4;
+    updateBlurPreview();
+    document.getElementById('incognito-antidelete').checked = settings['incognito-antidelete'] || false;
+    document.getElementById('incognito-statussaver').checked = settings['incognito-statussaver'] || false;
+    document.getElementById('incognito-noread').checked = settings['incognito-noread'] || false;
+    document.getElementById('incognito-notyping').checked = settings['incognito-notyping'] || false;
+    
+    if (settings['sidebar-width']) {
+      document.documentElement.style.setProperty('--sidebar-w', settings['sidebar-width'] + 'px');
+      if (settings['sidebar-width'] < 140) {
+        document.getElementById('sidebar-container').classList.add('compact');
+      }
+    }
 
-    document.getElementById('blur-specific').value = settings['blur-specific'] || '';
-
-    updateHideOnStartVisibility();
     updateBlurSubsettingsVisibility();
     renderDictList();
+  }
+
+  function updateBlurPreview() {
+    const val = document.getElementById('blur-amount').value;
+    const preview = document.getElementById('blur-preview');
+    if (preview) {
+      preview.style.filter = `blur(${val}px)`;
+    }
   }
 
   function renderDictList() {
@@ -506,18 +579,12 @@
     document.getElementById('btn-tab-' + tabId).classList.add('active');
   }
 
-  function updateHideOnStartVisibility() {
-    const isAutoRun = document.getElementById('auto-run').checked;
-    document.getElementById('row-hide-on-start').style.display = isAutoRun ? 'flex' : 'none';
-  }
-
   function updateBlurSubsettingsVisibility() {
     const isBlurOn = document.getElementById('privacy-blur').checked;
     document.getElementById('blur-subsettings').style.display = isBlurOn ? 'flex' : 'none';
   }
 
   document.getElementById('auto-run').addEventListener('change', () => {
-    updateHideOnStartVisibility();
     autoSave();
   });
   
@@ -526,7 +593,7 @@
     autoSave();
   });
 
-  const autoSaveInputs = ['notif-prefix', 'hide-on-start', 'quit-on-close', 'esc-toggle', 'smart-download', 'spellcheck', 'menu-bar', 'menu-bar-auto-hide', 'user-agent', 'blur-contacts', 'blur-pp', 'blur-messages', 'blur-media', 'blur-specific'];
+  const autoSaveInputs = ['notif-prefix', 'quit-on-close', 'esc-toggle', 'smart-download', 'spellcheck', 'menu-bar', 'menu-bar-auto-hide', 'user-agent', 'blur-contacts', 'blur-pp', 'blur-messages', 'blur-media', 'blur-specific', 'blur-amount', 'incognito-antidelete', 'incognito-statussaver', 'incognito-noread', 'incognito-notyping'];
   autoSaveInputs.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', autoSave);
@@ -534,6 +601,47 @@
 
   document.getElementById('btn-open-webstore').addEventListener('click', async () => {
     await ipcRenderer.invoke('open-webstore');
+  });
+
+  // Sidebar Resizer Logic
+  const resizer = document.getElementById('sidebar-resizer');
+  let isResizing = false;
+
+  resizer.addEventListener('mousedown', (e) => {
+    isResizing = true;
+    resizer.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+    let newWidth = e.clientX;
+    if (newWidth < 68) newWidth = 68; // Bisa dikecilkan sampai cuma icon
+    if (newWidth > 400) newWidth = 400;
+    
+    // Snap effect: Jika lebarnya nanggung antara ikon (68) dan teks penuh (160), otomatis sembunyikan teks
+    const sidebarEl = document.getElementById('sidebar-container');
+    if (newWidth < 140) {
+      newWidth = 68;
+      sidebarEl.classList.add('compact');
+    } else {
+      sidebarEl.classList.remove('compact');
+    }
+
+    document.documentElement.style.setProperty('--sidebar-w', newWidth + 'px');
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isResizing) {
+      isResizing = false;
+      resizer.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      
+      // Simpan lebar sidebar
+      autoSave();
+    }
   });
 
   document.getElementById('btn-dict-add').addEventListener('click', () => {
@@ -552,7 +660,6 @@
     const newSettings = {
       'notification-prefix': document.getElementById('notif-prefix').value,
       'auto-run': document.getElementById('auto-run').checked,
-      'hide-on-start': document.getElementById('hide-on-start').checked,
       'quit-on-close': document.getElementById('quit-on-close').checked,
       'esc-toggle-window': document.getElementById('esc-toggle').checked,
       'smart-download': document.getElementById('smart-download').checked,
@@ -565,8 +672,14 @@
       'blur-pp': document.getElementById('blur-pp').checked,
       'blur-messages': document.getElementById('blur-messages').checked,
       'blur-media': document.getElementById('blur-media').checked,
-      'blur-specific': document.getElementById('blur-specific').value || '',
+      'blur-specific': document.getElementById('blur-specific').value,
+      'blur-amount': parseInt(document.getElementById('blur-amount').value) || 4,
       'text-replacements': textReplacements,
+      'incognito-antidelete': document.getElementById('incognito-antidelete').checked,
+      'incognito-statussaver': document.getElementById('incognito-statussaver').checked,
+      'incognito-noread': document.getElementById('incognito-noread').checked,
+      'incognito-notyping': document.getElementById('incognito-notyping').checked,
+      'sidebar-width': parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w')) || 220
     };
     await ipcRenderer.invoke('settings-save', newSettings);
   }
