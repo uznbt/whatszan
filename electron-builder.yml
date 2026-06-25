@@ -21,6 +21,8 @@ nsis:
   license: "LICENSE"
   oneClick: false
   allowToChangeInstallationDirectory: true
+  displayLanguageSelector: true
+  multiLanguageInstaller: true
   deleteAppDataOnUninstall: true
   differentialPackage: false
   installerIcon: build/icon.ico

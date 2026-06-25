@@ -5,11 +5,11 @@ body.blur-messages div[data-testid="msg-container"] .copyable-text,
 body.blur-messages div[data-testid="msg-container"] span.selectable-text {
     filter: blur(var(--wz-blur-amount, 4px)); opacity: 0.75;
     transition: filter 0.15s ease-out, opacity 0.15s ease-out;
-    transform: translateZ(0); backface-visibility: hidden; will-change: filter, opacity;
+    transform: translateZ(0); backface-visibility: hidden;
 }
 body.blur-messages div[data-testid="msg-container"]:hover .copyable-text,
 body.blur-messages div[data-testid="msg-container"]:hover span.selectable-text {
-    filter: blur(0px); opacity: 1; transition: filter 0.05s ease-in, opacity 0.05s ease-in;
+    filter: blur(0px); opacity: 1; transition: filter 0.05s ease-in, opacity 0.05s ease-in; transition-delay: var(--wz-unblur-delay, 0s);
 }
 
 /* 2. Blur Daftar Kontak & Header */
@@ -21,7 +21,7 @@ body.blur-contacts #main div[data-testid="conversation-info-header-chat-title"],
 body.blur-contacts #main span[data-testid="conversation-info-header-chat-title"] {
     filter: blur(var(--wz-blur-amount, 4px)); opacity: 0.75;
     transition: filter 0.15s ease-out, opacity 0.15s ease-out;
-    transform: translateZ(0); backface-visibility: hidden; will-change: filter, opacity;
+    transform: translateZ(0); backface-visibility: hidden;
 }
 body.blur-contacts #pane-side [data-testid="cell-frame-title"]:hover,
 body.blur-contacts #pane-side [data-testid="cell-frame-secondary"]:hover,
@@ -35,7 +35,7 @@ body.blur-contacts #pane-side div[role="row"]:hover span[data-testid="cell-frame
 body.blur-contacts #pane-side div[role="listitem"]:hover span[data-testid="cell-frame-secondary"],
 body.blur-contacts #main header:hover div[data-testid="conversation-info-header-chat-title"],
 body.blur-contacts #main header:hover span[data-testid="conversation-info-header-chat-title"] {
-    filter: blur(0px); opacity: 1; transition: filter 0.05s ease-in, opacity 0.05s ease-in;
+    filter: blur(0px); opacity: 1; transition: filter 0.05s ease-in, opacity 0.05s ease-in; transition-delay: var(--wz-unblur-delay, 0s);
 }
 
 /* 3. Blur Foto Profil (PP) */
@@ -50,7 +50,7 @@ body.blur-pp #pane-side div[role="listitem"]:hover img,
 body.blur-pp #pane-side div[role="row"]:hover img,
 body.blur-pp #main header:hover img,
 body.blur-pp img:hover {
-    filter: blur(0px); opacity: 1; transition: filter 0.05s ease-in, opacity 0.05s ease-in;
+    filter: blur(0px); opacity: 1; transition: filter 0.05s ease-in, opacity 0.05s ease-in; transition-delay: var(--wz-unblur-delay, 0s);
 }
 
 /* 4. Blur Gambar & Media (Di dalam obrolan) */
@@ -66,5 +66,5 @@ body.blur-media #main div[data-testid="msg-container"]:hover img:not([src*="emoj
 body.blur-media #main div[data-testid="audio-play"]:hover,
 body.blur-media #main div[data-testid="ptt-play"]:hover,
 body.blur-media #main [data-testid="media-url-provider"]:hover {
-    filter: blur(0px); opacity: 1; transition: filter 0.05s ease-in, opacity 0.05s ease-in;
+    filter: blur(0px); opacity: 1; transition: filter 0.05s ease-in, opacity 0.05s ease-in; transition-delay: var(--wz-unblur-delay, 0s);
 }

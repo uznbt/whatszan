@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pengaturan</title>
+  <title><span data-i18n="settings_header_title">Pengaturan</span></title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
@@ -239,32 +239,32 @@
   </div>
   <div class="header-text">
     <h1>Pengaturan</h1>
-    <p>WhatsZan Desktop Client</p>
+    <p><span data-i18n="settings_header_subtitle">WhatsZan Desktop Client</span></p>
   </div>
 </header>
 
 <div class="main-container">
   <!-- Sidebar -->
   <aside class="sidebar" id="sidebar-container">
-    <button class="tab-btn active" onclick="switchTab('general')" id="btn-tab-general" title="Umum">
+    <button class="tab-btn active" onclick="switchTab('general')" id="btn-tab-general" title="Umum" data-i18n-title="settings_tab_general">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-      <span>Umum</span>
+      <span><span data-i18n="settings_tab_general">Umum</span></span>
     </button>
-    <button class="tab-btn" onclick="switchTab('privacy')" id="btn-tab-privacy" title="Privasi">
+    <button class="tab-btn" onclick="switchTab('privacy')" id="btn-tab-privacy" title="Privasi" data-i18n-title="settings_tab_privacy">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      <span>Privasi</span>
+      <span><span data-i18n="settings_tab_privacy">Privasi</span></span>
     </button>
-    <button class="tab-btn" onclick="switchTab('dictionary')" id="btn-tab-dictionary" title="Kamus">
+    <button class="tab-btn" onclick="switchTab('dictionary')" id="btn-tab-dictionary" title="Kamus" data-i18n-title="settings_tab_dictionary">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-      <span>Kamus</span>
+      <span><span data-i18n="settings_tab_dictionary">Kamus</span></span>
     </button>
-    <button class="tab-btn" onclick="switchTab('appearance')" id="btn-tab-appearance" title="Tampilan">
+    <button class="tab-btn" onclick="switchTab('appearance')" id="btn-tab-appearance" title="Tampilan" data-i18n-title="settings_tab_appearance">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-      <span>Tampilan</span>
+      <span><span data-i18n="settings_tab_appearance">Tampilan</span></span>
     </button>
-    <button class="tab-btn" onclick="switchTab('advanced')" id="btn-tab-advanced" title="Lanjutan">
+    <button class="tab-btn" onclick="switchTab('advanced')" id="btn-tab-advanced" title="Lanjutan" data-i18n-title="settings_tab_advanced">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      <span>Lanjutan</span>
+      <span><span data-i18n="settings_tab_advanced">Lanjutan</span></span>
     </button>
   </aside>
 
@@ -273,27 +273,27 @@
     
     <!-- Tab UMUM -->
     <div id="tab-general" class="tab-pane active">
-      <div class="section-title">Umum</div>
+      <div class="section-title"><span data-i18n="settings_tab_general">Umum</span></div>
       
       <div class="row">
         <div class="row-info">
-          <div class="row-title">Jalankan Otomatis saat Startup</div>
-          <div class="row-desc">Nyalakan aplikasi secara otomatis ketika komputer dihidupkan</div>
+          <div class="row-title"><span data-i18n="settings_autorun_title">Jalankan Otomatis saat Startup</span></div>
+          <div class="row-desc"><span data-i18n="settings_autorun_desc">Nyalakan aplikasi secara otomatis ketika komputer dihidupkan</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="auto-run" /><span class="slider"></span></label>
       </div>
 
       <div class="row">
         <div class="row-info">
-          <div class="row-title">Sembunyikan dengan ESC</div>
-          <div class="row-desc">Tekan tombol ESC pada keyboard untuk menyembunyikan jendela</div>
+          <div class="row-title"><span data-i18n="settings_esc_title">Sembunyikan dengan ESC</span></div>
+          <div class="row-desc"><span data-i18n="settings_esc_desc">Tekan tombol ESC pada keyboard untuk menyembunyikan jendela</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="esc-toggle" /><span class="slider"></span></label>
       </div>
 
       <div class="row" id="row-quit-on-close" style="display: none;">
         <div class="row-info">
-          <div class="row-title">Tutup ke Tray</div>
+          <div class="row-title"><span data-i18n="settings_quit_tray_title">Tutup ke Tray</span></div>
           <div class="row-desc">Menekan tombol tutup (X) hanya akan menyembunyikan jendela</div>
         </div>
         <label class="toggle"><input type="checkbox" id="quit-on-close" /><span class="slider"></span></label>
@@ -301,7 +301,7 @@
 
       <div class="row">
         <div class="row-info">
-          <div class="row-title">Pilah Unduhan Otomatis</div>
+          <div class="row-title"><span data-i18n="settings_smart_dl_title">Pilah Unduhan Otomatis</span></div>
           <div class="row-desc">Simpan file ke folder Windows yang sesuai (Video, Gambar, dll)</div>
         </div>
         <label class="toggle"><input type="checkbox" id="smart-download" /><span class="slider"></span></label>
@@ -309,20 +309,20 @@
 
       <div class="row" style="flex-direction: column; align-items: flex-start;">
         <div class="row-info" style="width: 100%; margin-bottom: 8px;">
-          <div class="row-title">Awalan Notifikasi</div>
+          <div class="row-title"><span data-i18n="settings_notif_prefix_title">Awalan Notifikasi</span></div>
           <div class="row-desc">Teks awalan pada notifikasi sistem (misal: WhatsZan - Pesan Baru)</div>
         </div>
-        <input id="notif-prefix" class="text-input" type="text" style="width:100%;" placeholder="Kosongkan jika tidak perlu" />
+        <input id="notif-prefix" class="text-input" type="text" style="width:100%;" placeholder="Kosongkan jika tidak perlu" data-i18n="settings_placeholder_notif" />
       </div>
     </div>
 
     <!-- Tab PRIVASI -->
     <div id="tab-privacy" class="tab-pane">
-      <div class="section-title">Privasi</div>
+      <div class="section-title"><span data-i18n="settings_tab_privacy">Privasi</span></div>
       
       <div class="row" style="border-color: var(--accent);">
         <div class="row-info">
-          <div class="row-title" style="color: var(--accent); font-weight: 600;">Aktifkan Mode Rahasia</div>
+          <div class="row-title" style="color: var(--accent); font-weight: 600;"><span data-i18n="settings_privacy_blur_title">Aktifkan Mode Rahasia</span></div>
           <div class="row-desc">Mengaktifkan sensor pada layar. Tekan (Ctrl+Shift+B) kapan saja.</div>
         </div>
         <label class="toggle"><input type="checkbox" id="privacy-blur" /><span class="slider"></span></label>
@@ -331,25 +331,25 @@
       <div id="blur-subsettings" style="display: none; flex-direction: column; gap: 10px; margin-top: 4px; padding-left: 20px; border-left: 2px solid var(--border);">
         <div class="row" style="border: none; padding: 10px 0; background: transparent;">
           <div class="row-info">
-            <div class="row-title">Blur Daftar Kontak</div>
+            <div class="row-title"><span data-i18n="settings_blur_contacts">Blur Daftar Kontak</span></div>
           </div>
           <label class="toggle"><input type="checkbox" id="blur-contacts" /><span class="slider"></span></label>
         </div>
         <div class="row" style="border: none; padding: 10px 0; background: transparent;">
           <div class="row-info">
-            <div class="row-title">Blur Foto Profil (PP)</div>
+            <div class="row-title"><span data-i18n="settings_blur_pp">Blur Foto Profil (PP)</span></div>
           </div>
           <label class="toggle"><input type="checkbox" id="blur-pp" /><span class="slider"></span></label>
         </div>
         <div class="row" style="border: none; padding: 10px 0; background: transparent;">
           <div class="row-info">
-            <div class="row-title">Blur Isi Pesan</div>
+            <div class="row-title"><span data-i18n="settings_blur_messages">Blur Isi Pesan</span></div>
           </div>
           <label class="toggle"><input type="checkbox" id="blur-messages" /><span class="slider"></span></label>
         </div>
         <div class="row" style="border: none; padding: 10px 0; background: transparent;">
           <div class="row-info">
-            <div class="row-title">Blur Media (Gambar & Video)</div>
+            <div class="row-title"><span data-i18n="settings_blur_media">Blur Media (Gambar & Video)</span></div>
           </div>
           <label class="toggle"><input type="checkbox" id="blur-media" /><span class="slider"></span></label>
         </div>
@@ -357,53 +357,61 @@
         <div class="row" style="border: none; padding: 10px 0; background: transparent; flex-direction: column; align-items: flex-start;">
           <div class="row-info" style="width: 100%; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <div class="row-title">Tingkat Blur</div>
-              <div class="row-desc">Geser untuk mengatur seberapa buram efek sensornya</div>
+              <div class="row-title"><span data-i18n="settings_blur_amount_title"><span data-i18n="settings_blur_amount_title">Tingkat Blur</span></span></div>
+              <div class="row-desc"><span data-i18n="settings_blur_amount_desc"><span data-i18n="settings_blur_amount_desc">Geser untuk mengatur seberapa buram efek sensornya</span></span></div>
             </div>
-            <div id="blur-preview" style="padding: 6px 12px; background: var(--bg-hover); border-radius: 8px; font-size: 13px; filter: blur(4px); transition: filter 0.1s;">Contoh Pesan Rahasia</div>
+            <div id="blur-preview" style="padding: 6px 12px; background: var(--bg-hover); border-radius: 8px; font-size: 13px; filter: blur(4px); transition: filter 0.1s;"><span data-i18n="settings_blur_preview">Contoh Pesan Rahasia</span></div>
           </div>
           <input type="range" id="blur-amount" min="1" max="15" value="4" oninput="updateBlurPreview(); autoSave()" style="width: 100%;">
+        </div>
+
+        <div class="row" style="border: none; padding: 10px 0; background: transparent; flex-direction: column; align-items: flex-start;">
+          <div class="row-info" style="width: 100%; margin-bottom: 8px;">
+            <div class="row-title"><span data-i18n="settings_unblur_delay_title">Tunda Unblur (Detik)</span></div>
+            <div class="row-desc"><span data-i18n="settings_unblur_delay_desc">Waktu tunda sebelum sensor terbuka saat kursor diarahkan. Bisa diisi angka besar (misal: 60).</span></div>
+          </div>
+          <input type="number" id="unblur-delay" class="text-input" min="0" step="0.1" value="0" oninput="autoSave()" style="width: 100px;">
         </div>
         
         <div class="row" style="border: none; padding: 10px 0; background: transparent; flex-direction: column; align-items: flex-start;">
           <div class="row-info" style="width: 100%; margin-bottom: 8px;">
-            <div class="row-title">Hanya Kontak Spesifik</div>
-            <div class="row-desc">Jika diisi, opsi Daftar Kontak di atas hanya berlaku untuk nama-nama ini. Pisahkan dengan koma.</div>
+            <div class="row-title"><span data-i18n="settings_blur_specific_title">Hanya Kontak Spesifik</span></div>
+            <div class="row-desc"><span data-i18n="settings_blur_specific_desc">Jika diisi, opsi Daftar Kontak di atas hanya berlaku untuk nama-nama ini. Pisahkan dengan koma.</span></div>
           </div>
-          <input id="blur-specific" class="text-input" type="text" style="width:100%;" placeholder="Contoh: Bos, Budi" />
+          <input id="blur-specific" class="text-input" type="text" style="width:100%;" placeholder="Contoh: Bos, Budi" data-i18n="settings_placeholder_specific" />
         </div>
       </div>
 
-      <div class="section-title" style="margin-top: 24px;">Incognito / Power User</div>
+      <div class="section-title" style="margin-top: 24px;"><span data-i18n="settings_incognito_title">Incognito / Power User</span></div>
       
       <div class="row">
         <div class="row-info">
-          <div class="row-title">Ghost Mode: Centang Biru</div>
-          <div class="row-desc">Mematikan laporan telah dibaca (Read Receipts). Lawan bicara tidak tahu pesannya sudah kamu baca.</div>
+          <div class="row-title"><span data-i18n="settings_ghost_read_title">Ghost Mode: Centang Biru</span></div>
+          <div class="row-desc"><span data-i18n="settings_ghost_read_desc">Mematikan laporan telah dibaca (Read Receipts). Lawan bicara tidak tahu pesannya sudah kamu baca.</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="incognito-noread" /><span class="slider"></span></label>
       </div>
 
       <div class="row">
         <div class="row-info">
-          <div class="row-title">Ghost Mode: Sembunyikan Mengetik</div>
-          <div class="row-desc">Menghilangkan indikator "Sedang mengetik..." di HP lawan bicaramu.</div>
+          <div class="row-title"><span data-i18n="settings_ghost_typing_title">Ghost Mode: Sembunyikan Mengetik</span></div>
+          <div class="row-desc"><span data-i18n="settings_ghost_typing_desc">Menghilangkan indikator "Sedang mengetik..." di HP lawan bicaramu.</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="incognito-notyping" /><span class="slider"></span></label>
       </div>
 
       <div class="row">
         <div class="row-info">
-          <div class="row-title">Anti-Hapus Pesan</div>
-          <div class="row-desc">Memulihkan pesan yang ditarik/dihapus oleh pengirim</div>
+          <div class="row-title"><span data-i18n="settings_antidelete_title">Anti-Hapus Pesan</span></div>
+          <div class="row-desc"><span data-i18n="settings_antidelete_desc">Memulihkan pesan yang ditarik/dihapus oleh pengirim</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="incognito-antidelete" /><span class="slider"></span></label>
       </div>
 
       <div class="row">
         <div class="row-info">
-          <div class="row-title">Pengunduh Status (Status Saver)</div>
-          <div class="row-desc">Tampilkan tombol 'Simpan Status' saat melihat Story teman</div>
+          <div class="row-title"><span data-i18n="settings_statussaver_title">Pengunduh Status (Status Saver)</span></div>
+          <div class="row-desc"><span data-i18n="settings_statussaver_desc">Tampilkan tombol 'Simpan Status' saat melihat Story teman</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="incognito-statussaver" /><span class="slider"></span></label>
       </div>
@@ -411,14 +419,14 @@
 
     <!-- Tab KAMUS -->
     <div id="tab-dictionary" class="tab-pane">
-      <div class="section-title">Kamus Otomatis</div>
-      <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Ganti kata pintasan menjadi teks panjang secara otomatis saat mengetik di obrolan.</div>
+      <div class="section-title"><span data-i18n="settings_dict_title">Kamus Otomatis</span></div>
+      <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;"><span data-i18n="settings_dict_desc">Ganti kata pintasan menjadi teks panjang secara otomatis saat mengetik di obrolan.</span></div>
       
       <div class="row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
         <div style="display: flex; gap: 10px; width: 100%;">
-          <input id="dict-trigger" class="text-input" style="flex: 1; min-width: 0;" placeholder="Pintasan (misal: npm)" />
-          <input id="dict-replacement" class="text-input" style="flex: 2; min-width: 0;" placeholder="Teks pengganti (misal: 123...)" />
-          <button class="btn" id="btn-dict-add" style="flex-shrink: 0;">Tambah</button>
+          <input id="dict-trigger" class="text-input" style="flex: 1; min-width: 0;" placeholder="Pintasan (misal: npm)" data-i18n="settings_placeholder_trigger" />
+          <input id="dict-replacement" class="text-input" style="flex: 2; min-width: 0;" placeholder="Teks pengganti (misal: 123...)" data-i18n="settings_placeholder_replacement" />
+          <button class="btn" id="btn-dict-add" style="flex-shrink: 0;"><span data-i18n="settings_btn_add">Tambah</span></button>
         </div>
       </div>
 
@@ -429,28 +437,28 @@
 
     <!-- Tab TAMPILAN -->
     <div id="tab-appearance" class="tab-pane">
-      <div class="section-title">Tampilan</div>
+      <div class="section-title"><span data-i18n="settings_tab_appearance">Tampilan</span></div>
       
       <div class="row">
         <div class="row-info">
-          <div class="row-title">Tampilkan Menu Bar</div>
-          <div class="row-desc">Menampilkan menu aplikasi di bagian atas jendela</div>
+          <div class="row-title"><span data-i18n="settings_menubar_title">Tampilkan Menu Bar</span></div>
+          <div class="row-desc"><span data-i18n="settings_menubar_desc">Menampilkan menu aplikasi di bagian atas jendela</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="menu-bar" /><span class="slider"></span></label>
       </div>
 
       <div class="row">
         <div class="row-info">
-          <div class="row-title">Sembunyikan Menu Bar Otomatis</div>
-          <div class="row-desc">Menu bar hanya akan muncul saat tombol Alt ditekan</div>
+          <div class="row-title"><span data-i18n="settings_menubar_autohide_title">Sembunyikan Menu Bar Otomatis</span></div>
+          <div class="row-desc"><span data-i18n="settings_menubar_autohide_desc">Menu bar hanya akan muncul saat tombol Alt ditekan</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="menu-bar-auto-hide" /><span class="slider"></span></label>
       </div>
 
       <div class="row">
         <div class="row-info">
-          <div class="row-title">Pemeriksa Ejaan (Spellcheck)</div>
-          <div class="row-desc">Garis bawah merah akan muncul pada kata yang salah ketik</div>
+          <div class="row-title"><span data-i18n="settings_spellcheck_title">Pemeriksa Ejaan (Spellcheck)</span></div>
+          <div class="row-desc"><span data-i18n="settings_spellcheck_desc">Garis bawah merah akan muncul pada kata yang salah ketik</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="spellcheck" /><span class="slider"></span></label>
       </div>
@@ -458,22 +466,22 @@
 
     <!-- Tab LANJUTAN -->
     <div id="tab-advanced" class="tab-pane">
-      <div class="section-title">Lanjutan</div>
+      <div class="section-title"><span data-i18n="settings_tab_advanced">Lanjutan</span></div>
       
       <div class="row">
         <div class="row-info">
-          <div class="row-title">Ekstensi Chrome</div>
-          <div class="row-desc">Pasang ekstensi browser seperti AdBlock atau Grammarly</div>
+          <div class="row-title"><span data-i18n="settings_chrome_ext_title">Ekstensi Chrome</span></div>
+          <div class="row-desc"><span data-i18n="settings_chrome_ext_desc">Pasang ekstensi browser seperti AdBlock atau Grammarly</span></div>
         </div>
-        <button class="btn" id="btn-open-webstore">Buka Web Store</button>
+        <button class="btn" id="btn-open-webstore"><span data-i18n="settings_btn_webstore">Buka Web Store</span></button>
       </div>
 
       <div class="row" style="flex-direction: column; align-items: flex-start;">
         <div class="row-info" style="width: 100%; margin-bottom: 8px;">
-          <div class="row-title">User Agent Kustom</div>
-          <div class="row-desc">String identifikasi perangkat. Kosongkan untuk menggunakan default.</div>
+          <div class="row-title"><span data-i18n="settings_ua_title">User Agent Kustom</span></div>
+          <div class="row-desc"><span data-i18n="settings_ua_desc">String identifikasi perangkat. Kosongkan untuk menggunakan default.</span></div>
         </div>
-        <input id="user-agent" class="text-input" type="text" style="width:100%;" placeholder="Otomatis" />
+        <input id="user-agent" class="text-input" type="text" style="width:100%;" placeholder="Otomatis" data-i18n="settings_placeholder_auto" />
       </div>
     </div>
 
@@ -490,10 +498,24 @@
 
   let settings = {};
   let textReplacements = {};
+  let isLoaded = false;
 
   async function load() {
     settings = await ipcRenderer.invoke('settings-get');
     textReplacements = settings['text-replacements'] || {};
+
+    const translations = await ipcRenderer.invoke('settings-get-translations');
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (translations[key]) {
+        if (el.tagName === 'INPUT' && el.type === 'text') el.placeholder = translations[key];
+        else el.innerHTML = translations[key];
+      }
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+      const key = el.getAttribute('data-i18n-title');
+      if (translations[key]) el.title = translations[key];
+    });
 
     document.getElementById('notif-prefix').value = settings['notification-prefix'] || '';
     document.getElementById('auto-run').checked = settings['auto-run'] || false;
@@ -503,6 +525,7 @@
     document.getElementById('spellcheck').checked = settings['spellcheck'] !== false;
     document.getElementById('menu-bar').checked = settings['menu-bar'] !== false;
     document.getElementById('menu-bar-auto-hide').checked = settings['menu-bar-auto-hide'] !== false;
+    document.getElementById('user-agent').value = settings['user-agent'] || '';
     document.getElementById('privacy-blur').checked = settings['privacy-blur'] || false;
     document.getElementById('blur-contacts').checked = settings['blur-contacts'] !== false;
     document.getElementById('blur-pp').checked = settings['blur-pp'] !== false;
@@ -510,6 +533,7 @@
     document.getElementById('blur-media').checked = settings['blur-media'] !== false;
     document.getElementById('blur-specific').value = settings['blur-specific'] || '';
     document.getElementById('blur-amount').value = settings['blur-amount'] !== undefined ? settings['blur-amount'] : 4;
+    document.getElementById('unblur-delay').value = settings['unblur-delay'] || 0;
     updateBlurPreview();
     document.getElementById('incognito-antidelete').checked = settings['incognito-antidelete'] || false;
     document.getElementById('incognito-statussaver').checked = settings['incognito-statussaver'] || false;
@@ -525,6 +549,7 @@
 
     updateBlurSubsettingsVisibility();
     renderDictList();
+    isLoaded = true;
   }
 
   function updateBlurPreview() {
@@ -588,8 +613,15 @@
     autoSave();
   });
   
-  document.getElementById('privacy-blur').addEventListener('change', () => {
+  document.getElementById('privacy-blur').addEventListener('change', (e) => {
     updateBlurSubsettingsVisibility();
+    if (e.target.checked) {
+      const subToggles = ['blur-contacts', 'blur-pp', 'blur-messages', 'blur-media'];
+      const allOff = subToggles.every(id => !document.getElementById(id).checked);
+      if (allOff) {
+        subToggles.forEach(id => document.getElementById(id).checked = true);
+      }
+    }
     autoSave();
   });
 
@@ -607,42 +639,44 @@
   const resizer = document.getElementById('sidebar-resizer');
   let isResizing = false;
 
-  resizer.addEventListener('mousedown', (e) => {
-    isResizing = true;
-    resizer.classList.add('dragging');
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-  });
+  if (resizer) {
+    resizer.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      resizer.classList.add('dragging');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    });
 
-  window.addEventListener('mousemove', (e) => {
-    if (!isResizing) return;
-    let newWidth = e.clientX;
-    if (newWidth < 68) newWidth = 68; // Bisa dikecilkan sampai cuma icon
-    if (newWidth > 400) newWidth = 400;
-    
-    // Snap effect: Jika lebarnya nanggung antara ikon (68) dan teks penuh (160), otomatis sembunyikan teks
-    const sidebarEl = document.getElementById('sidebar-container');
-    if (newWidth < 140) {
-      newWidth = 68;
-      sidebarEl.classList.add('compact');
-    } else {
-      sidebarEl.classList.remove('compact');
-    }
-
-    document.documentElement.style.setProperty('--sidebar-w', newWidth + 'px');
-  });
-
-  window.addEventListener('mouseup', () => {
-    if (isResizing) {
-      isResizing = false;
-      resizer.classList.remove('dragging');
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
+    window.addEventListener('mousemove', (e) => {
+      if (!isResizing) return;
+      let newWidth = e.clientX;
+      if (newWidth < 68) newWidth = 68; // Bisa dikecilkan sampai cuma icon
+      if (newWidth > 400) newWidth = 400;
       
-      // Simpan lebar sidebar
-      autoSave();
-    }
-  });
+      // Snap effect: Jika lebarnya nanggung antara ikon (68) dan teks penuh (160), otomatis sembunyikan teks
+      const sidebarEl = document.getElementById('sidebar-container');
+      if (newWidth < 140) {
+        newWidth = 68;
+        sidebarEl.classList.add('compact');
+      } else {
+        sidebarEl.classList.remove('compact');
+      }
+
+      document.documentElement.style.setProperty('--sidebar-w', newWidth + 'px');
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isResizing) {
+        isResizing = false;
+        resizer.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        
+        // Simpan lebar sidebar
+        autoSave();
+      }
+    });
+  }
 
   document.getElementById('btn-dict-add').addEventListener('click', () => {
     const trigger = document.getElementById('dict-trigger').value.trim();
@@ -657,6 +691,7 @@
   });
 
   async function autoSave() {
+    if (!isLoaded) return;
     const newSettings = {
       'notification-prefix': document.getElementById('notif-prefix').value,
       'auto-run': document.getElementById('auto-run').checked,
@@ -674,6 +709,7 @@
       'blur-media': document.getElementById('blur-media').checked,
       'blur-specific': document.getElementById('blur-specific').value,
       'blur-amount': parseInt(document.getElementById('blur-amount').value) || 4,
+      'unblur-delay': parseFloat(document.getElementById('unblur-delay').value) || 0,
       'text-replacements': textReplacements,
       'incognito-antidelete': document.getElementById('incognito-antidelete').checked,
       'incognito-statussaver': document.getElementById('incognito-statussaver').checked,

@@ -38,6 +38,10 @@
       Quit
 
     DoUninstall:
+      ; Matikan paksa aplikasi yang sedang berjalan secara diam-diam sebelum uninstall
+      nsExec::Exec 'taskkill /F /IM whatszan.exe /T'
+      nsExec::Exec 'taskkill /F /IM WhatsZan.exe /T'
+      
       ReadRegStr $2 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINSTALL_APP_KEY}" "UninstallString"
       ${If} $2 == ""
         ReadRegStr $2 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINSTALL_APP_KEY}" "UninstallString"
@@ -50,6 +54,9 @@
       Quit
 
     ContinueInstall:
+      ; Matikan paksa aplikasi yang sedang berjalan secara diam-diam sebelum update/downgrade/repair
+      nsExec::Exec 'taskkill /F /IM whatszan.exe /T'
+      nsExec::Exec 'taskkill /F /IM WhatsZan.exe /T'
       ; Melanjutkan ke proses instalasi normal
   ${EndIf}
 !macroend
@@ -70,4 +77,12 @@
 ; Hapus shortcut dari folder Startup agar tidak ada sisa.
 !macro customUnInstall
   Delete "$SMSTARTUP\WhatsZan.lnk"
+!macroend
+
+; ── Saat Uninstaller Dimulai ───────────────────────────────────────────────
+; Ini akan dipanggil ketika user melakukan uninstall dari Control Panel Windows
+!macro customUnInit
+  ; Matikan paksa aplikasi yang sedang berjalan secara diam-diam sebelum proses uninstall
+  nsExec::Exec 'taskkill /F /IM whatszan.exe /T'
+  nsExec::Exec 'taskkill /F /IM WhatsZan.exe /T'
 !macroend

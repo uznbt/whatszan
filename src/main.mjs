@@ -481,8 +481,14 @@ function main() {
 
         mainWindow.webContents.executeJavaScript(`
           (() => {
+            window.wzIncognito = {
+              noRead: ${config.get("incognito-noread", false)},
+              noTyping: ${config.get("incognito-notyping", false)},
+              antiDelete: ${config.get("incognito-antidelete", false)}
+            };
             document.documentElement.style.setProperty('--wz-blur-amount', '${blurAmount}px');
             document.documentElement.style.setProperty('--wz-blur-media', '${blurAmount * 1.5}px');
+            document.documentElement.style.setProperty('--wz-unblur-delay', '${config.get("unblur-delay", 0)}s');
             document.body.classList.remove('blur-contacts', 'blur-pp', 'blur-messages', 'blur-media', 'privacy-blur');
             const oldStyle = document.getElementById('whatszan-blur-specific');
             if (oldStyle) oldStyle.remove();
@@ -518,8 +524,13 @@ function main() {
         return {
           ...config.data,
           "privacy-blur": persistState.get("privacy-blur", false),
+          "sidebar-width": persistState.get("sidebar-width", 220),
           "auto-run": persistState.get("auto-run", false)
         };
+      });
+
+      ipcMain.handle("settings-get-translations", () => {
+        return loadTranslations(app.getLocale());
       });
 
       ipcMain.handle("settings-save", (ev, newSettings) => {
@@ -534,9 +545,25 @@ function main() {
           if (v !== null && v !== '') config.set(k, v);
           else { config.delete(k); }
         });
-
         
         updateBlurState(blur);
+
+        // Apply menu bar settings dynamically
+        if (!mainWindow.isDestroyed()) {
+          const showMenu = config.get("menu-bar", true);
+          const autoHide = config.get("menu-bar-auto-hide", true);
+          
+          if (showMenu) {
+            mainWindow.setMenuBarVisibility(!autoHide);
+            mainWindow.autoHideMenuBar = autoHide;
+            // Restore menu if it was previously removed
+            if (!mainWindow.menuBarVisible && !autoHide) {
+                mainWindow.setMenuBarVisibility(true);
+            }
+          } else {
+            mainWindow.removeMenu();
+          }
+        }
 
         ev.sender.send("settings-saved");
       });

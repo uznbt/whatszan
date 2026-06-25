@@ -171,13 +171,14 @@ function ewReplaceLogo() {
 
     // 2. Banner Killer
     const text = root.innerText || "";
-    if ((text.includes('Unduh WhatsApp untuk Windows') || text.includes('Unduh WhatsZan untuk Windows')) && text.includes('fitur ekstra')) {
+    if (((text.includes('Unduh WhatsApp untuk Windows') || text.includes('Unduh WhatsZan untuk Windows')) && text.includes('fitur ekstra')) || 
+        text.includes('Dapatkan WhatsApp untuk Windows') || text.includes('Dapatkan WhatsZan untuk Windows')) {
       root.style.display = 'none';
       let parent = root.parentElement;
       for (let i = 0; i < 3; i++) {
         if (parent && parent.tagName !== 'BODY') {
           const rect = parent.getBoundingClientRect();
-          if (rect.height > 60 && rect.height < 250) {
+          if (rect.height > 40 && rect.height < 250) {
             parent.style.display = 'none';
           }
           parent = parent.parentElement;
@@ -292,8 +293,18 @@ function ewSetupAntiDelete() {
       if (mut.type === 'childList') {
         mut.addedNodes.forEach(node => {
           if (node.nodeType === Node.ELEMENT_NODE) {
-            // Check for new messages
-            const msgs = node.matches && node.matches('div[data-id]') ? [node] : (node.querySelectorAll ? node.querySelectorAll('div[data-id]') : []);
+            // Check for new messages OR updates inside existing messages
+            const msgs = new Set();
+            if (node.closest && node.closest('div[data-id]')) {
+              msgs.add(node.closest('div[data-id]'));
+            }
+            if (node.matches && node.matches('div[data-id]')) {
+              msgs.add(node);
+            }
+            if (node.querySelectorAll) {
+              node.querySelectorAll('div[data-id]').forEach(m => msgs.add(m));
+            }
+            
             msgs.forEach(msg => {
               const id = msg.getAttribute('data-id');
               if (!id) return;
@@ -301,16 +312,20 @@ function ewSetupAntiDelete() {
               const isOut = id.startsWith('true_'); 
               if (isOut) return; // We only care about incoming messages
               
-              const textNode = msg.querySelector('.copyable-text span.selectable-text');
+              const textNode = msg.querySelector('.copyable-text span.selectable-text') || msg.querySelector('span.selectable-text[dir="ltr"]') || msg.querySelector('span.selectable-text');
               const imgNode = msg.querySelector('img[src^="blob:"]');
               
               // Save message if it's new
               if (!savedMessages.has(id) && (textNode || imgNode)) {
-                savedMessages.set(id, {
-                  text: textNode ? textNode.innerHTML : '',
-                  img: imgNode ? imgNode.src : null,
-                  timestamp: Date.now()
-                });
+                // Jangan simpan kalau text-nya ternyata tulisan 'dihapus'
+                const textContent = textNode ? textNode.innerText || textNode.textContent : '';
+                if (!textContent.includes('Pesan ini dihapus') && !textContent.includes('telah dihapus') && !msg.querySelector('span[data-icon="recalled"]')) {
+                  savedMessages.set(id, {
+                    text: textNode ? textNode.innerHTML : '',
+                    img: imgNode ? imgNode.src : null,
+                    timestamp: Date.now()
+                  });
+                }
               }
               
               // Prevent memory leak (max 2000 messages in RAM)
@@ -321,9 +336,10 @@ function ewSetupAntiDelete() {
               
               // Check if this is a deleted message tombstone
               const isDeleted = msg.querySelector('span[data-icon="recalled"]') || 
-                                (msg.innerText && (msg.innerText.includes('telah dihapus') || msg.innerText.includes('was deleted')));
+                                (msg.innerText && (msg.innerText.includes('telah dihapus') || msg.innerText.includes('was deleted') || msg.innerText.includes('Pesan ini dihapus')));
                                 
-              if (isDeleted && savedMessages.has(id)) {
+              // ONLY recover if the setting is currently ON
+              if (isDeleted && savedMessages.has(id) && window.wzIncognito?.antiDelete) {
                 const saved = savedMessages.get(id);
                 if (!msg.querySelector('.wz-recovered')) {
                   const recoveredDiv = document.createElement('div');
@@ -474,8 +490,7 @@ function ewSetupStatusSaver() {
   }
 }
 
-function ewSetupGhostMode(noRead, noTyping) {
-  if (!noRead && !noTyping) return;
+function ewSetupGhostMode() {
   console.log("Ghost Mode Webpack hook starting...");
   
   // WhatsApp uses window.webpackChunkwhatsapp_web_client
@@ -497,8 +512,15 @@ function ewSetupGhostMode(noRead, noTyping) {
   
   const blockFunction = (origFunc, name) => {
     return function(...args) {
-      console.log(`[Ghost Mode] Blocked ${name}`);
-      return Promise.resolve();
+      if (name === 'Read Receipt' && window.wzIncognito?.noRead) {
+        console.log(`[Ghost Mode] Blocked ${name}`);
+        return Promise.resolve();
+      }
+      if (name === 'Typing Indicator' && window.wzIncognito?.noTyping) {
+        console.log(`[Ghost Mode] Blocked ${name}`);
+        return Promise.resolve();
+      }
+      return origFunc.apply(this, args);
     };
   };
 
@@ -544,7 +566,7 @@ function ewSetupGhostMode(noRead, noTyping) {
     const modStr = wpRequire.m[modId].toString();
     
     // Disable Read Receipts (Blue Ticks)
-    if (noRead && modStr.includes('sendReadReceipt')) {
+    if (modStr.includes('sendReadReceipt')) {
       const mod = wpRequire(modId);
       if (patchModule(mod, 'sendReadReceipt', 'Read Receipt')) {
          console.log(`[Ghost Mode] Successfully patched Read Receipts in module ${modId}`);
@@ -552,7 +574,7 @@ function ewSetupGhostMode(noRead, noTyping) {
     }
     
     // Disable Typing Indicator
-    if (noTyping && modStr.includes('sendChatstate')) {
+    if (modStr.includes('sendChatstate')) {
       const mod = wpRequire(modId);
       if (patchModule(mod, 'sendChatstate', 'Typing Indicator')) {
          console.log(`[Ghost Mode] Successfully patched Typing Indicator in module ${modId}`);
@@ -572,12 +594,17 @@ async function ewSetup() {
   await ewSetupDictionary();
   const useAntiDelete = await window?.ipc?.stateGet?.("incognito-antidelete");
   const useStatusSaver = await window?.ipc?.stateGet?.("incognito-statussaver");
-  const useNoRead = await window?.ipc?.stateGet?.("incognito-noread");
-  const useNoTyping = await window?.ipc?.stateGet?.("incognito-notyping");
   
-  if (useAntiDelete) ewSetupAntiDelete();
+  // Set initial window.wzIncognito state
+  window.wzIncognito = {
+    noRead: await window?.ipc?.stateGet?.("incognito-noread"),
+    noTyping: await window?.ipc?.stateGet?.("incognito-notyping"),
+    antiDelete: await window?.ipc?.stateGet?.("incognito-antidelete")
+  };
+  
+  ewSetupAntiDelete();
   if (useStatusSaver) ewSetupStatusSaver();
-  ewSetupGhostMode(useNoRead, useNoTyping);
+  ewSetupGhostMode();
   
   ewReplaceLogo();
   ewHijackTitle();
