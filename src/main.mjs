@@ -162,6 +162,13 @@ function main() {
         try { if (existsSync(oldShortcutPath)) unlinkSync(oldShortcutPath); } catch(e){}
         try { if (existsSync(oldStartMenuShortcutPath)) unlinkSync(oldStartMenuShortcutPath); } catch(e){}
         
+        if (newName && newName !== 'WhatsZan') {
+          const defaultDesktopShortcut = path.join(desktopPath, 'WhatsZan.lnk');
+          const defaultStartMenuShortcut = path.join(startMenuPath, 'WhatsZan.lnk');
+          try { if (existsSync(defaultDesktopShortcut)) unlinkSync(defaultDesktopShortcut); } catch(e){}
+          try { if (existsSync(defaultStartMenuShortcut)) unlinkSync(defaultStartMenuShortcut); } catch(e){}
+        }
+        
         if (!create) {
            try { if (existsSync(newShortcutPath)) unlinkSync(newShortcutPath); } catch(e){}
            try { if (existsSync(newStartMenuShortcutPath)) unlinkSync(newStartMenuShortcutPath); } catch(e){}
@@ -171,11 +178,21 @@ function main() {
           const exePath = app.getPath('exe');
           const workDir = path.dirname(exePath);
           const customAppIcon = persistState.get("custom_tray_app");
-          const iconLocation = customAppIcon ? `${customAppIcon}, 0` : `${exePath}, 0`;
-          const ps = `$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('${newShortcutPath}'); $s.TargetPath = '${exePath}'; $s.WorkingDirectory = '${workDir}'; $s.IconLocation = '${iconLocation}'; $s.Save(); $s2 = $ws.CreateShortcut('${newStartMenuShortcutPath}'); $s2.TargetPath = '${exePath}'; $s2.WorkingDirectory = '${workDir}'; $s2.IconLocation = '${iconLocation}'; $s2.Save()`;
-          import('child_process').then(({ execSync }) => {
-            try { execSync(`powershell -NoProfile -Command "${ps}"`, { stdio: 'ignore' }); } catch(e){}
-          });
+          const iconLocation = customAppIcon || exePath;
+          const shortcutOptions = {
+            target: exePath,
+            cwd: workDir,
+            icon: iconLocation,
+            iconIndex: 0,
+            appUserModelId: 'org.uznbt.whatszan',
+            description: 'WhatsZan Desktop Client'
+          };
+          try {
+            shell.writeShortcutLink(newShortcutPath, 'create', shortcutOptions);
+            shell.writeShortcutLink(newStartMenuShortcutPath, 'create', shortcutOptions);
+          } catch(e) {
+            consola.error("Failed to create shortcut using shell API", e);
+          }
         }
       });
     } else if (process.platform === 'linux') {
@@ -187,6 +204,11 @@ function main() {
         const appDesktopFile = path.join(applicationsPath, 'whatszan.desktop');
         
         try { if (existsSync(oldDesktopShortcutPath)) unlinkSync(oldDesktopShortcutPath); } catch(e){}
+        
+        if (newName && newName !== 'WhatsZan') {
+          const defaultDesktopShortcut = path.join(desktopPath, 'WhatsZan.desktop');
+          try { if (existsSync(defaultDesktopShortcut)) unlinkSync(defaultDesktopShortcut); } catch(e){}
+        }
         
         if (!create) {
            try { if (existsSync(newDesktopShortcutPath)) unlinkSync(newDesktopShortcutPath); } catch(e){}
