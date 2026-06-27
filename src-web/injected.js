@@ -346,23 +346,35 @@ async function ewSetupDictionary() {
           const actualTrigger = trigger.startsWith('/') ? trigger : '/' + trigger;
 
           if (textBeforeCursor.endsWith(actualTrigger)) {
-            const startOffset = range.startOffset - actualTrigger.length;
-
-            if (startOffset >= 0) {
+            // Defer execution to allow Lexical to finish its internal state reconciliation
+            setTimeout(() => {
               isReplacing = true;
               
-              const replaceRange = document.createRange();
-              replaceRange.setStart(node, startOffset);
-              replaceRange.setEnd(node, range.startOffset);
+              // Get fresh selection as Lexical might have recreated the text node
+              const freshSelection = window.getSelection();
+              if (!freshSelection.rangeCount) { isReplacing = false; return; }
               
-              selection.removeAllRanges();
-              selection.addRange(replaceRange);
+              const freshRange = freshSelection.getRangeAt(0);
+              const freshNode = freshRange.startContainer;
               
-              // Insert the full replacement text
-              document.execCommand('insertText', false, dict[trigger]);
-              
+              if (freshNode.nodeType === Node.TEXT_NODE) {
+                const freshText = freshNode.textContent.slice(0, freshRange.startOffset);
+                if (freshText.endsWith(actualTrigger)) {
+                  const startOffset = freshRange.startOffset - actualTrigger.length;
+                  
+                  const replaceRange = document.createRange();
+                  replaceRange.setStart(freshNode, startOffset);
+                  replaceRange.setEnd(freshNode, freshRange.startOffset);
+                  
+                  freshSelection.removeAllRanges();
+                  freshSelection.addRange(replaceRange);
+                  
+                  // Insert the full replacement text
+                  document.execCommand('insertText', false, dict[trigger]);
+                }
+              }
               isReplacing = false;
-            }
+            }, 10); // Small 10ms delay is usually enough for React/Lexical to settle
             break;
           }
         }
