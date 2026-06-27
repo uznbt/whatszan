@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session, Menu, MenuItem, Tray, ipcMain, shell, Notification, dialog, nativeTheme, desktopCapturer } from "electron";
+import { app, BrowserWindow, session, Menu, MenuItem, Tray, ipcMain, shell, Notification, dialog, nativeTheme, desktopCapturer, nativeImage } from "electron";
 import { readFileSync, existsSync, unlinkSync } from "node:fs";
 import path from "node:path";
 import {
@@ -509,6 +509,34 @@ function main() {
       }
       ipcMain.handle("notifyEv", (ev, argsJson) => {
         windowShow(mainWindow);
+      });
+
+      ipcMain.handle("notifySend", (ev, id, title, body, iconDataUrl) => {
+        let iconOpts = {};
+        if (iconDataUrl) {
+          try {
+            iconOpts = { icon: nativeImage.createFromDataURL(iconDataUrl) };
+          } catch(e) { }
+        }
+
+        const notif = new Notification({
+          title: title,
+          body: body,
+          ...iconOpts,
+          hasReply: true,
+          replyPlaceholder: 'Balas pesan...'
+        });
+
+        notif.on('click', () => {
+          windowShow(mainWindow);
+          mainWindow.webContents.send('notify-click', id);
+        });
+
+        notif.on('reply', (event, reply) => {
+          mainWindow.webContents.send('notify-reply', id, reply);
+        });
+
+        notif.show();
       });
       const extractRealUrl = (urlStr) => {
         const parsed = getUrl(urlStr);

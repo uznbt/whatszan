@@ -18,6 +18,9 @@ contextBridge.exposeInMainWorld("ipc", {
   updateRecentChats: (chats) => ipcRenderer.send("update-recent-chats", chats),
   onJumpListAction: (callback) => ipcRenderer.on("jump-list-action", (event, data) => callback(data)),
   onSettingsSaved: (callback) => ipcRenderer.on("settings-saved", () => callback()),
+  notifySend: (id, title, body, iconDataUrl) => ipcRenderer.invoke("notifySend", id, title, body, iconDataUrl),
+  onNotifyClick: (callback) => ipcRenderer.on("notify-click", (event, id) => callback(id)),
+  onNotifyReply: (callback) => ipcRenderer.on("notify-reply", (event, id, reply) => callback(id, reply)),
 });
 
 // Bridge untuk screen-picker.html: kirim pilihan layar ke main process

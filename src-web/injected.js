@@ -5,18 +5,100 @@ function ewHijackNotif(prefix) {
 
   const override = {
     construct(target, args) {
-      args[0] = `${prefix}${args[0]}`;
-      const thing = new target(...args);
-      thing.addEventListener("click", (ev) => {
-        console.log("ev", ev);
-        window?.ipc?.notifyEv?.(JSON.stringify(ev));
-      });
+      const title = `${prefix}${args[0]}`;
+      const opts = args[1] || {};
+      
+      const dummy = new EventTarget();
+      dummy.close = () => {};
 
-      return thing;
+      const sendToMain = async () => {
+         let iconDataUrl = null;
+         if (opts.icon && opts.icon.startsWith('blob:')) {
+            try {
+              const res = await fetch(opts.icon);
+              const blob = await res.blob();
+              iconDataUrl = await new Promise(r => {
+                 const reader = new FileReader();
+                 reader.onloadend = () => r(reader.result);
+                 reader.readAsDataURL(blob);
+              });
+            } catch(e) { console.error("Failed to convert blob icon", e); }
+         } else {
+            iconDataUrl = opts.icon;
+         }
+         
+         const id = Date.now().toString() + Math.random();
+         window.__notifs = window.__notifs || {};
+         window.__notifs[id] = dummy;
+         
+         if (window?.ipc?.notifySend) {
+           window.ipc.logToMain?.(`[WZ Notif] Routing notification to main process: ${title}`);
+           window.ipc.notifySend(id, title, opts.body, iconDataUrl);
+         } else {
+           const thing = new target(title, opts);
+           thing.addEventListener("click", (ev) => {
+             dummy.dispatchEvent(new Event('click'));
+             window?.ipc?.notifyEv?.(JSON.stringify(ev));
+           });
+         }
+      };
+      
+      sendToMain();
+      return dummy;
     },
   };
 
   window.Notification = new Proxy(window.realNotification, override);
+  
+  if (window?.ipc?.onNotifyClick) {
+    window.ipc.onNotifyClick((id) => {
+      const dummy = window.__notifs?.[id];
+      if (dummy) dummy.dispatchEvent(new Event('click'));
+    });
+  }
+
+  if (window?.ipc?.onNotifyReply) {
+    window.ipc.onNotifyReply((id, reply) => {
+      const dummy = window.__notifs?.[id];
+      if (dummy) {
+        dummy.dispatchEvent(new Event('click'));
+
+        window?.ipc?.logToMain?.(`[WZ Notif] Reply received for: ${id}`);
+        setTimeout(() => {
+          const dataTransfer = new DataTransfer();
+          dataTransfer.setData('text/plain', reply);
+          const event = new ClipboardEvent('paste', {
+            clipboardData: dataTransfer,
+            bubbles: true
+          });
+          
+          const composeBox = document.querySelector('#main div[contenteditable="true"]') || document.querySelector('div[contenteditable="true"][data-tab="10"]');
+          if (composeBox) {
+            window?.ipc?.logToMain?.(`[WZ Notif] Found compose box, pasting text`);
+            composeBox.focus();
+            composeBox.dispatchEvent(event);
+            
+            setTimeout(() => {
+              composeBox.dispatchEvent(new Event('input', { bubbles: true }));
+              
+              setTimeout(() => {
+                const sendIcon = document.querySelector('[data-icon="send"]');
+                const sendBtn = sendIcon ? sendIcon.closest('button') : (document.querySelector('button[aria-label="Send"]') || document.querySelector('button[aria-label="Kirim"]'));
+                if (sendBtn) {
+                  window?.ipc?.logToMain?.(`[WZ Notif] Send button found. Clicking it.`);
+                  sendBtn.click();
+                } else {
+                  window?.ipc?.logToMain?.(`[WZ Notif] Send button NOT found!`);
+                }
+              }, 150);
+            }, 50);
+          } else {
+            window?.ipc?.logToMain?.(`[WZ Notif] Compose box NOT found!`);
+          }
+        }, 500);
+      }
+    });
+  }
 }
 
 function ewHijackClick() {
