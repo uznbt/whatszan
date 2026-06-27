@@ -68,3 +68,14 @@ body.blur-media #main div[data-testid="ptt-play"]:hover,
 body.blur-media #main [data-testid="media-url-provider"]:hover {
     filter: blur(0px); opacity: 1; transition: filter 0.05s ease-in, opacity 0.05s ease-in; transition-delay: var(--wz-unblur-delay, 0s);
 }
+
+/* 5. Blur Teks Ketikan (Input) */
+body.blur-input div[contenteditable="true"] {
+    filter: blur(var(--wz-blur-amount, 4px)); opacity: 0.75;
+    transition: filter 0.15s ease-out, opacity 0.15s ease-out;
+    transform: translateZ(0); backface-visibility: hidden;
+}
+body.blur-input div[contenteditable="true"]:focus,
+body.blur-input div[contenteditable="true"]:hover {
+    filter: blur(0px); opacity: 1; transition: filter 0.05s ease-in, opacity 0.05s ease-in; transition-delay: var(--wz-unblur-delay, 0s);
+}

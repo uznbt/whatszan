@@ -36,6 +36,7 @@
   "settings_blur_pp": "Blur Foto Profil",
   "settings_blur_messages": "Blur Isi Pesan",
   "settings_blur_media": "Blur Media",
+  "settings_blur_input": "Blur Teks Ketikan (Input)",
   "settings_blur_amount_title": "Tingkat Blur",
   "settings_blur_amount_desc": "Geser untuk atur seberapa buram efeknya",
   "settings_blur_preview": "Contoh Pesan Rahasia",

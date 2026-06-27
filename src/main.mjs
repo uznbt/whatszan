@@ -28,7 +28,7 @@ import { defaultKeys } from "./keys.mjs";
 import { Dbus } from "./dbus.mjs";
 
 const defaultUserAgent =
-  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36";
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
 function handleWhatsAppProtocol(window, url) {
   const webUrl = convertWhatsAppUrl(url);
@@ -263,6 +263,8 @@ function main() {
       autoHideMenuBar: config.get("menu-bar-auto-hide", true),
       ...state.windowBounds,
     });
+
+    mainWindow.setContentProtection(config.get("anti-screencast", false));
 
     if (!config.get("menu-bar", true)) {
       mainWindow.removeMenu();
@@ -592,6 +594,7 @@ function main() {
         const isPP = config.get("blur-pp", true);
         const isMessages = config.get("blur-messages", true);
         const isMedia = config.get("blur-media", true);
+        const isInput = config.get("blur-input", true);
         const specificStr = config.get("blur-specific", "");
         const blurAmount = config.get("blur-amount", 4);
 
@@ -607,7 +610,7 @@ function main() {
             document.documentElement.style.setProperty('--wz-blur-amount', '${blurAmount}px');
             document.documentElement.style.setProperty('--wz-blur-media', '${blurAmount * 1.5}px');
             document.documentElement.style.setProperty('--wz-unblur-delay', '${config.get("unblur-delay", 0)}s');
-            document.body.classList.remove('blur-contacts', 'blur-pp', 'blur-messages', 'blur-media', 'privacy-blur');
+            document.body.classList.remove('blur-contacts', 'blur-pp', 'blur-messages', 'blur-media', 'blur-input', 'privacy-blur');
             const oldStyle = document.getElementById('whatszan-blur-specific');
             if (oldStyle) oldStyle.remove();
 
@@ -615,6 +618,7 @@ function main() {
               if (${isPP}) document.body.classList.add('blur-pp');
               if (${isMessages}) document.body.classList.add('blur-messages');
               if (${isMedia}) document.body.classList.add('blur-media');
+              if (${isInput}) document.body.classList.add('blur-input');
 
               const specific = ${JSON.stringify(specificStr || "")};
               const names = specific.split(',').map(n => n.trim()).filter(n => n);
@@ -764,6 +768,7 @@ function main() {
 
         ev.sender.send("settings-saved");
         if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.setContentProtection(config.get("anti-screencast", false));
           mainWindow.webContents.send("settings-saved");
         }
       });
@@ -1093,11 +1098,49 @@ function main() {
 
           // Tetap pertahankan shortcut untuk Privacy Blur tanpa harus menampilkannya di menu
           import('electron').then(({ globalShortcut }) => {
+            const showToast = (msg) => {
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.executeJavaScript(`
+                  (function() {
+                    let t = document.getElementById('wz-toast');
+                    if (!t) {
+                      t = document.createElement('div');
+                      t.id = 'wz-toast';
+                      Object.assign(t.style, {
+                        position: 'fixed', top: '24px', left: '50%', transform: 'translateX(-50%)',
+                        backgroundColor: 'rgba(0, 0, 0, 0.85)', color: '#fff', padding: '10px 20px',
+                        borderRadius: '20px', zIndex: '999999', fontSize: '14px', fontWeight: '500',
+                        transition: 'opacity 0.3s ease', opacity: '0', pointerEvents: 'none',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                      });
+                      document.body.appendChild(t);
+                    }
+                    t.innerText = ${JSON.stringify(msg)};
+                    t.style.opacity = '1';
+                    if (t.timer) clearTimeout(t.timer);
+                    t.timer = setTimeout(() => t.style.opacity = '0', 2500);
+                  })();
+                `).catch(()=>{});
+              }
+            };
+
             globalShortcut.register('CommandOrControl+Shift+B', () => {
               const current = persistState.get("privacy-blur", false);
               const newState = !current;
               persistState.set("privacy-blur", newState);
               updateBlurState(newState);
+              showToast(newState ? 'Privacy Blur: ON' : 'Privacy Blur: OFF');
+            });
+
+            globalShortcut.register('CommandOrControl+Shift+H', () => {
+              const current = persistState.get("anti-screencast", false);
+              const newState = !current;
+              persistState.set("anti-screencast", newState);
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.setContentProtection(newState);
+                mainWindow.webContents.send("settings-saved");
+              }
+              showToast(newState ? 'Anti Screen Cast: ON' : 'Anti Screen Cast: OFF');
             });
           });
         }

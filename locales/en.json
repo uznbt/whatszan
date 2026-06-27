@@ -28,6 +28,7 @@
   "settings_blur_pp": "Blur Profile Pictures",
   "settings_blur_messages": "Blur Messages",
   "settings_blur_media": "Blur Media",
+  "settings_blur_input": "Blur Typed Text (Input)",
   "settings_blur_amount_title": "Blur Amount",
   "settings_blur_amount_desc": "Adjust the blur intensity",
   "settings_blur_preview": "Secret Message Example",

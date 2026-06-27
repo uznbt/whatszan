@@ -132,8 +132,8 @@ async function ewSetupKeys() {
 }
 
 function ewReplaceLogo() {
-  const customAppName = window.wzAppName || 'WhatsZan';
-  const isWhatsApp = customAppName.toLowerCase() === 'whatsapp';
+  const getAppName = () => window.wzAppName || 'WhatsZan';
+  const getIsWhatsApp = () => getAppName().toLowerCase() === 'whatsapp';
 
   const processTextNode = (node) => {
     const txt = node.nodeValue || "";
@@ -176,13 +176,13 @@ function ewReplaceLogo() {
         parent = parent.parentElement;
       }
       if (!isMessage) {
-        node.nodeValue = customAppName;
+        node.nodeValue = getAppName();
       }
     }
   };
 
   const processElement = (root) => {
-    if (!isWhatsApp) {
+    if (!getIsWhatsApp()) {
       // 1. Check for SVGs inside this element
       const svgs = root.querySelectorAll ? root.querySelectorAll('svg[aria-label="WhatsApp"]') : [];
       if (root.tagName === 'svg' && root.getAttribute('aria-label') === 'WhatsApp') svgs.push(root);
@@ -193,7 +193,7 @@ function ewReplaceLogo() {
           svg.style.display = 'none';
           const span = document.createElement('span');
           span.className = 'whatszan-logo';
-          span.textContent = customAppName;
+          span.textContent = getAppName();
           span.style.fontWeight = 'bold';
           span.style.fontSize = '18px';
           span.style.color = 'inherit'; 
@@ -204,16 +204,17 @@ function ewReplaceLogo() {
 
     // 2. Banner Killer (ALWAYS RUNS)
     const text = root.innerText || "";
-    if (((text.includes('Unduh WhatsApp untuk Windows') || text.includes(`Unduh ${customAppName} untuk Windows`)) && text.includes('fitur ekstra')) || 
-        text.includes('Dapatkan WhatsApp untuk Windows') || text.includes(`Dapatkan ${customAppName} untuk Windows`)) {
+    const currentAppName = getAppName();
+    if (((text.includes('Unduh WhatsApp untuk Windows') || text.includes(`Unduh ${currentAppName} untuk Windows`)) && text.includes('fitur ekstra')) || 
+        text.includes('Dapatkan WhatsApp untuk Windows') || text.includes(`Dapatkan ${currentAppName} untuk Windows`)) {
       
       const textWalker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
       let tNode;
       const targetNodes = [];
       while (tNode = textWalker.nextNode()) {
         const v = tNode.nodeValue || "";
-        if (v.includes('Unduh WhatsApp untuk Windows') || v.includes(`Unduh ${customAppName} untuk Windows`) ||
-            v.includes('Dapatkan WhatsApp untuk Windows') || v.includes(`Dapatkan ${customAppName} untuk Windows`) ||
+        if (v.includes('Unduh WhatsApp untuk Windows') || v.includes(`Unduh ${currentAppName} untuk Windows`) ||
+            v.includes('Dapatkan WhatsApp untuk Windows') || v.includes(`Dapatkan ${currentAppName} untuk Windows`) ||
             v.includes('fitur ekstra')) {
            targetNodes.push(tNode);
         }
@@ -265,7 +266,7 @@ function ewReplaceLogo() {
       else icon.style.display = 'none';
     });
 
-    if (!isWhatsApp) {
+    if (!getIsWhatsApp()) {
       // 3. Process all text nodes inside this element
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
       let tNode;
@@ -299,14 +300,14 @@ function ewReplaceLogo() {
 }
 
 function ewHijackTitle() {
-  const customAppName = window.wzAppName || 'WhatsZan';
   // Ensure the document title also says customAppName instead of WhatsApp and remove " Web"
   const titleEl = document.querySelector('title');
   if (titleEl) {
     const updateTitle = () => {
+      const getAppName = () => window.wzAppName || 'WhatsZan';
       let newTitle = document.title;
       if (newTitle.includes('WhatsApp')) {
-        newTitle = newTitle.replace('WhatsApp', customAppName);
+        newTitle = newTitle.replace('WhatsApp', getAppName());
       }
       if (newTitle.endsWith(' Web')) {
         newTitle = newTitle.slice(0, -4);
@@ -333,7 +334,7 @@ async function ewSetupDictionary() {
     if (dict && Object.keys(dict).length > 0) {
       for (const [k, v] of Object.entries(dict)) {
         const key = k.startsWith('/') ? k : '/' + k;
-        triggerMap[key] = v;
+        triggerMap[key.toLowerCase()] = v;
       }
     }
     triggerList = Object.keys(triggerMap);
@@ -351,7 +352,7 @@ async function ewSetupDictionary() {
   // Track backspace and reset keys for buffer management
   document.addEventListener('keydown', (ev) => {
     if (!ev.target.isContentEditable) { buffer = ''; return; }
-    window?.ipc?.logToMain?.(`[WZ Dict] keydown: ${ev.key}`);
+    // window?.ipc?.logToMain?.(`[WZ Dict] keydown: ${ev.key}`);
     
     if (ev.key === 'Backspace') {
       buffer = buffer.slice(0, -1);
@@ -387,8 +388,9 @@ async function ewSetupDictionary() {
 
     window?.ipc?.logToMain?.(`[WZ Dict] Text before cursor: "${textBeforeCursor}"`);
 
+    const textLower = textBeforeCursor.toLowerCase();
     for (const trigger of triggerList) {
-      if (textBeforeCursor.endsWith(trigger)) {
+      if (textLower.endsWith(trigger)) {
         window?.ipc?.logToMain?.(`[WZ Dict] Trigger matched: ${trigger}`);
         isReplacing = true;
 

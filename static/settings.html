@@ -381,6 +381,12 @@
           </div>
           <label class="toggle"><input type="checkbox" id="blur-media" /><span class="slider"></span></label>
         </div>
+        <div class="row" style="border: none; padding: 10px 0; background: transparent;">
+          <div class="row-info">
+            <div class="row-title"><span data-i18n="settings_blur_input">Blur Teks Ketikan (Input)</span></div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="blur-input" /><span class="slider"></span></label>
+        </div>
 
         <div class="row" style="border: none; padding: 10px 0; background: transparent; flex-direction: column; align-items: flex-start;">
           <div class="row-info" style="width: 100%; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
@@ -408,6 +414,14 @@
           </div>
           <input id="blur-specific" class="text-input" type="text" style="width:100%;" placeholder="Contoh: Bos, Budi" data-i18n="settings_placeholder_specific" />
         </div>
+      </div>
+
+      <div class="row">
+        <div class="row-info">
+          <div class="row-title">Anti Screen Cast</div>
+          <div class="row-desc">Sembunyikan aplikasi dari rekam layar / monitor eksternal. Tekan Ctrl+Shift+H kapan saja.</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="anti-screencast" /><span class="slider"></span></label>
       </div>
 
       <div class="section-title" style="margin-top: 24px;"><span data-i18n="settings_incognito_title">Incognito / Power User</span></div>
@@ -647,10 +661,12 @@
     document.getElementById('menu-bar-auto-hide').checked = settings['menu-bar-auto-hide'] !== false;
     document.getElementById('user-agent').value = settings['user-agent'] || '';
     document.getElementById('privacy-blur').checked = settings['privacy-blur'] || false;
+    document.getElementById('anti-screencast').checked = settings['anti-screencast'] || false;
     document.getElementById('blur-contacts').checked = settings['blur-contacts'] !== false;
     document.getElementById('blur-pp').checked = settings['blur-pp'] !== false;
     document.getElementById('blur-messages').checked = settings['blur-messages'] !== false;
     document.getElementById('blur-media').checked = settings['blur-media'] !== false;
+    document.getElementById('blur-input').checked = settings['blur-input'] !== false;
     document.getElementById('blur-specific').value = settings['blur-specific'] || '';
     document.getElementById('blur-amount').value = settings['blur-amount'] !== undefined ? settings['blur-amount'] : 4;
     document.getElementById('unblur-delay').value = settings['unblur-delay'] || 0;
@@ -718,6 +734,20 @@
         <span style="color: var(--text-primary); word-break: break-all;">${replacement}</span>
       `;
       
+      const btnGroup = document.createElement('div');
+      btnGroup.style.display = 'flex';
+      btnGroup.style.gap = '8px';
+
+      const editBtn = document.createElement('button');
+      editBtn.className = 'btn';
+      editBtn.style.background = '#f39c12';
+      editBtn.innerHTML = '✏️ Edit';
+      editBtn.onclick = () => {
+        document.getElementById('dict-trigger').value = trigger.startsWith('/') ? trigger : '/' + trigger;
+        document.getElementById('dict-replacement').value = replacement;
+        document.getElementById('dict-replacement').focus();
+      };
+
       const delBtn = document.createElement('button');
       delBtn.className = 'btn';
       delBtn.style.background = '#e74c3c';
@@ -728,8 +758,11 @@
         autoSave();
       };
       
+      btnGroup.appendChild(editBtn);
+      btnGroup.appendChild(delBtn);
+
       row.appendChild(info);
-      row.appendChild(delBtn);
+      row.appendChild(btnGroup);
       list.appendChild(row);
     }
   }
@@ -754,7 +787,7 @@
   document.getElementById('privacy-blur').addEventListener('change', (e) => {
     updateBlurSubsettingsVisibility();
     if (e.target.checked) {
-      const subToggles = ['blur-contacts', 'blur-pp', 'blur-messages', 'blur-media'];
+      const subToggles = ['blur-contacts', 'blur-pp', 'blur-messages', 'blur-media', 'blur-input'];
       const allOff = subToggles.every(id => !document.getElementById(id).checked);
       if (allOff) {
         subToggles.forEach(id => document.getElementById(id).checked = true);
@@ -763,7 +796,7 @@
     autoSave();
   });
 
-  const autoSaveInputs = ['app-language', 'notif-prefix', 'quit-on-close', 'esc-toggle', 'smart-download', 'spellcheck', 'menu-bar', 'menu-bar-auto-hide', 'user-agent', 'blur-contacts', 'blur-pp', 'blur-messages', 'blur-media', 'blur-specific', 'blur-amount', 'incognito-antidelete', 'incognito-statussaver', 'incognito-noread', 'incognito-notyping', 'desktop-shortcut', 'custom-app-name'];
+  const autoSaveInputs = ['app-language', 'notif-prefix', 'quit-on-close', 'esc-toggle', 'smart-download', 'spellcheck', 'menu-bar', 'menu-bar-auto-hide', 'user-agent', 'anti-screencast', 'blur-contacts', 'blur-pp', 'blur-messages', 'blur-media', 'blur-input', 'blur-specific', 'blur-amount', 'incognito-antidelete', 'incognito-statussaver', 'incognito-noread', 'incognito-notyping', 'desktop-shortcut', 'custom-app-name'];
   autoSaveInputs.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', async () => {
@@ -836,9 +869,10 @@
   }
 
   document.getElementById('btn-dict-add').addEventListener('click', () => {
-    const trigger = document.getElementById('dict-trigger').value.trim();
+    let trigger = document.getElementById('dict-trigger').value.trim();
     const replacement = document.getElementById('dict-replacement').value.trim();
     if (trigger && replacement) {
+      trigger = trigger.replace(/^\/+/, '').toLowerCase();
       textReplacements[trigger] = replacement;
       document.getElementById('dict-trigger').value = '';
       document.getElementById('dict-replacement').value = '';
@@ -861,6 +895,7 @@
       'menu-bar-auto-hide': document.getElementById('menu-bar-auto-hide').checked,
       'user-agent': document.getElementById('user-agent').value || null,
       'privacy-blur': document.getElementById('privacy-blur').checked,
+      'anti-screencast': document.getElementById('anti-screencast').checked,
       'blur-contacts': document.getElementById('blur-contacts').checked,
       'blur-pp': document.getElementById('blur-pp').checked,
       'blur-messages': document.getElementById('blur-messages').checked,
