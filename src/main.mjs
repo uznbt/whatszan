@@ -546,6 +546,18 @@ function main() {
           toggleVisibility(mainWindow);
         }
       });
+      ipcMain.handle("insert-text", (ev, text) => {
+        console.log("[Main] Menerima request insertText dari WhatsApp:", text);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          console.log("[Main] Mengeksekusi mainWindow.webContents.insertText()...");
+          mainWindow.webContents.insertText(text);
+        } else {
+          console.log("[Main] ERROR: mainWindow tidak ada atau hancur");
+        }
+      });
+      ipcMain.handle("log-to-main", (ev, msg) => {
+        console.log("[Injected]", msg);
+      });
       
       // IPC Handler untuk instal ekstensi
       ipcMain.handle("install-extension", async (ev, extensionId) => {
@@ -751,6 +763,9 @@ function main() {
         }
 
         ev.sender.send("settings-saved");
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send("settings-saved");
+        }
       });
 
       ipcMain.handle("branding-upload-icon", async (ev, { type, path: srcPath }) => {

@@ -13,8 +13,11 @@ contextBridge.exposeInMainWorld("ipc", {
   ...(isDebug && {
     ping: () => ipcRenderer.invoke("ping"),
   }),
+  logToMain: (msg) => ipcRenderer.invoke("log-to-main", msg),
+  insertText: (text) => ipcRenderer.invoke("insert-text", text),
   updateRecentChats: (chats) => ipcRenderer.send("update-recent-chats", chats),
   onJumpListAction: (callback) => ipcRenderer.on("jump-list-action", (event, data) => callback(data)),
+  onSettingsSaved: (callback) => ipcRenderer.on("settings-saved", () => callback()),
 });
 
 // Bridge untuk screen-picker.html: kirim pilihan layar ke main process

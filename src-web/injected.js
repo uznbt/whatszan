@@ -322,65 +322,94 @@ function ewHijackTitle() {
 }
 
 async function ewSetupDictionary() {
-  const dict = await window?.ipc?.stateGet?.("textReplacements");
-  if (!dict || Object.keys(dict).length === 0) return;
+  let triggerMap = {};
+  let triggerList = [];
+  let maxTriggerLen = 0;
 
-  const triggers = Object.keys(dict);
-
-  let isReplacing = false;
-  document.addEventListener('input', (ev) => {
-    if (isReplacing) return;
-    const target = ev.target;
-    if (target.isContentEditable) {
-      const selection = window.getSelection();
-      if (!selection.rangeCount) return;
-
-      const range = selection.getRangeAt(0);
-      if (!range.collapsed) return;
-
-      const node = range.startContainer;
-      if (node.nodeType === Node.TEXT_NODE) {
-        const textBeforeCursor = node.textContent.slice(0, range.startOffset);
-
-        for (const trigger of triggers) {
-          const actualTrigger = trigger.startsWith('/') ? trigger : '/' + trigger;
-
-          if (textBeforeCursor.endsWith(actualTrigger)) {
-            // Defer execution to allow Lexical to finish its internal state reconciliation
-            setTimeout(() => {
-              isReplacing = true;
-              
-              // Get fresh selection as Lexical might have recreated the text node
-              const freshSelection = window.getSelection();
-              if (!freshSelection.rangeCount) { isReplacing = false; return; }
-              
-              const freshRange = freshSelection.getRangeAt(0);
-              const freshNode = freshRange.startContainer;
-              
-              if (freshNode.nodeType === Node.TEXT_NODE) {
-                const freshText = freshNode.textContent.slice(0, freshRange.startOffset);
-                if (freshText.endsWith(actualTrigger)) {
-                  const startOffset = freshRange.startOffset - actualTrigger.length;
-                  
-                  const replaceRange = document.createRange();
-                  replaceRange.setStart(freshNode, startOffset);
-                  replaceRange.setEnd(freshNode, freshRange.startOffset);
-                  
-                  freshSelection.removeAllRanges();
-                  freshSelection.addRange(replaceRange);
-                  
-                  // Insert the full replacement text
-                  document.execCommand('insertText', false, dict[trigger]);
-                }
-              }
-              isReplacing = false;
-            }, 10); // Small 10ms delay is usually enough for React/Lexical to settle
-            break;
-          }
-        }
+  // Load dict and rebuild trigger map
+  const loadDict = async () => {
+    const dict = await window?.ipc?.stateGet?.("textReplacements");
+    triggerMap = {};
+    if (dict && Object.keys(dict).length > 0) {
+      for (const [k, v] of Object.entries(dict)) {
+        const key = k.startsWith('/') ? k : '/' + k;
+        triggerMap[key] = v;
       }
     }
-  }, { capture: true });
+    triggerList = Object.keys(triggerMap);
+    maxTriggerLen = triggerList.length > 0 ? Math.max(...triggerList.map(t => t.length)) : 0;
+  };
+
+  await loadDict();
+
+  // Reload dict whenever settings are saved
+  window?.ipc?.onSettingsSaved?.(() => loadDict());
+
+  let buffer = '';
+  let isReplacing = false;
+
+  // Track backspace and reset keys for buffer management
+  document.addEventListener('keydown', (ev) => {
+    if (!ev.target.isContentEditable) { buffer = ''; return; }
+    window?.ipc?.logToMain?.(`[WZ Dict] keydown: ${ev.key}`);
+    
+    if (ev.key === 'Backspace') {
+      buffer = buffer.slice(0, -1);
+    } else if (ev.key === 'Enter' || ev.key === 'Escape' || ev.key === 'Tab') {
+      buffer = '';
+    } else if (ev.key.length === 1) {
+      // Fallback: If WhatsApp swallows the 'input' event for special characters like '/',
+      // we can at least know it was pressed. But we'll let 'input' handle it if it fires.
+      // We will only manually add it to buffer if we detect it was swallowed. (We'll just log for now).
+    }
+  }, true);
+
+  // Use input event (synchronous, has user gesture context)
+  document.addEventListener('input', (ev) => {
+    if (isReplacing) return;
+    if (triggerList.length === 0) return;
+    const target = ev.target;
+    if (!target.isContentEditable) return;
+
+    window?.ipc?.logToMain?.(`[WZ Dict] input event: type=${ev.inputType}, data=${ev.data}`);
+
+    const selection = window.getSelection();
+    if (!selection || !selection.focusNode) return;
+
+    // Get the exact text in the current text node up to the cursor
+    // This is 100% accurate and immune to swallowed events, mouse clicks, or backspaces!
+    let textBeforeCursor = '';
+    if (selection.focusNode.nodeType === Node.TEXT_NODE) {
+      textBeforeCursor = selection.focusNode.textContent.slice(0, selection.focusOffset);
+    } else if (selection.focusNode.innerText) {
+      textBeforeCursor = selection.focusNode.innerText.slice(0, selection.focusOffset);
+    }
+
+    window?.ipc?.logToMain?.(`[WZ Dict] Text before cursor: "${textBeforeCursor}"`);
+
+    for (const trigger of triggerList) {
+      if (textBeforeCursor.endsWith(trigger)) {
+        window?.ipc?.logToMain?.(`[WZ Dict] Trigger matched: ${trigger}`);
+        isReplacing = true;
+
+        const selection = window.getSelection();
+        if (!selection || !selection.rangeCount) { isReplacing = false; break; }
+
+        // Select the trigger text backwards
+        for (let i = 0; i < trigger.length; i++) {
+          selection.modify('extend', 'backward', 'character');
+        }
+
+        // Use Electron's native webContents.insertText
+        const replacement = triggerMap[trigger];
+        window?.ipc?.logToMain?.(`[WZ Dict] Sending to insertText: ${replacement}`);
+        window?.ipc?.insertText?.(replacement);
+
+        isReplacing = false;
+        break;
+      }
+    }
+  }, true);
 }
 
 const savedMessages = new Map();
