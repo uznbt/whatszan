@@ -1,13 +1,14 @@
 {
   "name": "whatszan",
-  "desktopName": "whatszan",
-  "description": "Lightweight WhatsApp desktop client for Linux",
+  "productName": "WhatsZan",
+  "desktopName": "WhatsZan",
+  "description": "Unofficial lightweight WhatsApp desktop client for Linux",
   "author": {
     "name": "uznbt",
     "email": "uznbt@cachyos.org"
   },
   "homepage": "https://github.com/uznbt/whatszan",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "main": "src/main.mjs",
   "type": "module",
   "scripts": {

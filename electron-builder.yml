@@ -23,7 +23,8 @@ nsis:
   allowToChangeInstallationDirectory: true
   displayLanguageSelector: true
   multiLanguageInstaller: true
-  deleteAppDataOnUninstall: true
+  installerLanguages: ["en_US", "id", "de_DE", "fr_FR", "it_IT", "pt_BR"]
+  deleteAppDataOnUninstall: false
   differentialPackage: false
   installerIcon: build/icon.ico
   uninstallerIcon: build/icon.ico

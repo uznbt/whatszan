@@ -132,8 +132,39 @@ async function ewSetupKeys() {
 }
 
 function ewReplaceLogo() {
+  const customAppName = window.wzAppName || 'WhatsZan';
+  const isWhatsApp = customAppName.toLowerCase() === 'whatsapp';
+
   const processTextNode = (node) => {
-    if (node.nodeValue === 'WhatsApp' || node.nodeValue === 'WhatsApp Web') {
+    const txt = node.nodeValue || "";
+    
+    // Meta AI Killer (Text based)
+    if (txt === 'Meta AI' || txt === 'Tanya Meta AI' || txt === 'Ask Meta AI') {
+      let parent = node.parentElement;
+      let isMessage = false;
+      while (parent) {
+        if (parent.getAttribute && (parent.getAttribute('data-testid') === 'msg-container' || parent.getAttribute('role') === 'row' || parent.id === 'main')) {
+          isMessage = true;
+          break;
+        }
+        parent = parent.parentElement;
+      }
+      if (!isMessage) {
+        const btn = node.parentElement && node.parentElement.closest ? node.parentElement.closest('[role="button"], button') : null;
+        if (btn) btn.style.display = 'none';
+        else {
+          let p = node.parentElement;
+          for (let i = 0; i < 2; i++) {
+            if (p && p.tagName !== 'BODY') {
+              p.style.display = 'none';
+              p = p.parentElement;
+            }
+          }
+        }
+      }
+    }
+
+    if (txt === 'WhatsApp' || txt === 'WhatsApp Web') {
       let parent = node.parentElement;
       let isMessage = false;
       while (parent) {
@@ -145,52 +176,102 @@ function ewReplaceLogo() {
         parent = parent.parentElement;
       }
       if (!isMessage) {
-        node.nodeValue = node.nodeValue.replace('WhatsApp', 'WhatsZan');
+        node.nodeValue = customAppName;
       }
     }
   };
 
   const processElement = (root) => {
-    // 1. Check for SVGs inside this element
-    const svgs = root.querySelectorAll ? root.querySelectorAll('svg[aria-label="WhatsApp"]') : [];
-    if (root.tagName === 'svg' && root.getAttribute('aria-label') === 'WhatsApp') svgs.push(root);
-    
-    svgs.forEach(svg => {
-      const parent = svg.parentElement;
-      if (parent && !parent.querySelector('.whatszan-logo')) {
-        svg.style.display = 'none';
-        const span = document.createElement('span');
-        span.className = 'whatszan-logo';
-        span.textContent = 'WhatsZan';
-        span.style.fontWeight = 'bold';
-        span.style.fontSize = '18px';
-        span.style.color = 'inherit'; 
-        parent.appendChild(span);
-      }
-    });
-
-    // 2. Banner Killer
-    const text = root.innerText || "";
-    if (((text.includes('Unduh WhatsApp untuk Windows') || text.includes('Unduh WhatsZan untuk Windows')) && text.includes('fitur ekstra')) || 
-        text.includes('Dapatkan WhatsApp untuk Windows') || text.includes('Dapatkan WhatsZan untuk Windows')) {
-      root.style.display = 'none';
-      let parent = root.parentElement;
-      for (let i = 0; i < 3; i++) {
-        if (parent && parent.tagName !== 'BODY') {
-          const rect = parent.getBoundingClientRect();
-          if (rect.height > 40 && rect.height < 250) {
-            parent.style.display = 'none';
-          }
-          parent = parent.parentElement;
+    if (!isWhatsApp) {
+      // 1. Check for SVGs inside this element
+      const svgs = root.querySelectorAll ? root.querySelectorAll('svg[aria-label="WhatsApp"]') : [];
+      if (root.tagName === 'svg' && root.getAttribute('aria-label') === 'WhatsApp') svgs.push(root);
+      
+      svgs.forEach(svg => {
+        const parent = svg.parentElement;
+        if (parent && !parent.querySelector('.whatszan-logo')) {
+          svg.style.display = 'none';
+          const span = document.createElement('span');
+          span.className = 'whatszan-logo';
+          span.textContent = customAppName;
+          span.style.fontWeight = 'bold';
+          span.style.fontSize = '18px';
+          span.style.color = 'inherit'; 
+          parent.appendChild(span);
         }
-      }
+      });
     }
 
-    // 3. Process all text nodes inside this element
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
-    let tNode;
-    while (tNode = walker.nextNode()) {
-      processTextNode(tNode);
+    // 2. Banner Killer (ALWAYS RUNS)
+    const text = root.innerText || "";
+    if (((text.includes('Unduh WhatsApp untuk Windows') || text.includes(`Unduh ${customAppName} untuk Windows`)) && text.includes('fitur ekstra')) || 
+        text.includes('Dapatkan WhatsApp untuk Windows') || text.includes(`Dapatkan ${customAppName} untuk Windows`)) {
+      
+      const textWalker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+      let tNode;
+      const targetNodes = [];
+      while (tNode = textWalker.nextNode()) {
+        const v = tNode.nodeValue || "";
+        if (v.includes('Unduh WhatsApp untuk Windows') || v.includes(`Unduh ${customAppName} untuk Windows`) ||
+            v.includes('Dapatkan WhatsApp untuk Windows') || v.includes(`Dapatkan ${customAppName} untuk Windows`) ||
+            v.includes('fitur ekstra')) {
+           targetNodes.push(tNode);
+        }
+      }
+      
+      targetNodes.forEach(t => {
+        let p = t.parentElement;
+        let hiddenModal = false;
+        while (p && p.tagName !== 'BODY' && p.id !== 'app') {
+          if (p.getAttribute('role') === 'dialog' || p.getAttribute('aria-modal') === 'true') {
+             p.style.display = 'none';
+             let backdrop = p.parentElement;
+             while (backdrop && backdrop.tagName !== 'BODY' && backdrop.id !== 'app') {
+               const style = window.getComputedStyle(backdrop);
+               if (style.position === 'fixed' || style.position === 'absolute' || style.zIndex > 50) {
+                 backdrop.style.display = 'none';
+               }
+               backdrop = backdrop.parentElement;
+             }
+             hiddenModal = true;
+             break;
+          }
+          p = p.parentElement;
+        }
+        
+        if (!hiddenModal) {
+          let parent = t.parentElement;
+          for (let i = 0; i < 6; i++) {
+            if (parent && parent.tagName !== 'BODY' && parent.id !== 'app') {
+              const rect = parent.getBoundingClientRect();
+              if (rect.height > 10 && rect.height < 300) {
+                parent.style.display = 'none';
+              }
+              parent = parent.parentElement;
+            }
+          }
+        }
+      });
+    }
+
+    // 2.5 Meta AI Killer
+    const metaAiIcons = root.querySelectorAll ? Array.from(root.querySelectorAll('[title*="Meta AI"], [aria-label*="Meta AI"]')) : [];
+    if (root.getAttribute && ((root.getAttribute('title') || '').includes('Meta AI') || (root.getAttribute('aria-label') || '').includes('Meta AI'))) {
+      metaAiIcons.push(root);
+    }
+    metaAiIcons.forEach(icon => {
+      const btn = icon.closest ? icon.closest('[role="button"], button') : null;
+      if (btn) btn.style.display = 'none';
+      else icon.style.display = 'none';
+    });
+
+    if (!isWhatsApp) {
+      // 3. Process all text nodes inside this element
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+      let tNode;
+      while (tNode = walker.nextNode()) {
+        processTextNode(tNode);
+      }
     }
   };
 
@@ -218,18 +299,25 @@ function ewReplaceLogo() {
 }
 
 function ewHijackTitle() {
-  // Ensure the document title also says WhatsZan instead of WhatsApp
+  const customAppName = window.wzAppName || 'WhatsZan';
+  // Ensure the document title also says customAppName instead of WhatsApp and remove " Web"
   const titleEl = document.querySelector('title');
   if (titleEl) {
-    new MutationObserver(() => {
-      if (document.title.includes('WhatsApp')) {
-        document.title = document.title.replace('WhatsApp', 'WhatsZan');
+    const updateTitle = () => {
+      let newTitle = document.title;
+      if (newTitle.includes('WhatsApp')) {
+        newTitle = newTitle.replace('WhatsApp', customAppName);
       }
-    }).observe(titleEl, { childList: true });
+      if (newTitle.endsWith(' Web')) {
+        newTitle = newTitle.slice(0, -4);
+      }
+      if (document.title !== newTitle) {
+        document.title = newTitle;
+      }
+    };
+    new MutationObserver(updateTitle).observe(titleEl, { childList: true });
     // Trigger once initially
-    if (document.title.includes('WhatsApp')) {
-      document.title = document.title.replace('WhatsApp', 'WhatsZan');
-    }
+    updateTitle();
   }
 }
 
@@ -608,6 +696,7 @@ async function ewSetup() {
   
   ewReplaceLogo();
   ewHijackTitle();
+  ewSetupJumpList();
 
   addEventListener(
     "keydown",
@@ -629,4 +718,102 @@ void ewSetup();
 
 function ewCloseChat() {
   ewDoWhatsappAction("CLOSE_CHAT");
+}
+
+function ewSetupJumpList() {
+  const JUMP_LIST_THROTTLE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+  window.addEventListener('blur', () => {
+    try {
+      const lastUpdate = parseInt(localStorage.getItem('wz_last_jump_list_update_v2') || '0', 10);
+      const now = Date.now();
+      if (now - lastUpdate < JUMP_LIST_THROTTLE_MS) return;
+
+      // Mengambil setiap baris obrolan
+      const listItems = document.querySelectorAll('#pane-side div[role="listitem"], #pane-side div[role="row"]');
+      const recentChats = [];
+      
+      for (const item of listItems) {
+        // Obrolan biasanya adalah span ber-title PERTAMA di dalam list item
+        const titleEl = item.querySelector('span[title][dir="auto"], span[title]');
+        if (titleEl) {
+          let title = titleEl.getAttribute('title');
+          if (title && title.trim() !== '') {
+            // Bersihkan baris baru dan batasi panjang nama maksimal 50 karakter agar OS tidak menolak
+            title = title.replace(/\r?\n|\r/g, ' ').trim();
+            if (title.length > 50) title = title.substring(0, 47) + '...';
+
+            if (!recentChats.includes(title)) {
+              recentChats.push(title);
+            }
+          }
+        }
+        if (recentChats.length >= 5) break;
+      }
+
+      if (recentChats.length > 0) {
+        window?.ipc?.updateRecentChats?.(recentChats);
+        localStorage.setItem('wz_last_jump_list_update_v2', now.toString());
+      }
+    } catch (err) {
+      console.error("Failed to update jump list", err);
+    }
+  });
+
+  window?.ipc?.onJumpListAction?.((data) => {
+    if (!data) return;
+    
+    // Attempt the action periodically until successful (e.g. if WA is still loading)
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      if (attempts > 10) clearInterval(interval);
+
+      if (data.type === 'open-chat') {
+        const searchInput = document.querySelector('#side div[contenteditable="true"]');
+        if (searchInput) {
+          clearInterval(interval);
+          searchInput.focus();
+          // Select all existing text if any to replace
+          document.execCommand('selectAll', false, null);
+          document.execCommand('insertText', false, data.name);
+          
+          setTimeout(() => {
+            const results = document.querySelectorAll('#pane-side span[title]');
+            for (const el of results) {
+              if (el.title === data.name) {
+                // WhatsApp list items are usually divs that listen to mousedown
+                let clickable = el;
+                while (clickable && clickable.tagName !== 'DIV') {
+                  clickable = clickable.parentElement;
+                }
+                if (clickable) {
+                  const mousedown = new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window });
+                  clickable.dispatchEvent(mousedown);
+                }
+                break;
+              }
+            }
+          }, 500);
+        }
+      } else if (data.type === 'action') {
+        let clicked = false;
+        if (data.name === 'new-chat') {
+          // Find element containing "New chat" SVG path or similar
+          const chatBtn = document.querySelector('div[title="New chat"], div[title="Chat baru"], span[data-icon="chat"], span[data-icon="new-chat-outline"]');
+          if (chatBtn) {
+            chatBtn.click();
+            clicked = true;
+          }
+        } else if (data.name === 'new-call') {
+          const callBtn = document.querySelector('div[title="Calls"], div[title="Panggilan"], span[data-icon="status-v3"]');
+          if (callBtn) {
+            callBtn.click();
+            clicked = true;
+          }
+        }
+        if (clicked) clearInterval(interval);
+      }
+    }, 1000);
+  });
 }

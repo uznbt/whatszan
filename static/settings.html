@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title><span data-i18n="settings_header_title">Pengaturan</span></title>
+  <title data-i18n="settings_header_title">Pengaturan</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
@@ -205,6 +205,14 @@
     }
     .text-input:focus { border-color: var(--accent); }
 
+    .icon-picker { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+    .icon-option { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 10px; border: 2px solid transparent; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: var(--bg-app); width: 65px; height: 65px; }
+    .icon-option:hover { background: var(--bg-hover); }
+    .icon-option.selected { border-color: var(--accent); background: rgba(0, 168, 132, 0.1); }
+    .icon-option img { width: 32px; height: 32px; border-radius: 4px; object-fit: contain; }
+    .icon-placeholder { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: var(--border); border-radius: 4px; font-size: 20px; color: var(--text-secondary); }
+    .icon-option span { font-size: 10px; font-weight: 600; color: var(--text-primary); text-align: center; line-height: 1.2; }
+
     .btn {
       display: flex; align-items: center; justify-content: center; gap: 6px;
       background: var(--accent); color: #fff;
@@ -238,7 +246,7 @@
     </svg>
   </div>
   <div class="header-text">
-    <h1>Pengaturan</h1>
+    <h1 data-i18n="settings_header_title">Pengaturan</h1>
     <p><span data-i18n="settings_header_subtitle">WhatsZan Desktop Client</span></p>
   </div>
 </header>
@@ -248,23 +256,27 @@
   <aside class="sidebar" id="sidebar-container">
     <button class="tab-btn active" onclick="switchTab('general')" id="btn-tab-general" title="Umum" data-i18n-title="settings_tab_general">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-      <span><span data-i18n="settings_tab_general">Umum</span></span>
+      <span data-i18n="settings_tab_general">Umum</span>
     </button>
     <button class="tab-btn" onclick="switchTab('privacy')" id="btn-tab-privacy" title="Privasi" data-i18n-title="settings_tab_privacy">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      <span><span data-i18n="settings_tab_privacy">Privasi</span></span>
+      <span data-i18n="settings_tab_privacy">Privasi</span>
     </button>
     <button class="tab-btn" onclick="switchTab('dictionary')" id="btn-tab-dictionary" title="Kamus" data-i18n-title="settings_tab_dictionary">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-      <span><span data-i18n="settings_tab_dictionary">Kamus</span></span>
+      <span data-i18n="settings_tab_dictionary">Kamus</span>
     </button>
     <button class="tab-btn" onclick="switchTab('appearance')" id="btn-tab-appearance" title="Tampilan" data-i18n-title="settings_tab_appearance">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-      <span><span data-i18n="settings_tab_appearance">Tampilan</span></span>
+      <span data-i18n="settings_tab_appearance">Tampilan</span>
     </button>
     <button class="tab-btn" onclick="switchTab('advanced')" id="btn-tab-advanced" title="Lanjutan" data-i18n-title="settings_tab_advanced">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      <span><span data-i18n="settings_tab_advanced">Lanjutan</span></span>
+      <span data-i18n="settings_tab_advanced">Lanjutan</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('branding')" id="btn-tab-branding" title="Branding">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      <span>Branding</span>
     </button>
   </aside>
 
@@ -277,8 +289,24 @@
       
       <div class="row">
         <div class="row-info">
+          <div class="row-title"><span data-i18n="settings_language_title">Bahasa Aplikasi</span></div>
+          <div class="row-desc"><span data-i18n="settings_language_desc">Pilih bahasa untuk menu pengaturan dan klik kanan</span></div>
+        </div>
+        <select id="app-language" class="text-input" style="width: auto; cursor: pointer;">
+          <option value="auto" data-i18n="settings_placeholder_auto">Otomatis</option>
+          <option value="en">English</option>
+          <option value="id">Bahasa Indonesia</option>
+          <option value="de">Deutsch</option>
+          <option value="fr">Français</option>
+          <option value="it">Italiano</option>
+          <option value="pt">Português</option>
+        </select>
+      </div>
+      
+      <div class="row">
+        <div class="row-info">
           <div class="row-title"><span data-i18n="settings_autorun_title">Jalankan Otomatis saat Startup</span></div>
-          <div class="row-desc"><span data-i18n="settings_autorun_desc">Nyalakan aplikasi secara otomatis ketika komputer dihidupkan</span></div>
+          <div class="row-desc"><span data-i18n="settings_autorun_desc">Jalankan otomatis saat startup</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="auto-run" /><span class="slider"></span></label>
       </div>
@@ -286,7 +314,7 @@
       <div class="row">
         <div class="row-info">
           <div class="row-title"><span data-i18n="settings_esc_title">Sembunyikan dengan ESC</span></div>
-          <div class="row-desc"><span data-i18n="settings_esc_desc">Tekan tombol ESC pada keyboard untuk menyembunyikan jendela</span></div>
+          <div class="row-desc"><span data-i18n="settings_esc_desc">Tekan ESC untuk sembunyikan</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="esc-toggle" /><span class="slider"></span></label>
       </div>
@@ -294,7 +322,7 @@
       <div class="row" id="row-quit-on-close" style="display: none;">
         <div class="row-info">
           <div class="row-title"><span data-i18n="settings_quit_tray_title">Tutup ke Tray</span></div>
-          <div class="row-desc">Menekan tombol tutup (X) hanya akan menyembunyikan jendela</div>
+          <div class="row-desc">Aplikasi ke tray saat ditutup</div>
         </div>
         <label class="toggle"><input type="checkbox" id="quit-on-close" /><span class="slider"></span></label>
       </div>
@@ -302,7 +330,7 @@
       <div class="row">
         <div class="row-info">
           <div class="row-title"><span data-i18n="settings_smart_dl_title">Pilah Unduhan Otomatis</span></div>
-          <div class="row-desc">Simpan file ke folder Windows yang sesuai (Video, Gambar, dll)</div>
+          <div class="row-desc">Simpan file ke folder yang sesuai otomatis</div>
         </div>
         <label class="toggle"><input type="checkbox" id="smart-download" /><span class="slider"></span></label>
       </div>
@@ -310,7 +338,7 @@
       <div class="row" style="flex-direction: column; align-items: flex-start;">
         <div class="row-info" style="width: 100%; margin-bottom: 8px;">
           <div class="row-title"><span data-i18n="settings_notif_prefix_title">Awalan Notifikasi</span></div>
-          <div class="row-desc">Teks awalan pada notifikasi sistem (misal: WhatsZan - Pesan Baru)</div>
+          <div class="row-desc">Awalan teks pada notifikasi</div>
         </div>
         <input id="notif-prefix" class="text-input" type="text" style="width:100%;" placeholder="Kosongkan jika tidak perlu" data-i18n="settings_placeholder_notif" />
       </div>
@@ -323,7 +351,7 @@
       <div class="row" style="border-color: var(--accent);">
         <div class="row-info">
           <div class="row-title" style="color: var(--accent); font-weight: 600;"><span data-i18n="settings_privacy_blur_title">Aktifkan Mode Rahasia</span></div>
-          <div class="row-desc">Mengaktifkan sensor pada layar. Tekan (Ctrl+Shift+B) kapan saja.</div>
+          <div class="row-desc">Aktifkan sensor layar. Tekan Ctrl+Shift+B kapan saja.</div>
         </div>
         <label class="toggle"><input type="checkbox" id="privacy-blur" /><span class="slider"></span></label>
       </div>
@@ -368,7 +396,7 @@
         <div class="row" style="border: none; padding: 10px 0; background: transparent; flex-direction: column; align-items: flex-start;">
           <div class="row-info" style="width: 100%; margin-bottom: 8px;">
             <div class="row-title"><span data-i18n="settings_unblur_delay_title">Tunda Unblur (Detik)</span></div>
-            <div class="row-desc"><span data-i18n="settings_unblur_delay_desc">Waktu tunda sebelum sensor terbuka saat kursor diarahkan. Bisa diisi angka besar (misal: 60).</span></div>
+            <div class="row-desc"><span data-i18n="settings_unblur_delay_desc">Jeda sebelum sensor terbuka saat kursor diarahkan ke sana</span></div>
           </div>
           <input type="number" id="unblur-delay" class="text-input" min="0" step="0.1" value="0" oninput="autoSave()" style="width: 100px;">
         </div>
@@ -376,7 +404,7 @@
         <div class="row" style="border: none; padding: 10px 0; background: transparent; flex-direction: column; align-items: flex-start;">
           <div class="row-info" style="width: 100%; margin-bottom: 8px;">
             <div class="row-title"><span data-i18n="settings_blur_specific_title">Hanya Kontak Spesifik</span></div>
-            <div class="row-desc"><span data-i18n="settings_blur_specific_desc">Jika diisi, opsi Daftar Kontak di atas hanya berlaku untuk nama-nama ini. Pisahkan dengan koma.</span></div>
+            <div class="row-desc"><span data-i18n="settings_blur_specific_desc">Sensor hanya berlaku untuk nama-nama ini. Pisahkan dengan koma.</span></div>
           </div>
           <input id="blur-specific" class="text-input" type="text" style="width:100%;" placeholder="Contoh: Bos, Budi" data-i18n="settings_placeholder_specific" />
         </div>
@@ -387,7 +415,7 @@
       <div class="row">
         <div class="row-info">
           <div class="row-title"><span data-i18n="settings_ghost_read_title">Ghost Mode: Centang Biru</span></div>
-          <div class="row-desc"><span data-i18n="settings_ghost_read_desc">Mematikan laporan telah dibaca (Read Receipts). Lawan bicara tidak tahu pesannya sudah kamu baca.</span></div>
+          <div class="row-desc"><span data-i18n="settings_ghost_read_desc">Lawan bicara tidak tahu pesannya sudah kamu baca</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="incognito-noread" /><span class="slider"></span></label>
       </div>
@@ -395,7 +423,7 @@
       <div class="row">
         <div class="row-info">
           <div class="row-title"><span data-i18n="settings_ghost_typing_title">Ghost Mode: Sembunyikan Mengetik</span></div>
-          <div class="row-desc"><span data-i18n="settings_ghost_typing_desc">Menghilangkan indikator "Sedang mengetik..." di HP lawan bicaramu.</span></div>
+          <div class="row-desc"><span data-i18n="settings_ghost_typing_desc">Sembunyikan indikator sedang mengetik di HP lawan bicara</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="incognito-notyping" /><span class="slider"></span></label>
       </div>
@@ -403,7 +431,7 @@
       <div class="row">
         <div class="row-info">
           <div class="row-title"><span data-i18n="settings_antidelete_title">Anti-Hapus Pesan</span></div>
-          <div class="row-desc"><span data-i18n="settings_antidelete_desc">Memulihkan pesan yang ditarik/dihapus oleh pengirim</span></div>
+          <div class="row-desc"><span data-i18n="settings_antidelete_desc">Pulihkan pesan yang ditarik oleh pengirim</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="incognito-antidelete" /><span class="slider"></span></label>
       </div>
@@ -411,7 +439,7 @@
       <div class="row">
         <div class="row-info">
           <div class="row-title"><span data-i18n="settings_statussaver_title">Pengunduh Status (Status Saver)</span></div>
-          <div class="row-desc"><span data-i18n="settings_statussaver_desc">Tampilkan tombol 'Simpan Status' saat melihat Story teman</span></div>
+          <div class="row-desc"><span data-i18n="settings_statussaver_desc">Tampilkan tombol simpan saat melihat Story teman</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="incognito-statussaver" /><span class="slider"></span></label>
       </div>
@@ -479,9 +507,100 @@
       <div class="row" style="flex-direction: column; align-items: flex-start;">
         <div class="row-info" style="width: 100%; margin-bottom: 8px;">
           <div class="row-title"><span data-i18n="settings_ua_title">User Agent Kustom</span></div>
-          <div class="row-desc"><span data-i18n="settings_ua_desc">String identifikasi perangkat. Kosongkan untuk menggunakan default.</span></div>
+          <div class="row-desc"><span data-i18n="settings_ua_desc">String identifikasi perangkat. Kosongkan untuk default.</span></div>
         </div>
         <input id="user-agent" class="text-input" type="text" style="width:100%;" placeholder="Otomatis" data-i18n="settings_placeholder_auto" />
+      </div>
+    </div>
+
+    <!-- Tab BRANDING -->
+    <div id="tab-branding" class="tab-pane">
+      <div class="section-title"><span>Branding & Shortcut</span></div>
+
+      <div class="row">
+        <div class="row-info">
+          <div class="row-title"><span>Nama Aplikasi</span></div>
+          <div class="row-desc"><span>Nama yang muncul di dalam obrolan dan judul jendela</span></div>
+        </div>
+        <input type="text" id="custom-app-name" class="text-input" placeholder="WhatsZan" />
+      </div>
+
+      <div class="row">
+        <div class="row-info">
+          <div class="row-title"><span>Shortcut Desktop</span></div>
+          <div class="row-desc"><span>Tampilkan ikon aplikasi di Desktop</span></div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="desktop-shortcut" /><span class="slider"></span></label>
+      </div>
+
+      <div class="row" style="flex-direction: column; align-items: flex-start;">
+        <div class="row-info" style="width: 100%;">
+          <div class="row-title"><span data-i18n="settings_branding_app_title">Ikon Aplikasi (Desktop & Start Menu)</span></div>
+          <div class="row-desc"><span data-i18n="settings_branding_app_desc">Ikon untuk shortcut dan pencarian. Mendukung semua format gambar.</span></div>
+        </div>
+        <div class="icon-picker" id="picker-app">
+          <div class="icon-option" data-val="whatszan">
+            <img src="../static/app.png" />
+            <span>WhatsZan</span>
+          </div>
+          <div class="icon-option" data-val="whatsapp">
+            <img src="../static/whatsapp.png" />
+            <span>WhatsApp</span>
+          </div>
+          <div class="icon-option" data-val="custom">
+            <div class="icon-placeholder">+</div>
+            <span>Kustom</span>
+          </div>
+        </div>
+        <input type="file" id="icon-app" accept="image/*,.ico" style="display: none; margin-top: 8px;" />
+      </div>
+
+      <div class="row" style="flex-direction: column; align-items: flex-start;">
+        <div class="row-info" style="width: 100%;">
+          <div class="row-title"><span data-i18n="settings_branding_tray_unread_title">Ikon Tray (Ada Pesan Baru)</span></div>
+          <div class="row-desc"><span data-i18n="settings_branding_tray_unread_desc">Ikon tray saat ada pesan masuk. Mendukung semua format gambar.</span></div>
+        </div>
+        <div class="icon-picker" id="picker-unread">
+          <div class="icon-option" data-val="whatszan">
+            <img src="../static/app-badged.png" />
+            <span>WhatsZan</span>
+          </div>
+          <div class="icon-option" data-val="whatsapp">
+            <img src="../static/whatsapp.png" />
+            <span>WhatsApp</span>
+          </div>
+          <div class="icon-option" data-val="custom">
+            <div class="icon-placeholder">+</div>
+            <span>Kustom</span>
+          </div>
+        </div>
+        <input type="file" id="icon-unread" accept="image/*,.ico" style="display: none; margin-top: 8px;" />
+      </div>
+
+      <div class="row" style="flex-direction: column; align-items: flex-start;">
+        <div class="row-info" style="width: 100%;">
+          <div class="row-title"><span data-i18n="settings_branding_tray_normal_title">Ikon Tray (Normal)</span></div>
+          <div class="row-desc"><span data-i18n="settings_branding_tray_normal_desc">Ikon tray saat tidak ada pesan. Mendukung semua format gambar.</span></div>
+        </div>
+        <div class="icon-picker" id="picker-normal">
+          <div class="icon-option" data-val="whatszan">
+            <img src="../static/app.png" />
+            <span>WhatsZan</span>
+          </div>
+          <div class="icon-option" data-val="whatsapp">
+            <img src="../static/whatsapp.png" />
+            <span>WhatsApp</span>
+          </div>
+          <div class="icon-option" data-val="custom">
+            <div class="icon-placeholder">+</div>
+            <span>Kustom</span>
+          </div>
+        </div>
+        <input type="file" id="icon-normal" accept="image/*,.ico" style="display: none; margin-top: 8px;" />
+      </div>
+
+      <div class="row" style="background: none; border: none; padding: 10px 0; justify-content: flex-end;">
+         <button class="btn" id="btn-reset-branding" style="background: var(--text-secondary);" data-i18n="settings_branding_reset">Reset Semua Ikon</button>
       </div>
     </div>
 
@@ -517,6 +636,7 @@
       if (translations[key]) el.title = translations[key];
     });
 
+    document.getElementById('app-language').value = settings['app-language'] || 'auto';
     document.getElementById('notif-prefix').value = settings['notification-prefix'] || '';
     document.getElementById('auto-run').checked = settings['auto-run'] || false;
     document.getElementById('quit-on-close').checked = settings['quit-on-close'] || false;
@@ -539,6 +659,24 @@
     document.getElementById('incognito-statussaver').checked = settings['incognito-statussaver'] || false;
     document.getElementById('incognito-noread').checked = settings['incognito-noread'] || false;
     document.getElementById('incognito-notyping').checked = settings['incognito-notyping'] || false;
+
+    // Branding load
+    document.getElementById('custom-app-name').value = settings['custom-app-name'] || '';
+    document.getElementById('desktop-shortcut').checked = settings['desktop-shortcut'] !== false;
+    
+    ['app', 'unread', 'normal'].forEach(type => {
+      const choice = settings[`icon-choice-${type}`] || 'whatszan';
+      const picker = document.getElementById(`picker-${type}`);
+      if (picker) {
+         picker.querySelectorAll('.icon-option').forEach(opt => {
+           if (opt.getAttribute('data-val') === choice) opt.classList.add('selected');
+           else opt.classList.remove('selected');
+         });
+         if (choice === 'custom') {
+            document.getElementById(`icon-${type}`).style.display = 'block';
+         }
+      }
+    });
     
     if (settings['sidebar-width']) {
       document.documentElement.style.setProperty('--sidebar-w', settings['sidebar-width'] + 'px');
@@ -625,10 +763,29 @@
     autoSave();
   });
 
-  const autoSaveInputs = ['notif-prefix', 'quit-on-close', 'esc-toggle', 'smart-download', 'spellcheck', 'menu-bar', 'menu-bar-auto-hide', 'user-agent', 'blur-contacts', 'blur-pp', 'blur-messages', 'blur-media', 'blur-specific', 'blur-amount', 'incognito-antidelete', 'incognito-statussaver', 'incognito-noread', 'incognito-notyping'];
+  const autoSaveInputs = ['app-language', 'notif-prefix', 'quit-on-close', 'esc-toggle', 'smart-download', 'spellcheck', 'menu-bar', 'menu-bar-auto-hide', 'user-agent', 'blur-contacts', 'blur-pp', 'blur-messages', 'blur-media', 'blur-specific', 'blur-amount', 'incognito-antidelete', 'incognito-statussaver', 'incognito-noread', 'incognito-notyping', 'desktop-shortcut', 'custom-app-name'];
   autoSaveInputs.forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.addEventListener('change', autoSave);
+    if (el) el.addEventListener('change', async () => {
+      await autoSave();
+      if (id === 'app-language') {
+        const translations = await ipcRenderer.invoke('settings-get-translations');
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+          const key = el.getAttribute('data-i18n');
+          if (translations[key]) {
+            if (el.tagName === 'INPUT' && el.type === 'text') el.placeholder = translations[key];
+            else el.innerHTML = translations[key];
+          }
+        });
+        document.querySelectorAll('[data-i18n-title]').forEach(el => {
+          const key = el.getAttribute('data-i18n-title');
+          if (translations[key]) el.title = translations[key];
+        });
+        showToast('Restart app to apply language to WhatsApp Web');
+      } else if (id === 'custom-app-name') {
+        showToast(window.i18nData?.settings_toast_saved || 'Tersimpan otomatis');
+      }
+    });
   });
 
   document.getElementById('btn-open-webstore').addEventListener('click', async () => {
@@ -693,6 +850,7 @@
   async function autoSave() {
     if (!isLoaded) return;
     const newSettings = {
+      'app-language': document.getElementById('app-language').value,
       'notification-prefix': document.getElementById('notif-prefix').value,
       'auto-run': document.getElementById('auto-run').checked,
       'quit-on-close': document.getElementById('quit-on-close').checked,
@@ -715,7 +873,9 @@
       'incognito-statussaver': document.getElementById('incognito-statussaver').checked,
       'incognito-noread': document.getElementById('incognito-noread').checked,
       'incognito-notyping': document.getElementById('incognito-notyping').checked,
-      'sidebar-width': parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w')) || 220
+      'sidebar-width': parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w')) || 220,
+      'custom-app-name': document.getElementById('custom-app-name').value,
+      'desktop-shortcut': document.getElementById('desktop-shortcut').checked
     };
     await ipcRenderer.invoke('settings-save', newSettings);
   }
@@ -726,6 +886,58 @@
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2500);
   }
+
+  // Handle branding file uploads
+  ['app', 'unread', 'normal'].forEach(type => {
+    const fileInput = document.getElementById(`icon-${type}`);
+    const picker = document.getElementById(`picker-${type}`);
+    const options = picker.querySelectorAll('.icon-option');
+
+    const updateSelection = (val) => {
+      options.forEach(opt => {
+        if (opt.getAttribute('data-val') === val) opt.classList.add('selected');
+        else opt.classList.remove('selected');
+      });
+      if (val === 'custom') fileInput.style.display = 'block';
+      else fileInput.style.display = 'none';
+    };
+
+    options.forEach(opt => {
+      opt.addEventListener('click', async () => {
+        const val = opt.getAttribute('data-val');
+        updateSelection(val);
+        if (val !== 'custom') {
+           await ipcRenderer.invoke('branding-upload-icon', { type, path: val });
+           showToast(window.i18nData?.settings_toast_icon_changed || `Ikon berhasil diubah!`);
+        } else {
+           fileInput.click();
+        }
+      });
+    });
+
+    fileInput.addEventListener('change', async (e) => {
+      if (e.target.files.length > 0) {
+        await ipcRenderer.invoke('branding-upload-icon', { type, path: e.target.files[0].path });
+        showToast(window.i18nData?.settings_toast_custom_uploaded || `Ikon kustom berhasil diunggah dan diterapkan!`);
+      }
+    });
+  });
+
+  document.getElementById('btn-reset-branding').addEventListener('click', async () => {
+    await ipcRenderer.invoke('branding-reset-icons');
+    ['app', 'unread', 'normal'].forEach(type => {
+      const picker = document.getElementById(`picker-${type}`);
+      if (picker) {
+         picker.querySelectorAll('.icon-option').forEach(opt => {
+           if (opt.getAttribute('data-val') === 'whatszan') opt.classList.add('selected');
+           else opt.classList.remove('selected');
+         });
+      }
+      document.getElementById(`icon-${type}`).style.display = 'none';
+      document.getElementById(`icon-${type}`).value = '';
+    });
+    showToast(window.i18nData?.settings_toast_icon_reset || 'Ikon berhasil di-reset ke bawaan.');
+  });
 
   ipcRenderer.on('settings-saved', () => {
     showToast('Tersimpan otomatis');

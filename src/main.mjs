@@ -81,6 +81,24 @@ function main() {
 
   const isHiddenStartup = process.argv.includes("--hide");
 
+  const updateAppUserModel = (appName, iconPath) => {
+    if (process.platform !== 'win32') return;
+    const appId = 'org.uznbt.whatszan'; // Constant AUMID to prevent taskbar duplication
+    app.setAppUserModelId(appId);
+    try {
+      app.setAppDetails({
+        appId: appId,
+        appIconPath: iconPath || process.execPath,
+        appIconIndex: 0,
+        relaunchCommand: process.execPath,
+        relaunchDisplayName: appName
+      });
+    } catch (e) {}
+  };
+
+  const customAppName = persistState.get("custom-app-name", "WhatsZan") || "WhatsZan";
+  updateAppUserModel(customAppName, persistState.get("custom_tray_app"));
+
   const state = {
     notifPrefix: config.get("notification-prefix", ""),
     showAtStartup: isDebug || !isHiddenStartup,
@@ -131,9 +149,89 @@ function main() {
     }
   };
 
+  const applyDesktopShortcut = (create, oldName, newName) => {
+    if (process.platform === 'win32') {
+      import('fs').then(({ existsSync, unlinkSync }) => {
+        const desktopPath = app.getPath('desktop');
+        const startMenuPath = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs');
+        const oldShortcutPath = path.join(desktopPath, `${oldName || 'WhatsZan'}.lnk`);
+        const newShortcutPath = path.join(desktopPath, `${newName || 'WhatsZan'}.lnk`);
+        const oldStartMenuShortcutPath = path.join(startMenuPath, `${oldName || 'WhatsZan'}.lnk`);
+        const newStartMenuShortcutPath = path.join(startMenuPath, `${newName || 'WhatsZan'}.lnk`);
+        
+        try { if (existsSync(oldShortcutPath)) unlinkSync(oldShortcutPath); } catch(e){}
+        try { if (existsSync(oldStartMenuShortcutPath)) unlinkSync(oldStartMenuShortcutPath); } catch(e){}
+        
+        if (!create) {
+           try { if (existsSync(newShortcutPath)) unlinkSync(newShortcutPath); } catch(e){}
+           try { if (existsSync(newStartMenuShortcutPath)) unlinkSync(newStartMenuShortcutPath); } catch(e){}
+        }
+
+        if (create) {
+          const exePath = app.getPath('exe');
+          const workDir = path.dirname(exePath);
+          const customAppIcon = persistState.get("custom_tray_app");
+          const iconLocation = customAppIcon ? `${customAppIcon}, 0` : `${exePath}, 0`;
+          const ps = `$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('${newShortcutPath}'); $s.TargetPath = '${exePath}'; $s.WorkingDirectory = '${workDir}'; $s.IconLocation = '${iconLocation}'; $s.Save(); $s2 = $ws.CreateShortcut('${newStartMenuShortcutPath}'); $s2.TargetPath = '${exePath}'; $s2.WorkingDirectory = '${workDir}'; $s2.IconLocation = '${iconLocation}'; $s2.Save()`;
+          import('child_process').then(({ execSync }) => {
+            try { execSync(`powershell -NoProfile -Command "${ps}"`, { stdio: 'ignore' }); } catch(e){}
+          });
+        }
+      });
+    } else if (process.platform === 'linux') {
+      import('fs').then(({ existsSync, unlinkSync, writeFileSync, mkdirSync }) => {
+        const desktopPath = app.getPath('desktop');
+        const applicationsPath = path.join(app.getPath('home'), '.local', 'share', 'applications');
+        const oldDesktopShortcutPath = path.join(desktopPath, `${oldName || 'WhatsZan'}.desktop`);
+        const newDesktopShortcutPath = path.join(desktopPath, `${newName || 'WhatsZan'}.desktop`);
+        const appDesktopFile = path.join(applicationsPath, 'whatszan.desktop');
+        
+        try { if (existsSync(oldDesktopShortcutPath)) unlinkSync(oldDesktopShortcutPath); } catch(e){}
+        
+        if (!create) {
+           try { if (existsSync(newDesktopShortcutPath)) unlinkSync(newDesktopShortcutPath); } catch(e){}
+        }
+
+        if (create) {
+          const exePath = app.getPath('exe');
+          const customAppIcon = persistState.get("custom_tray_app");
+          const iconLocation = customAppIcon || 'whatszan';
+          
+          const desktopEntry = `[Desktop Entry]\nName=${newName || 'WhatsZan'}\nExec="${exePath}" %U\nTerminal=false\nType=Application\nIcon=${iconLocation}\nStartupWMClass=${newName || 'WhatsZan'}\nComment=WhatsZan Desktop Client\nCategories=Network;Chat;InstantMessaging;\nMimeType=x-scheme-handler/whatsapp;`;
+
+          try {
+            if (!existsSync(applicationsPath)) mkdirSync(applicationsPath, { recursive: true });
+            writeFileSync(appDesktopFile, desktopEntry);
+            writeFileSync(newDesktopShortcutPath, desktopEntry);
+            import('child_process').then(({ execSync }) => {
+               try {
+                 execSync(`chmod +x "${newDesktopShortcutPath}"`);
+                 execSync(`update-desktop-database "${applicationsPath}"`);
+               } catch(e){}
+            });
+          } catch(e) {
+            consola.error("Failed to create linux shortcut", e);
+          }
+        }
+      });
+    }
+  };
+
   // Selalu pastikan setting auto-run aktif saat startup (misal pasca-update)
   if (!isDebug) {
     applyAutoRun(persistState.get("auto-run", false));
+    
+    // Check if app was just updated or repaired to re-apply custom shortcuts
+    const currentVersion = app.getVersion();
+    const flagPath = path.join(app.getPath('userData'), 'reapply-shortcuts.flag');
+    if (persistState.get("app-version") !== currentVersion || existsSync(flagPath)) {
+      persistState.set("app-version", currentVersion);
+      if (existsSync(flagPath)) {
+        try { unlinkSync(flagPath); } catch (e) {}
+      }
+      const customAppName = persistState.get("custom-app-name", "WhatsZan") || "WhatsZan";
+      applyDesktopShortcut(persistState.get("desktop-shortcut", true), customAppName, customAppName);
+    }
   }
 
   // Auto-load saved extensions on startup
@@ -152,7 +250,11 @@ function main() {
 
   const createWindow = async () => {
     // Create the browser window.
+    const customAppName = persistState.get("custom-app-name", "WhatsZan") || "WhatsZan";
+    const customAppIcon = persistState.get("custom_tray_app");
     const mainWindow = new BrowserWindow({
+      title: customAppName,
+      icon: customAppIcon || path.join(import.meta.dirname, '..', 'build', 'icon.ico'),
       webPreferences: {
         preload: path.join(import.meta.dirname, "..", "src-web", "preload.js"),
         spellcheck: config.get("spellcheck", true),
@@ -196,7 +298,8 @@ function main() {
       consola.error("setSpellCheckerLanguages", err);
     }
 
-    const lang = preferredLangs[0];
+    const appLang = config.get("app-language", "auto");
+    const lang = appLang !== "auto" ? appLang : preferredLangs[0];
     const translations = loadTranslations(lang);
 
     contextMenu({
@@ -210,6 +313,9 @@ function main() {
 
     session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
       details.requestHeaders["User-Agent"] = state.userAgent;
+      if (appLang !== "auto") {
+        details.requestHeaders['Accept-Language'] = `${appLang},en;q=0.9`;
+      }
       callback({ cancel: false, requestHeaders: details.requestHeaders });
     });
 
@@ -525,21 +631,39 @@ function main() {
           ...config.data,
           "privacy-blur": persistState.get("privacy-blur", false),
           "sidebar-width": persistState.get("sidebar-width", 220),
-          "auto-run": persistState.get("auto-run", false)
+          "auto-run": persistState.get("auto-run", false),
+          "desktop-shortcut": persistState.get("desktop-shortcut", true),
+          "custom-app-name": persistState.get("custom-app-name", "WhatsZan"),
+          "icon-choice-app": persistState.get("icon-choice-app", "whatszan"),
+          "icon-choice-unread": persistState.get("icon-choice-unread", "whatszan"),
+          "icon-choice-normal": persistState.get("icon-choice-normal", "whatszan")
         };
       });
 
       ipcMain.handle("settings-get-translations", () => {
-        return loadTranslations(app.getLocale());
+        const appLang = config.get("app-language", "auto");
+        const lang = appLang !== "auto" ? appLang : app.getLocale();
+        return loadTranslations(lang);
       });
 
       ipcMain.handle("settings-save", (ev, newSettings) => {
-        const { 'privacy-blur': blur, 'auto-run': autoRun, ...configSettings } = newSettings;
+        const { 'privacy-blur': blur, 'auto-run': autoRun, 'desktop-shortcut': desktopShortcut, 'custom-app-name': customAppName, ...configSettings } = newSettings;
         
         persistState.set("privacy-blur", blur);
         persistState.set("auto-run", autoRun);
         
+        const oldDesktopShortcut = persistState.get("desktop-shortcut", true);
+        const oldAppName = persistState.get("custom-app-name", "WhatsZan") || "WhatsZan";
+        const newAppName = customAppName || "WhatsZan";
+        
+        persistState.set("desktop-shortcut", desktopShortcut);
+        persistState.set("custom-app-name", customAppName);
+        
         applyAutoRun(autoRun);
+        
+        if (oldDesktopShortcut !== desktopShortcut || (desktopShortcut && oldAppName !== newAppName)) {
+           applyDesktopShortcut(desktopShortcut, oldAppName, newAppName);
+        }
 
         Object.entries(configSettings).forEach(([k, v]) => {
           if (v !== null && v !== '') config.set(k, v);
@@ -548,8 +672,69 @@ function main() {
         
         updateBlurState(blur);
 
+        // Force taskbar icon refresh
+        updateAppUserModel(newAppName, persistState.get("custom_tray_app"));
+
         // Apply menu bar settings dynamically
         if (!mainWindow.isDestroyed()) {
+          mainWindow.setTitle(newAppName);
+          
+          if (oldAppName !== newAppName) {
+            mainWindow.webContents.executeJavaScript(`
+              (function() {
+                var newName = ${JSON.stringify(newAppName)};
+                var oldName = ${JSON.stringify(oldAppName)};
+                window.wzAppName = newName;
+                
+                const processTextNode = (node) => {
+                  if (node.nodeValue === oldName || node.nodeValue === oldName + ' Web' || node.nodeValue === 'WhatsApp' || node.nodeValue === 'WhatsApp Web') {
+                     let parent = node.parentElement;
+                     let isMessage = false;
+                     while (parent) {
+                       if (parent.getAttribute && (parent.getAttribute('data-testid') === 'msg-container' || parent.getAttribute('role') === 'row' || parent.id === 'main')) {
+                         isMessage = true;
+                         break;
+                       }
+                       parent = parent.parentElement;
+                     }
+                     if (!isMessage) {
+                       node.nodeValue = newName;
+                     }
+                  }
+                };
+                
+                const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+                let tNode;
+                while (tNode = walker.nextNode()) {
+                  processTextNode(tNode);
+                }
+                
+                if (newName.toLowerCase() === 'whatsapp') {
+                  document.querySelectorAll('.whatszan-logo').forEach(el => el.remove());
+                  document.querySelectorAll('svg[aria-label="WhatsApp"]').forEach(svg => svg.style.display = '');
+                  document.title = 'WhatsApp Web';
+                } else {
+                  document.querySelectorAll('.whatszan-logo').forEach(el => el.textContent = newName);
+                  document.querySelectorAll('svg[aria-label="WhatsApp"]').forEach(svg => {
+                    svg.style.display = 'none';
+                    if (svg.parentElement && !svg.parentElement.querySelector('.whatszan-logo')) {
+                      const span = document.createElement('span');
+                      span.className = 'whatszan-logo';
+                      span.textContent = newName;
+                      span.style.fontWeight = 'bold';
+                      span.style.fontSize = '18px';
+                      span.style.color = 'inherit'; 
+                      svg.parentElement.appendChild(span);
+                    }
+                  });
+                  if (document.title.includes(oldName) || document.title.includes('WhatsApp')) {
+                    document.title = newName;
+                  }
+                }
+              })();
+            `).catch(e => {});
+          }
+
           const showMenu = config.get("menu-bar", true);
           const autoHide = config.get("menu-bar-auto-hide", true);
           
@@ -568,10 +753,175 @@ function main() {
         ev.sender.send("settings-saved");
       });
 
+      ipcMain.handle("branding-upload-icon", async (ev, { type, path: srcPath }) => {
+        try {
+          const updateLiveIcon = async (t, p) => {
+            try {
+              const { nativeImage } = await import('electron');
+              const img = nativeImage.createFromPath(p);
+              if (t === 'app' && mainWindow && !mainWindow.isDestroyed()) mainWindow.setIcon(img);
+              if (t === 'normal' && typeof tray !== 'undefined' && tray && !tray.isDestroyed()) tray.setImage(img);
+            } catch(e) {}
+          };
+
+          persistState.set(`icon-choice-${type}`, srcPath === 'whatszan' || srcPath === 'whatsapp' ? srcPath : 'custom');
+          
+          if (srcPath === 'whatszan') {
+            persistState.delete(`custom_tray_${type}`);
+            if (type === 'app') {
+               const desktopShortcut = persistState.get("desktop-shortcut", true);
+               const customAppName = persistState.get("custom-app-name", "WhatsZan") || "WhatsZan";
+               applyDesktopShortcut(desktopShortcut, customAppName, customAppName);
+               updateAppUserModel(customAppName, path.join(import.meta.dirname, '..', 'build', 'icon.ico'));
+               updateLiveIcon('app', path.join(import.meta.dirname, '..', 'build', 'icon.ico'));
+            } else if (type === 'normal') {
+               updateLiveIcon('normal', path.join(import.meta.dirname, '..', 'static', 'app.png'));
+            }
+          } else {
+            let actualSrcPath = srcPath;
+            if (srcPath === 'whatsapp') {
+               const ext = type === 'app' ? '.ico' : '.png';
+               actualSrcPath = path.join(import.meta.dirname, '..', 'static', `whatsapp${ext}`);
+            }
+            
+            const inputExt = path.extname(actualSrcPath).toLowerCase();
+            const isIco = inputExt === '.ico';
+            const destExt = type === 'app' ? '.ico' : (isIco ? '.ico' : '.png');
+            const destPath = path.join(app.getPath('userData'), `custom_tray_${type}${destExt}`);
+
+            const needsConversion = (type === 'app' && !isIco) || (type !== 'app' && inputExt !== '.png' && !isIco);
+
+            if (needsConversion) {
+               import('sharp').then(async ({ default: sharp }) => {
+                 try {
+                   const size = type === 'app' ? 256 : 32;
+                   const pngBuf = await sharp(actualSrcPath).resize(size, size).png().toBuffer();
+                   const fs = await import('fs');
+                   
+                   if (type === 'app') {
+                     const header = Buffer.from([0,0,1,0,1,0]);
+                     const entry = Buffer.alloc(16);
+                     entry.writeUInt8(0, 0); // 0 means 256
+                     entry.writeUInt8(0, 1);
+                     entry.writeUInt8(0, 2);
+                     entry.writeUInt8(0, 3);
+                     entry.writeUInt16LE(1, 4);
+                     entry.writeUInt16LE(32, 6);
+                     entry.writeUInt32LE(pngBuf.length, 8);
+                     entry.writeUInt32LE(22, 12);
+                     fs.writeFileSync(destPath, Buffer.concat([header, entry, pngBuf]));
+                   } else {
+                     fs.writeFileSync(destPath, pngBuf);
+                   }
+                   
+                   persistState.set(`custom_tray_${type}`, destPath);
+                   updateLiveIcon(type, destPath);
+                   if (type === 'app') {
+                     const desktopShortcut = persistState.get("desktop-shortcut", true);
+                     const customAppName = persistState.get("custom-app-name", "WhatsZan") || "WhatsZan";
+                     applyDesktopShortcut(desktopShortcut, customAppName, customAppName);
+                     updateAppUserModel(customAppName, destPath);
+                   }
+                 } catch (e) {
+                   consola.error("Failed to convert image", e);
+                 }
+               }).catch(e => consola.error("Sharp module failed to load", e));
+            } else {
+              import('fs').then(({ copyFileSync }) => {
+                copyFileSync(actualSrcPath, destPath);
+                persistState.set(`custom_tray_${type}`, destPath);
+                updateLiveIcon(type, destPath);
+                if (type === 'app') {
+                   const desktopShortcut = persistState.get("desktop-shortcut", true);
+                   const customAppName = persistState.get("custom-app-name", "WhatsZan") || "WhatsZan";
+                   applyDesktopShortcut(desktopShortcut, customAppName, customAppName);
+                   updateAppUserModel(customAppName, destPath);
+                }
+              });
+            }
+          }
+        } catch (err) {
+          consola.error("Failed to copy branding icon", err);
+        }
+      });
+
+      ipcMain.handle("branding-reset-icons", async () => {
+        persistState.delete("custom_tray_normal");
+        persistState.delete("custom_tray_unread");
+        persistState.set("icon-choice-normal", "whatszan");
+        persistState.set("icon-choice-unread", "whatszan");
+        persistState.set("icon-choice-app", "whatszan");
+        const hadAppIcon = !!persistState.get("custom_tray_app");
+        persistState.delete("custom_tray_app");
+        if (hadAppIcon) {
+           const desktopShortcut = persistState.get("desktop-shortcut", true);
+           const customAppName = persistState.get("custom-app-name", "WhatsZan") || "WhatsZan";
+           applyDesktopShortcut(desktopShortcut, customAppName, customAppName);
+           updateAppUserModel(customAppName, destPath);
+        }
+        
+        try {
+           const { nativeImage } = await import('electron');
+           if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setIcon(path.join(import.meta.dirname, '..', 'build', 'icon.ico'));
+           if (typeof tray !== 'undefined' && tray && !tray.isDestroyed()) tray.setImage(path.join(import.meta.dirname, '..', 'static', 'app.png'));
+        } catch(e){}
+        return true;
+      });
+
       ipcMain.handle("accounts-get", () => []);
       ipcMain.handle("active-account-get", () => "default");
-      ipcMain.handle("account-add", () => {});
       ipcMain.handle("account-remove", () => {});
+
+      ipcMain.on("update-recent-chats", (ev, chats) => {
+        if (process.platform !== 'win32') return;
+
+        const customAppIcon = persistState.get("custom_tray_app");
+        const iconPath = customAppIcon || process.execPath;
+
+        const recentCategory = {
+          type: 'custom',
+          name: 'Obrolan Terbaru',
+          items: chats.slice(0, 5).map(chatName => ({
+            type: 'task',
+            title: chatName,
+            program: process.execPath,
+            args: `--open-chat="${chatName}"`,
+            description: `Buka obrolan dengan ${chatName}`,
+            iconPath: iconPath,
+            iconIndex: 0
+          }))
+        };
+
+        const tasksCategory = {
+          type: 'tasks',
+          items: [
+            {
+              type: 'task',
+              title: 'Obrolan Baru',
+              program: process.execPath,
+              args: '--action="new-chat"',
+              description: 'Mulai obrolan baru',
+              iconPath: iconPath,
+              iconIndex: 0
+            },
+            {
+              type: 'task',
+              title: 'Panggilan Baru',
+              program: process.execPath,
+              args: '--action="new-call"',
+              description: 'Mulai panggilan baru',
+              iconPath: iconPath,
+              iconIndex: 0
+            }
+          ]
+        };
+
+        try {
+          app.setJumpList([recentCategory, tasksCategory]);
+        } catch (err) {
+          consola.error("Failed to set jump list", err);
+        }
+      });
 
       ipcMain.handle("open-webstore", () => {
         const extWin = new BrowserWindow({
@@ -592,10 +942,12 @@ function main() {
       // --- END SETTINGS IPC ---
 
       const openSettings = async () => {
+        const customAppIcon = persistState.get("custom_tray_app");
         const setWin = new BrowserWindow({
           width: 720,
           height: 600,
           title: 'Pengaturan WhatsZan',
+          icon: customAppIcon || path.join(import.meta.dirname, '..', 'build', 'icon.ico'),
           autoHideMenuBar: true,
           resizable: false,
           webPreferences: {
@@ -623,7 +975,7 @@ function main() {
         });
       };
 
-      const trayIcon = getUserIcon("app", state) || path.join(import.meta.dirname, "..", "static", "app.png");
+      const trayIcon = persistState.get("custom_tray_normal") || getUserIcon("app", state) || path.join(import.meta.dirname, "..", "static", "app.png");
       let tray;
       try {
         tray = new Tray(trayIcon);
@@ -768,7 +1120,11 @@ function main() {
         consola.debug("load scripts", scripts);
         for (const script of scripts) {
           const filename = path.join(import.meta.dirname, "..", "src-web", script);
-          const data = readFileSync(filename, "utf-8");
+          let data = readFileSync(filename, "utf-8");
+          if (script === "injected.js") {
+            const customAppName = persistState.get("custom-app-name", "WhatsZan") || "WhatsZan";
+            data = `window.wzAppName = ${JSON.stringify(customAppName)};\n` + data;
+          }
           await executeScript(data);
         }
 
@@ -836,7 +1192,16 @@ function main() {
 
             dbus?.setBadgeCount(unreadCount); // gnome, kde
 
-            getBadgedTrayIcon(trayIcon, unreadCount).then(icon => {
+            const customUnread = persistState.get("custom_tray_unread");
+            let iconToPass = trayIcon;
+            let drawBadge = unreadCount;
+
+            if (unreadCount > 0 && customUnread) {
+              iconToPass = customUnread;
+              drawBadge = 0; // Don't draw the red dot over custom unread icon
+            }
+
+            getBadgedTrayIcon(iconToPass, drawBadge).then(icon => {
               if (icon && lastFaviconUrl === newestIcon) {
                 tray?.setImage(icon);
               }
@@ -892,9 +1257,28 @@ function main() {
         mainWindow.webContents.loadURL(url);
       }
     });
-
     return mainWindow;
   };
+
+  function handleJumpListArgs(window, commandLine) {
+    const openChatArg = commandLine.find(arg => arg.startsWith('--open-chat='));
+    if (openChatArg) {
+      const chatName = openChatArg.substring('--open-chat='.length).replace(/^"|"$/g, '');
+      windowShow(window);
+      window.webContents.send('jump-list-action', { type: 'open-chat', name: chatName });
+      return true;
+    }
+
+    const actionArg = commandLine.find(arg => arg.startsWith('--action='));
+    if (actionArg) {
+      const actionType = actionArg.substring('--action='.length).replace(/^"|"$/g, '');
+      windowShow(window);
+      window.webContents.send('jump-list-action', { type: 'action', name: actionType });
+      return true;
+    }
+
+    return false;
+  }
 
   app.setAboutPanelOptions({
     applicationName: pkg.name,
@@ -907,10 +1291,31 @@ function main() {
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
-  app.whenReady().then(async () => {
-    let window = await createWindow();
+  
+  const appLang = config.get("app-language", "auto");
+  if (appLang !== "auto") {
+    app.commandLine.appendSwitch('lang', appLang);
+  }
 
-    // Otomatis arahkan folder unduhan berdasarkan jenis file
+  app.whenReady().then(async () => {
+    
+    if (process.platform === 'win32') {
+      try {
+        const customAppIcon = persistState.get("custom_tray_app");
+        app.setUserTasks([
+          {
+            program: process.execPath,
+            arguments: '--action="new-chat"',
+            iconPath: customAppIcon || process.execPath,
+            iconIndex: 0,
+            title: 'Chat Baru',
+            description: 'Mulai obrolan baru'
+          }
+        ]);
+      } catch (err) {}
+    }
+
+    let window = await createWindow();    // Otomatis arahkan folder unduhan berdasarkan jenis file
     session.defaultSession.on('will-download', (event, item) => {
       if (config.get('smart-download', true) === false) return;
 
@@ -938,6 +1343,8 @@ function main() {
     const whatsappUrl = process.argv.find((arg) => arg.startsWith(`${urlScheme}:`));
     if (whatsappUrl) {
       handleWhatsAppProtocol(window, whatsappUrl);
+    } else {
+      handleJumpListArgs(window, process.argv);
     }
 
     addAboutMenuItem();
@@ -957,6 +1364,10 @@ function main() {
         const whatsappUrl = commandLine.find((arg) => arg.startsWith(`${urlScheme}:`));
         if (whatsappUrl) {
           handleWhatsAppProtocol(window, whatsappUrl);
+          return;
+        }
+        
+        if (handleJumpListArgs(window, commandLine)) {
           return;
         }
 
