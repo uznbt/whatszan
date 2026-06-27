@@ -327,10 +327,11 @@ async function ewSetupDictionary() {
 
   const triggers = Object.keys(dict);
 
-  document.addEventListener('keydown', (ev) => {
+  let isReplacing = false;
+  document.addEventListener('input', (ev) => {
+    if (isReplacing) return;
     const target = ev.target;
-    // Only process single character keys
-    if (target.isContentEditable && ev.key.length === 1) {
+    if (target.isContentEditable) {
       const selection = window.getSelection();
       if (!selection.rangeCount) return;
 
@@ -339,20 +340,17 @@ async function ewSetupDictionary() {
 
       const node = range.startContainer;
       if (node.nodeType === Node.TEXT_NODE) {
-        // Simulate what the text WOULD be after this keystroke
-        const textBeforeCursor = node.textContent.slice(0, range.startOffset) + ev.key;
+        const textBeforeCursor = node.textContent.slice(0, range.startOffset);
 
         for (const trigger of triggers) {
           const actualTrigger = trigger.startsWith('/') ? trigger : '/' + trigger;
 
           if (textBeforeCursor.endsWith(actualTrigger)) {
-            ev.preventDefault(); // Stop the last character from being typed naturally
-
-            // Select the characters of the trigger that are ALREADY in the DOM
-            const triggerWithoutLastChar = actualTrigger.slice(0, -1);
-            const startOffset = range.startOffset - triggerWithoutLastChar.length;
+            const startOffset = range.startOffset - actualTrigger.length;
 
             if (startOffset >= 0) {
+              isReplacing = true;
+              
               const replaceRange = document.createRange();
               replaceRange.setStart(node, startOffset);
               replaceRange.setEnd(node, range.startOffset);
@@ -360,8 +358,10 @@ async function ewSetupDictionary() {
               selection.removeAllRanges();
               selection.addRange(replaceRange);
               
-              // Insert the full replacement text (React will catch this as an input event)
+              // Insert the full replacement text
               document.execCommand('insertText', false, dict[trigger]);
+              
+              isReplacing = false;
             }
             break;
           }
