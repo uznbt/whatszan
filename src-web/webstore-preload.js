@@ -83,15 +83,15 @@ function injectInstallButton(extensionId) {
       const success = await ipcRenderer.invoke('install-extension', targetId);
       if (btnContainer) {
         if (success) {
-          btnContainer.innerHTML = window.__wzWebstoreInstalled || '✔ Berhasil Terpasang';
+          btnContainer.innerHTML = window.__wzWebstoreInstalled || 'Berhasil Terpasang';
           btnContainer.style.background = '#00a884';
         } else {
-          btnContainer.innerHTML = window.__wzWebstoreFailed || '❌ Gagal Menginstal';
+          btnContainer.innerHTML = window.__wzWebstoreFailed || 'Gagal Menginstal';
           btnContainer.style.background = '#ea0038';
         }
       }
     } catch (err) {
-      btnContainer.innerHTML = '❌ Error';
+      btnContainer.innerHTML = 'Error';
       btnContainer.style.background = '#ea0038';
     }
     

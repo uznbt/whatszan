@@ -77,6 +77,6 @@ async function generateIco() {
 }
 
 generateIco().catch(err => {
-  console.error('❌ Failed to generate icon.ico:', err);
+  console.error('Failed to generate icon.ico:', err);
   process.exit(1);
 });
