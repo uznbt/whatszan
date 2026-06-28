@@ -1005,8 +1005,11 @@ function uploadFiles(files, asMedia) {
   // To ensure the global "Share with..." modal appears (Picture 1),
   // we must close the current chat if one is open.
   try {
-    if (typeof ewCloseChat === 'function') ewCloseChat();
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
+    const chatOpen = !!document.getElementById("main");
+    if (chatOpen) {
+      if (typeof ewCloseChat === 'function') ewCloseChat();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
+    }
   } catch (err) {}
   
   setTimeout(() => {
