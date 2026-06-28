@@ -305,11 +305,36 @@ function main() {
         const newDesktopShortcutPath = path.join(desktopPath, `${newName || 'WhatsZan'}.desktop`);
         const appDesktopFile = path.join(applicationsPath, 'whatszan.desktop');
         
+        const scriptDirs = [
+          path.join(app.getPath('home'), '.local', 'share', 'nautilus', 'scripts'),
+          path.join(app.getPath('home'), '.local', 'share', 'nemo', 'scripts'),
+          path.join(app.getPath('home'), '.config', 'caja', 'scripts')
+        ];
+
+        const cleanLinuxScripts = (nameToClean) => {
+          scriptDirs.forEach(dir => {
+            import('fs').then(({ readdirSync, lstatSync }) => {
+               try {
+                 if (existsSync(dir)) {
+                   readdirSync(dir).forEach(file => {
+                     if (file.includes(nameToClean)) {
+                       const fp = path.join(dir, file);
+                       if (lstatSync(fp).isFile()) unlinkSync(fp);
+                     }
+                   });
+                 }
+               } catch(e) {}
+            });
+          });
+        };
+
         try { if (existsSync(oldDesktopShortcutPath)) unlinkSync(oldDesktopShortcutPath); } catch(e){}
+        cleanLinuxScripts(oldName || 'WhatsZan');
         
         if (newName && newName !== 'WhatsZan') {
           const defaultDesktopShortcut = path.join(desktopPath, 'WhatsZan.desktop');
           try { if (existsSync(defaultDesktopShortcut)) unlinkSync(defaultDesktopShortcut); } catch(e){}
+          cleanLinuxScripts('WhatsZan');
         }
         
         if (!create) {
@@ -321,25 +346,7 @@ function main() {
            try { if (existsSync(kioServices)) unlinkSync(kioServices); } catch(e){}
            try { if (existsSync(kservices5)) unlinkSync(kservices5); } catch(e){}
 
-           const scriptDirs = [
-             path.join(app.getPath('home'), '.local', 'share', 'nautilus', 'scripts'),
-             path.join(app.getPath('home'), '.local', 'share', 'nemo', 'scripts'),
-             path.join(app.getPath('home'), '.config', 'caja', 'scripts')
-           ];
-           scriptDirs.forEach(dir => {
-             import('fs').then(({ readdirSync, lstatSync }) => {
-                try {
-                  if (existsSync(dir)) {
-                    readdirSync(dir).forEach(file => {
-                      if (file.includes(newName || 'WhatsZan')) {
-                        const fp = path.join(dir, file);
-                        if (lstatSync(fp).isFile()) unlinkSync(fp);
-                      }
-                    });
-                  }
-                } catch(e) {}
-             });
-           });
+           cleanLinuxScripts(newName || 'WhatsZan');
         }
 
         if (create) {
