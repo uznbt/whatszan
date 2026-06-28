@@ -1582,7 +1582,7 @@ function main() {
       handleShareArgs(window, process.argv);
     }
 
-    const { handleMenu } = await import("./menu.mjs");
+
     addAboutMenuItem();
     app.on("activate", async () => {
       // On macOS it's common to re-create a window in the app when the

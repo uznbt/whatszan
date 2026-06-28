@@ -1015,18 +1015,18 @@ function uploadFiles(files, asMedia) {
         }, 500);
       }
     } else {
-       window.ipc.logToMain?.(`[WZ Share] Attach button not found. Waiting for user to open a chat...`);
-       const toast = document.createElement("div");
-       toast.style.cssText = "position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#25D366;color:white;padding:10px 20px;border-radius:20px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-family:inherit;font-size:14px;";
-       // Since uploadFiles does not have access to share.toastText directly, we can pass it down
-       toast.innerText = window.__wzToastText || "WhatsZan: Silakan buka salah satu chat untuk mengirim file ini.";
-       document.body.appendChild(toast);
+       window.ipc.logToMain?.(`[WZ Share] Attach button not found. Opening New Chat sidebar...`);
+       
+       // Try to click New Chat to prompt user to select a contact
+       const chatBtn = document.querySelector('div[title="New chat"], div[title="Chat baru"], span[data-icon="chat"], span[data-icon="new-chat-outline"]');
+       if (chatBtn) {
+         chatBtn.click();
+       }
        
        const pollInterval = setInterval(() => {
          const btn = document.querySelector('div[title="Attach"], span[data-icon="plus"]');
          if (btn) {
            clearInterval(pollInterval);
-           toast.remove();
            uploadFiles(files, asMedia);
          }
        }, 1000);
