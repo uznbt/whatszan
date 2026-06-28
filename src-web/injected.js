@@ -1003,7 +1003,7 @@ function uploadFiles(files, asMedia) {
   };
   
   if (!injectToInput()) {
-    const attachBtn = document.querySelector('div[title="Attach"], span[data-icon="plus"]');
+    const attachBtn = document.querySelector('div[title="Attach"], div[title="Lampirkan"], div[title="Lampiran"], span[data-icon="plus"], span[data-icon="attach-menu-plus"], span[data-icon="clip"]');
     if (attachBtn) {
       const clickable = attachBtn.closest('[role="button"]') || attachBtn.parentElement;
       if (clickable) {
@@ -1024,7 +1024,7 @@ function uploadFiles(files, asMedia) {
        }
        
        const pollInterval = setInterval(() => {
-         const btn = document.querySelector('div[title="Attach"], span[data-icon="plus"]');
+         const btn = document.querySelector('div[title="Attach"], div[title="Lampirkan"], div[title="Lampiran"], span[data-icon="plus"], span[data-icon="attach-menu-plus"], span[data-icon="clip"]');
          if (btn) {
            clearInterval(pollInterval);
            uploadFiles(files, asMedia);
