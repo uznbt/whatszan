@@ -314,6 +314,32 @@ function main() {
         
         if (!create) {
            try { if (existsSync(newDesktopShortcutPath)) unlinkSync(newDesktopShortcutPath); } catch(e){}
+           
+           // Remove Linux File Manager Context Menus
+           const kioServices = path.join(app.getPath('home'), '.local', 'share', 'kio', 'servicemenus', 'whatszan-share.desktop');
+           const kservices5 = path.join(app.getPath('home'), '.local', 'share', 'kservices5', 'ServiceMenus', 'whatszan-share.desktop');
+           try { if (existsSync(kioServices)) unlinkSync(kioServices); } catch(e){}
+           try { if (existsSync(kservices5)) unlinkSync(kservices5); } catch(e){}
+
+           const scriptDirs = [
+             path.join(app.getPath('home'), '.local', 'share', 'nautilus', 'scripts'),
+             path.join(app.getPath('home'), '.local', 'share', 'nemo', 'scripts'),
+             path.join(app.getPath('home'), '.config', 'caja', 'scripts')
+           ];
+           scriptDirs.forEach(dir => {
+             import('fs').then(({ readdirSync, lstatSync }) => {
+                try {
+                  if (existsSync(dir)) {
+                    readdirSync(dir).forEach(file => {
+                      if (file.includes(newName || 'WhatsZan')) {
+                        const fp = path.join(dir, file);
+                        if (lstatSync(fp).isFile()) unlinkSync(fp);
+                      }
+                    });
+                  }
+                } catch(e) {}
+             });
+           });
         }
 
         if (create) {
@@ -327,6 +353,51 @@ function main() {
             if (!existsSync(applicationsPath)) mkdirSync(applicationsPath, { recursive: true });
             writeFileSync(appDesktopFile, desktopEntry);
             writeFileSync(newDesktopShortcutPath, desktopEntry);
+            
+            // --- Linux File Manager Context Menus ---
+            const appLang = config.get("app-language", "auto");
+            const lang = appLang !== "auto" ? appLang : app.getLocale();
+            const translations = loadTranslations(lang);
+            const tMedia = translations.share_media || "Bagikan Media";
+            const tDoc = translations.share_document || "Bagikan Dokumen";
+
+            const kioServices = path.join(app.getPath('home'), '.local', 'share', 'kio', 'servicemenus');
+            const kservices5 = path.join(app.getPath('home'), '.local', 'share', 'kservices5', 'ServiceMenus');
+            const dolphinEntry = `[Desktop Entry]\nType=Service\nServiceTypes=KonqPopupMenu/Plugin\nMimeType=all/all;\nActions=ShareDocument;ShareMedia;\nX-KDE-Priority=TopLevel\n\n[Desktop Action ShareDocument]\nName=${newName || 'WhatsZan'} (${tDoc})\nIcon=${iconLocation}\nExec="${exePath}" --share-document %F\n\n[Desktop Action ShareMedia]\nName=${newName || 'WhatsZan'} (${tMedia})\nIcon=${iconLocation}\nExec="${exePath}" --share-media %F\n`;
+            
+            [kioServices, kservices5].forEach(dir => {
+              try {
+                if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+                writeFileSync(path.join(dir, 'whatszan-share.desktop'), dolphinEntry);
+              } catch(e) {}
+            });
+
+            const scriptDirs = [
+              path.join(app.getPath('home'), '.local', 'share', 'nautilus', 'scripts'),
+              path.join(app.getPath('home'), '.local', 'share', 'nemo', 'scripts'),
+              path.join(app.getPath('home'), '.config', 'caja', 'scripts')
+            ];
+            
+            const scriptDoc = `#!/bin/bash\n"${exePath}" --share-document "$@"\n`;
+            const scriptMedia = `#!/bin/bash\n"${exePath}" --share-media "$@"\n`;
+
+            scriptDirs.forEach(dir => {
+              try {
+                if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+                const docPath = path.join(dir, `${newName || 'WhatsZan'} (${tDoc})`);
+                const mediaPath = path.join(dir, `${newName || 'WhatsZan'} (${tMedia})`);
+                writeFileSync(docPath, scriptDoc);
+                writeFileSync(mediaPath, scriptMedia);
+                import('child_process').then(({ execSync }) => {
+                   try {
+                     execSync(`chmod +x "${docPath}"`);
+                     execSync(`chmod +x "${mediaPath}"`);
+                   } catch(e){}
+                });
+              } catch(e) {}
+            });
+            // --- End Linux File Manager Context Menus ---
+
             import('child_process').then(({ execSync }) => {
                try {
                  execSync(`chmod +x "${newDesktopShortcutPath}"`);
