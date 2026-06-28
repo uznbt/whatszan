@@ -83,5 +83,7 @@
   "settings_branding_reset": "Ripristina tutte le icone",
   "settings_toast_icon_changed": "Icona modificata con successo!",
   "settings_toast_custom_uploaded": "Icona personalizzata caricata e applicata con successo!",
-  "settings_toast_icon_reset": "Icone ripristinate con successo ai valori predefiniti."
+  "settings_toast_icon_reset": "Icone ripristinate con successo ai valori predefiniti.",
+  "share_media": "Condividi media",
+  "share_document": "Condividi documento"
 }

@@ -83,5 +83,7 @@
   "settings_branding_reset": "Alle Symbole zurücksetzen",
   "settings_toast_icon_changed": "Symbol erfolgreich geändert!",
   "settings_toast_custom_uploaded": "Benutzerdefiniertes Symbol erfolgreich hochgeladen und angewendet!",
-  "settings_toast_icon_reset": "Symbole erfolgreich auf Standard zurückgesetzt."
+  "settings_toast_icon_reset": "Symbole erfolgreich auf Standard zurückgesetzt.",
+  "share_media": "Medien teilen",
+  "share_document": "Dokument teilen"
 }

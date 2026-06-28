@@ -75,5 +75,7 @@
   "settings_branding_reset": "Reset All Icons",
   "settings_toast_icon_changed": "Icon changed!",
   "settings_toast_custom_uploaded": "Custom icon applied!",
-  "settings_toast_icon_reset": "Icons reset to default."
+  "settings_toast_icon_reset": "Icons reset to default.",
+  "share_media": "Share Media",
+  "share_document": "Share Document"
 }

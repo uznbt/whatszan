@@ -220,16 +220,22 @@ function main() {
         const startMenuPath = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs');
         const sendToPath = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'SendTo');
         
+        const appLang = config.get("app-language", "auto");
+        const lang = appLang !== "auto" ? appLang : app.getLocale();
+        const translations = loadTranslations(lang);
+        const tMedia = translations.share_media || "Bagikan Media";
+        const tDoc = translations.share_document || "Bagikan Dokumen";
+        
         const oldShortcutPath = path.join(desktopPath, `${oldName || 'WhatsZan'}.lnk`);
         const newShortcutPath = path.join(desktopPath, `${newName || 'WhatsZan'}.lnk`);
         const oldStartMenuShortcutPath = path.join(startMenuPath, `${oldName || 'WhatsZan'}.lnk`);
         const newStartMenuShortcutPath = path.join(startMenuPath, `${newName || 'WhatsZan'}.lnk`);
         const oldSendToShortcutPath = path.join(sendToPath, `${oldName || 'WhatsZan'}.lnk`);
         const newSendToShortcutPath = path.join(sendToPath, `${newName || 'WhatsZan'}.lnk`);
-        const oldSendToMediaShortcutPath = path.join(sendToPath, `${oldName || 'WhatsZan'} (Bagikan Media).lnk`);
-        const newSendToMediaShortcutPath = path.join(sendToPath, `${newName || 'WhatsZan'} (Bagikan Media).lnk`);
-        const oldSendToDocShortcutPath = path.join(sendToPath, `${oldName || 'WhatsZan'} (Bagikan Dokumen).lnk`);
-        const newSendToDocShortcutPath = path.join(sendToPath, `${newName || 'WhatsZan'} (Bagikan Dokumen).lnk`);
+        const oldSendToMediaShortcutPath = path.join(sendToPath, `${oldName || 'WhatsZan'} (${tMedia}).lnk`);
+        const newSendToMediaShortcutPath = path.join(sendToPath, `${newName || 'WhatsZan'} (${tMedia}).lnk`);
+        const oldSendToDocShortcutPath = path.join(sendToPath, `${oldName || 'WhatsZan'} (${tDoc}).lnk`);
+        const newSendToDocShortcutPath = path.join(sendToPath, `${newName || 'WhatsZan'} (${tDoc}).lnk`);
         
         try { if (existsSync(oldShortcutPath)) unlinkSync(oldShortcutPath); } catch(e){}
         try { if (existsSync(oldStartMenuShortcutPath)) unlinkSync(oldStartMenuShortcutPath); } catch(e){}
@@ -242,8 +248,8 @@ function main() {
           const defaultDesktopShortcut = path.join(desktopPath, 'WhatsZan.lnk');
           const defaultStartMenuShortcut = path.join(startMenuPath, 'WhatsZan.lnk');
           const defaultSendToShortcut = path.join(sendToPath, 'WhatsZan.lnk');
-          const defaultSendToMediaShortcut = path.join(sendToPath, 'WhatsZan (Bagikan Media).lnk');
-          const defaultSendToDocShortcut = path.join(sendToPath, 'WhatsZan (Bagikan Dokumen).lnk');
+          const defaultSendToMediaShortcut = path.join(sendToPath, `WhatsZan (${tMedia}).lnk`);
+          const defaultSendToDocShortcut = path.join(sendToPath, `WhatsZan (${tDoc}).lnk`);
           try { if (existsSync(defaultDesktopShortcut)) unlinkSync(defaultDesktopShortcut); } catch(e){}
           try { if (existsSync(defaultStartMenuShortcut)) unlinkSync(defaultStartMenuShortcut); } catch(e){}
           try { if (existsSync(defaultSendToShortcut)) unlinkSync(defaultSendToShortcut); } catch(e){}

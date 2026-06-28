@@ -83,5 +83,7 @@
   "settings_branding_reset": "Reset Semua Ikon",
   "settings_toast_icon_changed": "Ikon berhasil diubah!",
   "settings_toast_custom_uploaded": "Ikon kustom berhasil diterapkan!",
-  "settings_toast_icon_reset": "Ikon di-reset ke bawaan."
+  "settings_toast_icon_reset": "Ikon di-reset ke bawaan.",
+  "share_media": "Bagikan Media",
+  "share_document": "Bagikan Dokumen"
 }

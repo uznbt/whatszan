@@ -83,5 +83,7 @@
   "settings_branding_reset": "Redefinir todos os ícones",
   "settings_toast_icon_changed": "Ícone alterado com sucesso!",
   "settings_toast_custom_uploaded": "Ícone personalizado carregado e aplicado com sucesso!",
-  "settings_toast_icon_reset": "Ícones redefinidos com sucesso para o padrão."
+  "settings_toast_icon_reset": "Ícones redefinidos com sucesso para o padrão.",
+  "share_media": "Compartilhar mídia",
+  "share_document": "Compartilhar documento"
 }
