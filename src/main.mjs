@@ -249,8 +249,9 @@ function main() {
       webPreferences: {
         preload: path.join(import.meta.dirname, "..", "src-web", "preload.js"),
         spellcheck: config.get("spellcheck", true),
+        backgroundThrottling: false,
       },
-      show: state.showAtStartup,
+      show: isHiddenStartup ? false : state.showAtStartup,
       autoHideMenuBar: config.get("menu-bar-auto-hide", true),
       ...state.windowBounds,
     });
@@ -261,7 +262,7 @@ function main() {
       mainWindow.removeMenu();
     }
 
-    if (persistState.get("window-maximized", false)) {
+    if (persistState.get("window-maximized", false) && !isHiddenStartup) {
       mainWindow.maximize();
     }
 
@@ -1141,6 +1142,16 @@ function main() {
           } catch (err) {
             consola.error(`error inserting ${css}`, err);
           }
+        }
+      });
+
+      // Re-enable background throttling once WhatsApp has fully loaded to save resources
+      let hasFullyLoaded = false;
+      mainWindow.webContents.on("page-title-updated", (event, title) => {
+        if (!hasFullyLoaded && title && title.includes("WhatsApp") && !title.includes("WhatsApp Web")) {
+          hasFullyLoaded = true;
+          mainWindow.webContents.setBackgroundThrottling(true);
+          consola.info("WhatsApp fully loaded, background throttling re-enabled.");
         }
       });
 
