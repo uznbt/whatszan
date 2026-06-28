@@ -117,7 +117,17 @@ function handleShareArgs(window, commandLine) {
     }
     
     if (files.length > 0) {
-      pendingShare = { type, files };
+      const config = new JsonConfig(path.join(app.getPath("userData"), "config.json"));
+      const appLang = config.get("app-language", "auto");
+      const lang = appLang !== "auto" ? appLang : app.getLocale();
+      const { loadTranslations } = await import("./util.mjs");
+      const translations = loadTranslations(lang);
+      
+      pendingShare = { 
+        type, 
+        files, 
+        toastText: translations.toast_open_chat || "WhatsZan: Silakan buka salah satu chat untuk mengirim file ini."
+      };
       if (window && window.webContents) {
         windowShow(window);
         window.webContents.send("share-files-ready");
@@ -482,7 +492,7 @@ function main() {
           minimizable: false,
           maximizable: false,
           alwaysOnTop: true,
-          title: 'Bagikan Layar',
+          title: translations.share_screen || 'Bagikan Layar',
           autoHideMenuBar: true,
           webPreferences: {
             nodeIntegration: false,
@@ -501,11 +511,8 @@ function main() {
           consola.debug('Gagal deteksi tema WA, menggunakan tema OS');
         }
 
-        pickerWin.loadFile(path.join(import.meta.dirname, '..', 'static', 'screen-picker.html'), {
-          query: { theme: isWaDark ? 'dark' : 'light' },
-        });
-
-        // Kirim daftar sumber ke picker setelah halaman siap
+        const queryStr = `theme=${isWaDark ? 'dark' : 'light'}&title=${encodeURIComponent(translations.share_screen || 'Bagikan Layar')}&desc=${encodeURIComponent(translations.select_screen || 'Pilih layar atau jendela yang ingin dibagikan')}&btn=${encodeURIComponent(translations.share || 'Bagikan')}&tCancel=${encodeURIComponent(translations.cancel || 'Batal')}&tScreen=${encodeURIComponent(translations.tab_screens || 'Layar')}&tWin=${encodeURIComponent(translations.tab_windows || 'Jendela')}`;
+        pickerWin.loadFile(path.join(import.meta.dirname, '..', 'static', 'screen-picker.html'), { search: queryStr });
         pickerWin.webContents.on('did-finish-load', () => {
           const sourcesData = sources.map(s => ({
             id: s.id,
@@ -1535,8 +1542,8 @@ function main() {
             arguments: '--action="new-chat"',
             iconPath: customAppIcon || process.execPath,
             iconIndex: 0,
-            title: 'Chat Baru',
-            description: 'Mulai obrolan baru'
+            title: translations.new_chat || 'Chat Baru',
+            description: translations.new_chat_desc || 'Mulai obrolan baru'
           }
         ]);
       } catch (err) {}

@@ -85,5 +85,14 @@
   "settings_toast_custom_uploaded": "Ikon kustom berhasil diterapkan!",
   "settings_toast_icon_reset": "Ikon di-reset ke bawaan.",
   "share_media": "Bagikan Media",
-  "share_document": "Bagikan Dokumen"
+  "share_document": "Bagikan Dokumen",
+  "new_chat": "Chat Baru",
+  "new_chat_desc": "Mulai obrolan baru",
+  "share_screen": "Bagikan Layar",
+  "share": "Bagikan",
+  "select_screen": "Pilih layar atau jendela yang ingin dibagikan",
+  "toast_open_chat": "WhatsZan: Silakan buka salah satu chat untuk mengirim file ini.",
+  "cancel": "Batal",
+  "tab_screens": "Layar",
+  "tab_windows": "Jendela"
 }

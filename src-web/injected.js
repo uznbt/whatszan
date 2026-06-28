@@ -949,6 +949,8 @@ async function processPendingShare() {
   const share = await window.ipc.getPendingShare();
   if (!share || !share.files || share.files.length === 0) return;
   
+  if (share.toastText) window.__wzToastText = share.toastText;
+  
   window.ipc.logToMain?.(`[WZ Share] Received share request for ${share.files.length} files as ${share.type}`);
   
   const files = [];
@@ -1016,7 +1018,8 @@ function uploadFiles(files, asMedia) {
        window.ipc.logToMain?.(`[WZ Share] Attach button not found. Waiting for user to open a chat...`);
        const toast = document.createElement("div");
        toast.style.cssText = "position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#25D366;color:white;padding:10px 20px;border-radius:20px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-family:inherit;font-size:14px;";
-       toast.innerText = "WhatsZan: Silakan buka salah satu chat untuk mengirim file ini.";
+       // Since uploadFiles does not have access to share.toastText directly, we can pass it down
+       toast.innerText = window.__wzToastText || "WhatsZan: Silakan buka salah satu chat untuk mengirim file ini.";
        document.body.appendChild(toast);
        
        const pollInterval = setInterval(() => {

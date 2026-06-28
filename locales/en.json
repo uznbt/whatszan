@@ -77,5 +77,14 @@
   "settings_toast_custom_uploaded": "Custom icon applied!",
   "settings_toast_icon_reset": "Icons reset to default.",
   "share_media": "Share Media",
-  "share_document": "Share Document"
+  "share_document": "Share Document",
+  "new_chat": "New Chat",
+  "new_chat_desc": "Start a new chat",
+  "share_screen": "Share Screen",
+  "share": "Share",
+  "select_screen": "Select screen or window to share",
+  "toast_open_chat": "WhatsZan: Please open a chat to send this file.",
+  "cancel": "Cancel",
+  "tab_screens": "Screens",
+  "tab_windows": "Windows"
 }

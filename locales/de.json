@@ -85,5 +85,14 @@
   "settings_toast_custom_uploaded": "Benutzerdefiniertes Symbol erfolgreich hochgeladen und angewendet!",
   "settings_toast_icon_reset": "Symbole erfolgreich auf Standard zurückgesetzt.",
   "share_media": "Medien teilen",
-  "share_document": "Dokument teilen"
+  "share_document": "Dokument teilen",
+  "new_chat": "Neuer Chat",
+  "new_chat_desc": "Neuen Chat starten",
+  "share_screen": "Bildschirm freigeben",
+  "share": "Teilen",
+  "select_screen": "Wählen Sie den Bildschirm oder das Fenster zum Teilen aus",
+  "toast_open_chat": "WhatsZan: Bitte öffnen Sie einen Chat, um diese Datei zu senden.",
+  "cancel": "Abbrechen",
+  "tab_screens": "Bildschirme",
+  "tab_windows": "Fenster"
 }

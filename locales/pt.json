@@ -85,5 +85,14 @@
   "settings_toast_custom_uploaded": "Ícone personalizado carregado e aplicado com sucesso!",
   "settings_toast_icon_reset": "Ícones redefinidos com sucesso para o padrão.",
   "share_media": "Compartilhar mídia",
-  "share_document": "Compartilhar documento"
+  "share_document": "Compartilhar documento",
+  "new_chat": "Novo Chat",
+  "new_chat_desc": "Iniciar um novo chat",
+  "share_screen": "Compartilhar tela",
+  "share": "Compartilhar",
+  "select_screen": "Selecione a tela ou janela para compartilhar",
+  "toast_open_chat": "WhatsZan: Por favor, abra um chat para enviar este arquivo.",
+  "cancel": "Cancelar",
+  "tab_screens": "Telas",
+  "tab_windows": "Janelas"
 }
