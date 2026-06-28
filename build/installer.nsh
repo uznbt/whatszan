@@ -113,6 +113,9 @@ LangString MsgRepair 1046 "WhatsZan versão ${VERSION} já está instalada.$\n$\
   Delete "$SMSTARTUP\WhatsZan.lnk"
   Delete "$DESKTOP\WhatsApp.lnk"
   Delete "$SMPROGRAMS\WhatsApp.lnk"
+  Delete "$APPDATA\Microsoft\Windows\SendTo\WhatsZan.lnk"
+  Delete "$APPDATA\Microsoft\Windows\SendTo\WhatsZan (Bagikan Media).lnk"
+  Delete "$APPDATA\Microsoft\Windows\SendTo\WhatsZan (Bagikan Dokumen).lnk"
   
   ; Write and execute a powershell script to dynamically delete renamed shortcuts
   FileOpen $9 "$TEMP\clean_whatszan_shortcuts.ps1" w
@@ -123,6 +126,9 @@ LangString MsgRepair 1046 "WhatsZan versão ${VERSION} já está instalada.$\n$\
   FileWrite $9 "  if ($$n) {$\r\n"
   FileWrite $9 "    Remove-Item -Path '$DESKTOP\$$n.lnk' -ErrorAction SilentlyContinue$\r\n"
   FileWrite $9 "    Remove-Item -Path '$SMPROGRAMS\$$n.lnk' -ErrorAction SilentlyContinue$\r\n"
+  FileWrite $9 "    Remove-Item -Path '$APPDATA\Microsoft\Windows\SendTo\$$n.lnk' -ErrorAction SilentlyContinue$\r\n"
+  FileWrite $9 "    Remove-Item -Path '$APPDATA\Microsoft\Windows\SendTo\$$n (Bagikan Media).lnk' -ErrorAction SilentlyContinue$\r\n"
+  FileWrite $9 "    Remove-Item -Path '$APPDATA\Microsoft\Windows\SendTo\$$n (Bagikan Dokumen).lnk' -ErrorAction SilentlyContinue$\r\n"
   FileWrite $9 "  }$\r\n"
   FileWrite $9 "}$\r\n"
   FileClose $9
