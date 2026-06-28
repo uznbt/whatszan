@@ -1002,36 +1002,27 @@ function uploadFiles(files, asMedia) {
     return false;
   };
   
-  if (!injectToInput()) {
-    const attachBtn = document.querySelector('div[title="Attach"], div[title="Lampirkan"], div[title="Lampiran"], span[data-icon="plus"], span[data-icon="attach-menu-plus"], span[data-icon="clip"]');
-    if (attachBtn) {
-      const clickable = attachBtn.closest('[role="button"]') || attachBtn.parentElement;
-      if (clickable) {
-        clickable.click();
-        setTimeout(() => {
-          if (!injectToInput()) {
-            window.ipc.logToMain?.(`[WZ Share] Failed to find target input even after clicking attach`);
-          }
-        }, 500);
-      }
-    } else {
-       window.ipc.logToMain?.(`[WZ Share] Attach button not found. Opening New Chat sidebar...`);
-       
-       // Try to click New Chat to prompt user to select a contact
-       const chatBtn = document.querySelector('div[title="New chat"], div[title="Chat baru"], span[data-icon="chat"], span[data-icon="new-chat-outline"]');
-       if (chatBtn) {
-         chatBtn.click();
-       }
-       
-       const pollInterval = setInterval(() => {
-         const btn = document.querySelector('div[title="Attach"], div[title="Lampirkan"], div[title="Lampiran"], span[data-icon="plus"], span[data-icon="attach-menu-plus"], span[data-icon="clip"]');
-         if (btn) {
-           clearInterval(pollInterval);
-           uploadFiles(files, asMedia);
-         }
-       }, 1000);
+  // To ensure the global "Share with..." modal appears (Picture 1),
+  // we must close the current chat if one is open.
+  try {
+    if (typeof ewCloseChat === 'function') ewCloseChat();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
+  } catch (err) {}
+  
+  setTimeout(() => {
+    if (!injectToInput()) {
+      window.ipc.logToMain?.(`[WZ Share] Global input not found. Opening New Chat sidebar as fallback...`);
+      const chatBtn = document.querySelector('div[title="New chat"], div[title="Chat baru"], span[data-icon="chat"], span[data-icon="new-chat-outline"]');
+      if (chatBtn) chatBtn.click();
+      
+      const pollInterval = setInterval(() => {
+        if (injectToInput()) {
+          clearInterval(pollInterval);
+        }
+      }, 500);
+      setTimeout(() => clearInterval(pollInterval), 5000);
     }
-  }
+  }, 200);
 }
 
 if (window?.ipc?.onShareFiles) {
