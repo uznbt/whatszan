@@ -322,7 +322,7 @@
       <div class="row" id="row-quit-on-close" style="display: none;">
         <div class="row-info">
           <div class="row-title"><span data-i18n="settings_quit_tray_title">Tutup ke Tray</span></div>
-          <div class="row-desc">Aplikasi ke tray saat ditutup</div>
+          <div class="row-desc"><span data-i18n="settings_quit_tray_desc">Aplikasi ke tray saat ditutup</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="quit-on-close" /><span class="slider"></span></label>
       </div>
@@ -330,7 +330,7 @@
       <div class="row">
         <div class="row-info">
           <div class="row-title"><span data-i18n="settings_smart_dl_title">Pilah Unduhan Otomatis</span></div>
-          <div class="row-desc">Simpan file ke folder yang sesuai otomatis</div>
+          <div class="row-desc"><span data-i18n="settings_smart_dl_desc">Simpan file ke folder yang sesuai otomatis</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="smart-download" /><span class="slider"></span></label>
       </div>
@@ -338,7 +338,7 @@
       <div class="row" style="flex-direction: column; align-items: flex-start;">
         <div class="row-info" style="width: 100%; margin-bottom: 8px;">
           <div class="row-title"><span data-i18n="settings_notif_prefix_title">Awalan Notifikasi</span></div>
-          <div class="row-desc">Awalan teks pada notifikasi</div>
+          <div class="row-desc"><span data-i18n="settings_notif_prefix_desc">Awalan teks pada notifikasi</span></div>
         </div>
         <input id="notif-prefix" class="text-input" type="text" style="width:100%;" placeholder="Kosongkan jika tidak perlu" data-i18n="settings_placeholder_notif" />
       </div>
@@ -351,7 +351,7 @@
       <div class="row" style="border-color: var(--accent);">
         <div class="row-info">
           <div class="row-title" style="color: var(--accent); font-weight: 600;"><span data-i18n="settings_privacy_blur_title">Aktifkan Mode Rahasia</span></div>
-          <div class="row-desc">Aktifkan sensor layar. Tekan Ctrl+Shift+B kapan saja.</div>
+          <div class="row-desc"><span data-i18n="settings_privacy_blur_desc">Aktifkan sensor layar. Tekan Ctrl+Shift+B kapan saja.</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="privacy-blur" /><span class="slider"></span></label>
       </div>
@@ -419,7 +419,7 @@
       <div class="row">
         <div class="row-info">
           <div class="row-title">Anti Screen Cast</div>
-          <div class="row-desc">Sembunyikan aplikasi dari rekam layar / monitor eksternal. Tekan Ctrl+Shift+H kapan saja.</div>
+          <div class="row-desc"><span data-i18n="settings_anti_screencast_desc">Sembunyikan aplikasi dari rekam layar / monitor eksternal. Tekan Ctrl+Shift+H kapan saja.</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="anti-screencast" /><span class="slider"></span></label>
       </div>
@@ -534,7 +534,7 @@
       <div class="row">
         <div class="row-info">
           <div class="row-title"><span>Nama Aplikasi</span></div>
-          <div class="row-desc"><span>Nama yang muncul di dalam obrolan dan judul jendela</span></div>
+          <div class="row-desc"><span data-i18n="settings_branding_name_desc">Nama yang muncul di dalam obrolan dan judul jendela</span></div>
         </div>
         <input type="text" id="custom-app-name" class="text-input" placeholder="WhatsZan" />
       </div>
@@ -542,7 +542,7 @@
       <div class="row">
         <div class="row-info">
           <div class="row-title"><span>Shortcut Desktop</span></div>
-          <div class="row-desc"><span>Tampilkan ikon aplikasi di Desktop</span></div>
+          <div class="row-desc"><span data-i18n="settings_branding_desktop_desc">Tampilkan ikon aplikasi di Desktop</span></div>
         </div>
         <label class="toggle"><input type="checkbox" id="desktop-shortcut" /><span class="slider"></span></label>
       </div>
@@ -975,7 +975,7 @@
   });
 
   ipcRenderer.on('settings-saved', () => {
-    showToast('Tersimpan otomatis');
+    showToast(window.i18nData?.settings_toast_saved || 'Tersimpan otomatis');
   });
 
   load();

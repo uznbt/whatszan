@@ -244,7 +244,7 @@
 
 <div class="grid-container">
   <div class="grid" id="grid">
-    <div class="empty"><p>Memuat sumber...</p></div>
+    <div class="empty"><p id="doc-loading">Memuat sumber...</p></div>
   </div>
 </div>
 
@@ -278,6 +278,15 @@
   if (params.has('tWin')) {
     document.getElementById('doc-tab-windows').innerText = params.get('tWin');
   }
+  if (params.has('tLoading')) {
+    const el = document.getElementById('doc-loading');
+    if (el) el.innerText = params.get('tLoading');
+  }
+  if (params.has('tEmpty')) {
+    window.__wzEmptyText = params.get('tEmpty');
+    window.__wzTypeS = params.get('tTypeS') || 'layar';
+    window.__wzTypeW = params.get('tTypeW') || 'jendela';
+  }
 
   let allSources = [], selectedId = null, currentTab = 'screens';
 
@@ -309,7 +318,7 @@
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="1.5" stroke-linecap="round">
           <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/>
         </svg>
-        <p>Tidak ada ${tab === 'screens' ? 'layar' : 'jendela'} yang tersedia</p>
+        <p>${(window.__wzEmptyText || 'Tidak ada {type} yang tersedia').replace('{type}', tab === 'screens' ? (window.__wzTypeS || 'layar') : (window.__wzTypeW || 'jendela'))}</p>
       </div>`;
       return;
     }

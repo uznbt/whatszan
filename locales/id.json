@@ -82,8 +82,8 @@
   "settings_branding_custom": "Kustom",
   "settings_branding_reset": "Reset Semua Ikon",
   "settings_toast_icon_changed": "Ikon berhasil diubah!",
-  "settings_toast_custom_uploaded": "Ikon kustom berhasil diterapkan!",
-  "settings_toast_icon_reset": "Ikon di-reset ke bawaan.",
+  "settings_toast_custom_uploaded": "Ikon kustom berhasil diunggah dan diterapkan!",
+  "settings_toast_icon_reset": "Ikon berhasil di-reset ke bawaan.",
   "share_media": "Bagikan Media",
   "share_document": "Bagikan Dokumen",
   "new_chat": "Chat Baru",
@@ -94,5 +94,16 @@
   "toast_open_chat": "WhatsZan: Silakan buka salah satu chat untuk mengirim file ini.",
   "cancel": "Batal",
   "tab_screens": "Layar",
-  "tab_windows": "Jendela"
+  "tab_windows": "Jendela",
+  "settings_anti_screencast_title": "Anti Rekam Layar / Screenshot",
+  "settings_anti_screencast_desc": "Sembunyikan aplikasi dari rekam layar / monitor eksternal. Tekan Ctrl+Shift+H kapan saja.",
+  "settings_branding_name_title": "Nama Aplikasi",
+  "settings_branding_name_desc": "Nama yang muncul di dalam obrolan dan judul jendela",
+  "settings_branding_desktop_title": "Pintasan Desktop",
+  "settings_branding_desktop_desc": "Tampilkan ikon aplikasi di Desktop",
+  "screen_picker_loading": "Memuat sumber...",
+  "screen_picker_empty": "Tidak ada {type} yang tersedia",
+  "screen_picker_screens": "layar",
+  "screen_picker_windows": "jendela",
+  "webstore_installed": "✔ Berhasil Terpasang"
 }

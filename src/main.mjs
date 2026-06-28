@@ -511,7 +511,7 @@ function main() {
           consola.debug('Gagal deteksi tema WA, menggunakan tema OS');
         }
 
-        const queryStr = `theme=${isWaDark ? 'dark' : 'light'}&title=${encodeURIComponent(translations.share_screen || 'Bagikan Layar')}&desc=${encodeURIComponent(translations.select_screen || 'Pilih layar atau jendela yang ingin dibagikan')}&btn=${encodeURIComponent(translations.share || 'Bagikan')}&tCancel=${encodeURIComponent(translations.cancel || 'Batal')}&tScreen=${encodeURIComponent(translations.tab_screens || 'Layar')}&tWin=${encodeURIComponent(translations.tab_windows || 'Jendela')}`;
+        const queryStr = `theme=${isWaDark ? 'dark' : 'light'}&title=${encodeURIComponent(translations.share_screen || 'Bagikan Layar')}&desc=${encodeURIComponent(translations.select_screen || 'Pilih layar atau jendela yang ingin dibagikan')}&btn=${encodeURIComponent(translations.share || 'Bagikan')}&tCancel=${encodeURIComponent(translations.cancel || 'Batal')}&tScreen=${encodeURIComponent(translations.tab_screens || 'Layar')}&tWin=${encodeURIComponent(translations.tab_windows || 'Jendela')}&tLoading=${encodeURIComponent(translations.screen_picker_loading || 'Memuat sumber...')}&tEmpty=${encodeURIComponent(translations.screen_picker_empty || 'Tidak ada {type} yang tersedia')}&tTypeS=${encodeURIComponent(translations.screen_picker_screens || 'layar')}&tTypeW=${encodeURIComponent(translations.screen_picker_windows || 'jendela')}`;
         pickerWin.loadFile(path.join(import.meta.dirname, '..', 'static', 'screen-picker.html'), { search: queryStr });
         pickerWin.webContents.on('did-finish-load', () => {
           const sourcesData = sources.map(s => ({
