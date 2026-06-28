@@ -72,29 +72,60 @@ function handleShareArgs(window, commandLine) {
   
   if (!isMedia && !isDoc) return false;
   
-  const type = isMedia ? "media" : "document";
-  const files = [];
-  
-  for (const arg of commandLine) {
-    if (!arg.startsWith("--") && !arg.endsWith(".exe") && arg !== ".") {
-      try {
-        if (existsSync(arg)) {
-          files.push(arg);
+  (async () => {
+    let type = isMedia ? "media" : "document";
+    const files = [];
+    let hasNonMedia = false;
+    
+    const { statSync } = await import('node:fs');
+    const { exec } = await import('node:child_process');
+    
+    for (const arg of commandLine) {
+      if (!arg.startsWith("--") && !arg.endsWith(".exe") && arg !== ".") {
+        try {
+          if (existsSync(arg)) {
+            if (statSync(arg).isDirectory()) {
+              const zipPath = path.join(app.getPath("temp"), `WhatsZan_${path.basename(arg)}.zip`);
+              if (process.platform === 'win32') {
+                if (window) windowShow(window);
+                await new Promise((resolve) => {
+                  exec(`powershell.exe -NoProfile -Command "Compress-Archive -Path '${arg}\\*' -DestinationPath '${zipPath}' -Force"`, resolve);
+                });
+                files.push(zipPath);
+                hasNonMedia = true;
+              }
+            } else {
+              files.push(arg);
+            }
+          }
+        } catch(e) {}
+      }
+    }
+    
+    if (type === "media") {
+      for (const f of files) {
+        const ext = path.extname(f).toLowerCase();
+        if (!['.jpg', '.jpeg', '.png', '.gif', '.webp', '.mp4', '.mov', '.avi'].includes(ext)) {
+          hasNonMedia = true;
+          break;
         }
-      } catch(e) {}
+      }
     }
-  }
-  
-  if (files.length > 0) {
-    pendingShare = { type, files };
-    if (window && window.webContents) {
-      windowShow(window);
-      window.webContents.send("share-files-ready");
+    
+    if (hasNonMedia && type === "media") {
+      type = "document";
     }
-    return true;
-  }
+    
+    if (files.length > 0) {
+      pendingShare = { type, files };
+      if (window && window.webContents) {
+        windowShow(window);
+        window.webContents.send("share-files-ready");
+      }
+    }
+  })();
   
-  return false;
+  return true;
 }
 
 function main() {

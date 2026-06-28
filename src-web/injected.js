@@ -966,6 +966,7 @@ async function processPendingShare() {
       else if (ext === 'pdf') mimeType = 'application/pdf';
       else if (ext === 'txt') mimeType = 'text/plain';
       else if (ext === 'csv') mimeType = 'text/csv';
+      else if (ext === 'zip') mimeType = 'application/zip';
       
       const file = new File([blob], data.name, { type: mimeType });
       files.push(file);
