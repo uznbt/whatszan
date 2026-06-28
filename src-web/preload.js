@@ -21,6 +21,9 @@ contextBridge.exposeInMainWorld("ipc", {
   notifySend: (id, title, body, iconDataUrl) => ipcRenderer.invoke("notifySend", id, title, body, iconDataUrl),
   onNotifyClick: (callback) => ipcRenderer.on("notify-click", (event, id) => callback(id)),
   onNotifyReply: (callback) => ipcRenderer.on("notify-reply", (event, id, reply) => callback(id, reply)),
+  getPendingShare: () => ipcRenderer.invoke("get-pending-share"),
+  readFileBuffer: (path) => ipcRenderer.invoke("read-file-buffer", path),
+  onShareFiles: (callback) => ipcRenderer.on("share-files-ready", () => callback()),
 });
 
 // Bridge untuk screen-picker.html: kirim pilihan layar ke main process

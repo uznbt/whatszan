@@ -64,6 +64,39 @@ function handleWhatsAppProtocol(window, url) {
   }
 }
 
+let pendingShare = null;
+
+function handleShareArgs(window, commandLine) {
+  const isMedia = commandLine.includes("--share-media");
+  const isDoc = commandLine.includes("--share-document");
+  
+  if (!isMedia && !isDoc) return false;
+  
+  const type = isMedia ? "media" : "document";
+  const files = [];
+  
+  for (const arg of commandLine) {
+    if (!arg.startsWith("--") && !arg.endsWith(".exe") && arg !== ".") {
+      try {
+        if (existsSync(arg)) {
+          files.push(arg);
+        }
+      } catch(e) {}
+    }
+  }
+  
+  if (files.length > 0) {
+    pendingShare = { type, files };
+    if (window && window.webContents) {
+      windowShow(window);
+      window.webContents.send("share-files-ready");
+    }
+    return true;
+  }
+  
+  return false;
+}
+
 function main() {
   const config = new JsonConfig(path.join(app.getPath("userData"), "config.json"));
 
@@ -162,24 +195,36 @@ function main() {
         const newStartMenuShortcutPath = path.join(startMenuPath, `${newName || 'WhatsZan'}.lnk`);
         const oldSendToShortcutPath = path.join(sendToPath, `${oldName || 'WhatsZan'}.lnk`);
         const newSendToShortcutPath = path.join(sendToPath, `${newName || 'WhatsZan'}.lnk`);
+        const oldSendToMediaShortcutPath = path.join(sendToPath, `${oldName || 'WhatsZan'} (Bagikan Media).lnk`);
+        const newSendToMediaShortcutPath = path.join(sendToPath, `${newName || 'WhatsZan'} (Bagikan Media).lnk`);
+        const oldSendToDocShortcutPath = path.join(sendToPath, `${oldName || 'WhatsZan'} (Bagikan Dokumen).lnk`);
+        const newSendToDocShortcutPath = path.join(sendToPath, `${newName || 'WhatsZan'} (Bagikan Dokumen).lnk`);
         
         try { if (existsSync(oldShortcutPath)) unlinkSync(oldShortcutPath); } catch(e){}
         try { if (existsSync(oldStartMenuShortcutPath)) unlinkSync(oldStartMenuShortcutPath); } catch(e){}
         try { if (existsSync(oldSendToShortcutPath)) unlinkSync(oldSendToShortcutPath); } catch(e){}
+        try { if (existsSync(newSendToShortcutPath)) unlinkSync(newSendToShortcutPath); } catch(e){}
+        try { if (existsSync(oldSendToMediaShortcutPath)) unlinkSync(oldSendToMediaShortcutPath); } catch(e){}
+        try { if (existsSync(oldSendToDocShortcutPath)) unlinkSync(oldSendToDocShortcutPath); } catch(e){}
         
         if (newName && newName !== 'WhatsZan') {
           const defaultDesktopShortcut = path.join(desktopPath, 'WhatsZan.lnk');
           const defaultStartMenuShortcut = path.join(startMenuPath, 'WhatsZan.lnk');
           const defaultSendToShortcut = path.join(sendToPath, 'WhatsZan.lnk');
+          const defaultSendToMediaShortcut = path.join(sendToPath, 'WhatsZan (Bagikan Media).lnk');
+          const defaultSendToDocShortcut = path.join(sendToPath, 'WhatsZan (Bagikan Dokumen).lnk');
           try { if (existsSync(defaultDesktopShortcut)) unlinkSync(defaultDesktopShortcut); } catch(e){}
           try { if (existsSync(defaultStartMenuShortcut)) unlinkSync(defaultStartMenuShortcut); } catch(e){}
           try { if (existsSync(defaultSendToShortcut)) unlinkSync(defaultSendToShortcut); } catch(e){}
+          try { if (existsSync(defaultSendToMediaShortcut)) unlinkSync(defaultSendToMediaShortcut); } catch(e){}
+          try { if (existsSync(defaultSendToDocShortcut)) unlinkSync(defaultSendToDocShortcut); } catch(e){}
         }
         
         if (!create) {
            try { if (existsSync(newShortcutPath)) unlinkSync(newShortcutPath); } catch(e){}
            try { if (existsSync(newStartMenuShortcutPath)) unlinkSync(newStartMenuShortcutPath); } catch(e){}
-           try { if (existsSync(newSendToShortcutPath)) unlinkSync(newSendToShortcutPath); } catch(e){}
+           try { if (existsSync(newSendToMediaShortcutPath)) unlinkSync(newSendToMediaShortcutPath); } catch(e){}
+           try { if (existsSync(newSendToDocShortcutPath)) unlinkSync(newSendToDocShortcutPath); } catch(e){}
         }
 
         if (create) {
@@ -198,7 +243,8 @@ function main() {
           try {
             shell.writeShortcutLink(newShortcutPath, 'create', shortcutOptions);
             shell.writeShortcutLink(newStartMenuShortcutPath, 'create', shortcutOptions);
-            shell.writeShortcutLink(newSendToShortcutPath, 'create', shortcutOptions);
+            shell.writeShortcutLink(newSendToMediaShortcutPath, 'create', { ...shortcutOptions, args: '--share-media' });
+            shell.writeShortcutLink(newSendToDocShortcutPath, 'create', { ...shortcutOptions, args: '--share-document' });
           } catch(e) {
             consola.error("Failed to create shortcut using shell API", e);
           }
@@ -951,6 +997,29 @@ function main() {
       ipcMain.handle("active-account-get", () => "default");
       ipcMain.handle("account-remove", () => {});
 
+      ipcMain.on("update-recent-chats", (event, chats) => {
+        updateJumpList(chats);
+      });
+
+      ipcMain.handle("get-pending-share", () => {
+        const share = pendingShare;
+        pendingShare = null;
+        return share;
+      });
+      
+      ipcMain.handle("read-file-buffer", (event, filepath) => {
+        try {
+          if (existsSync(filepath)) {
+            const buffer = readFileSync(filepath);
+            const name = path.basename(filepath);
+            return { buffer, name };
+          }
+        } catch(e) {
+          consola.error("Failed to read file buffer", e);
+        }
+        return null;
+      });
+
       ipcMain.on("update-recent-chats", (ev, chats) => {
         if (process.platform !== 'win32') return;
 
@@ -1393,6 +1462,10 @@ function main() {
       window.webContents.send('jump-list-action', { type: 'action', name: actionType });
       return true;
     }
+    
+    if (handleShareArgs(window, commandLine)) {
+      return true;
+    }
 
     return false;
   }
@@ -1462,8 +1535,10 @@ function main() {
       handleWhatsAppProtocol(window, whatsappUrl);
     } else {
       handleJumpListArgs(window, process.argv);
+      handleShareArgs(window, process.argv);
     }
 
+    const { handleMenu } = await import("./menu.mjs");
     addAboutMenuItem();
     app.on("activate", async () => {
       // On macOS it's common to re-create a window in the app when the
@@ -1485,6 +1560,10 @@ function main() {
         }
         
         if (handleJumpListArgs(window, commandLine)) {
+          return;
+        }
+        
+        if (handleShareArgs(window, commandLine)) {
           return;
         }
 

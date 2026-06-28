@@ -942,3 +942,100 @@ function ewSetupJumpList() {
     }, 1000);
   });
 }
+
+// --- File Sharing Feature ---
+async function processPendingShare() {
+  if (!window?.ipc?.getPendingShare) return;
+  const share = await window.ipc.getPendingShare();
+  if (!share || !share.files || share.files.length === 0) return;
+  
+  window.ipc.logToMain?.(`[WZ Share] Received share request for ${share.files.length} files as ${share.type}`);
+  
+  const files = [];
+  for (const path of share.files) {
+    const data = await window.ipc.readFileBuffer(path);
+    if (data && data.buffer) {
+      const blob = new Blob([data.buffer]);
+      let mimeType = 'application/octet-stream';
+      const ext = data.name.split('.').pop().toLowerCase();
+      if (['jpg', 'jpeg'].includes(ext)) mimeType = 'image/jpeg';
+      else if (ext === 'png') mimeType = 'image/png';
+      else if (ext === 'gif') mimeType = 'image/gif';
+      else if (ext === 'webp') mimeType = 'image/webp';
+      else if (ext === 'mp4') mimeType = 'video/mp4';
+      else if (ext === 'pdf') mimeType = 'application/pdf';
+      else if (ext === 'txt') mimeType = 'text/plain';
+      else if (ext === 'csv') mimeType = 'text/csv';
+      
+      const file = new File([blob], data.name, { type: mimeType });
+      files.push(file);
+    }
+  }
+  
+  if (files.length === 0) return;
+  
+  uploadFiles(files, share.type === 'media');
+}
+
+function uploadFiles(files, asMedia) {
+  const dt = new DataTransfer();
+  files.forEach(f => dt.items.add(f));
+  
+  const injectToInput = () => {
+    const inputs = document.querySelectorAll('input[type="file"]');
+    let targetInput = null;
+    if (asMedia) {
+      targetInput = Array.from(inputs).find(i => i.accept && i.accept.includes('image/*'));
+    } else {
+      targetInput = Array.from(inputs).find(i => i.accept === '*');
+    }
+    
+    if (targetInput) {
+      targetInput.files = dt.files;
+      targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+      window.ipc.logToMain?.(`[WZ Share] Successfully injected files into input`);
+      return true;
+    }
+    return false;
+  };
+  
+  if (!injectToInput()) {
+    const attachBtn = document.querySelector('div[title="Attach"], span[data-icon="plus"]');
+    if (attachBtn) {
+      const clickable = attachBtn.closest('[role="button"]') || attachBtn.parentElement;
+      if (clickable) {
+        clickable.click();
+        setTimeout(() => {
+          if (!injectToInput()) {
+            window.ipc.logToMain?.(`[WZ Share] Failed to find target input even after clicking attach`);
+          }
+        }, 500);
+      }
+    } else {
+       window.ipc.logToMain?.(`[WZ Share] Attach button not found. Waiting for user to open a chat...`);
+       const toast = document.createElement("div");
+       toast.style.cssText = "position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#25D366;color:white;padding:10px 20px;border-radius:20px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-family:inherit;font-size:14px;";
+       toast.innerText = "WhatsZan: Silakan buka salah satu chat untuk mengirim file ini.";
+       document.body.appendChild(toast);
+       
+       const pollInterval = setInterval(() => {
+         const btn = document.querySelector('div[title="Attach"], span[data-icon="plus"]');
+         if (btn) {
+           clearInterval(pollInterval);
+           toast.remove();
+           uploadFiles(files, asMedia);
+         }
+       }, 1000);
+    }
+  }
+}
+
+if (window?.ipc?.onShareFiles) {
+  window.ipc.onShareFiles(() => {
+    processPendingShare();
+  });
+  
+  setInterval(() => {
+    processPendingShare();
+  }, 2000);
+}
