@@ -24,6 +24,9 @@ contextBridge.exposeInMainWorld("ipc", {
   getPendingShare: () => ipcRenderer.invoke("get-pending-share"),
   readFileBuffer: (path) => ipcRenderer.invoke("read-file-buffer", path),
   onShareFiles: (callback) => ipcRenderer.on("share-files-ready", () => callback()),
+  browseFolder: () => ipcRenderer.invoke("browse-folder"),
+  getDefaultDownloadPaths: () => ipcRenderer.invoke("get-default-download-paths"),
+  checkPathExists: (p) => ipcRenderer.invoke("check-path-exists", p),
 });
 
 // Bridge untuk screen-picker.html: kirim pilihan layar ke main process

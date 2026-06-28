@@ -335,6 +335,50 @@
         <label class="toggle"><input type="checkbox" id="smart-download" /><span class="slider"></span></label>
       </div>
 
+      <!-- Sub-panel path unduhan, muncul saat smart-download aktif -->
+      <div id="smart-download-paths" style="display:none; flex-direction:column; gap:10px; padding-left:20px; border-left:2px solid var(--accent);">
+        <div class="row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+          <div class="row-info">
+            <div class="row-title">Foto &amp; Gambar</div>
+            <div class="row-desc" id="desc-download-path-image">Folder Gambar sistem</div>
+          </div>
+          <div style="display:flex; gap:8px; width:100%;">
+            <input id="download-path-image" class="text-input" type="text" style="flex:1;" />
+            <button class="btn" onclick="browseFor('download-path-image')" style="flex-shrink:0; padding:8px 12px;">Browse</button>
+          </div>
+        </div>
+        <div class="row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+          <div class="row-info">
+            <div class="row-title">Video</div>
+            <div class="row-desc" id="desc-download-path-video">Folder Video sistem</div>
+          </div>
+          <div style="display:flex; gap:8px; width:100%;">
+            <input id="download-path-video" class="text-input" type="text" style="flex:1;" />
+            <button class="btn" onclick="browseFor('download-path-video')" style="flex-shrink:0; padding:8px 12px;">Browse</button>
+          </div>
+        </div>
+        <div class="row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+          <div class="row-info">
+            <div class="row-title">Audio</div>
+            <div class="row-desc" id="desc-download-path-audio">Folder Musik sistem</div>
+          </div>
+          <div style="display:flex; gap:8px; width:100%;">
+            <input id="download-path-audio" class="text-input" type="text" style="flex:1;" />
+            <button class="btn" onclick="browseFor('download-path-audio')" style="flex-shrink:0; padding:8px 12px;">Browse</button>
+          </div>
+        </div>
+        <div class="row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+          <div class="row-info">
+            <div class="row-title">Dokumen</div>
+            <div class="row-desc" id="desc-download-path-document">Folder Dokumen sistem</div>
+          </div>
+          <div style="display:flex; gap:8px; width:100%;">
+            <input id="download-path-document" class="text-input" type="text" style="flex:1;" />
+            <button class="btn" onclick="browseFor('download-path-document')" style="flex-shrink:0; padding:8px 12px;">Browse</button>
+          </div>
+        </div>
+      </div>
+
       <div class="row" style="flex-direction: column; align-items: flex-start;">
         <div class="row-info" style="width: 100%; margin-bottom: 8px;">
           <div class="row-title"><span data-i18n="settings_notif_prefix_title">Awalan Notifikasi</span></div>
@@ -656,6 +700,11 @@
     document.getElementById('quit-on-close').checked = settings['quit-on-close'] || false;
     document.getElementById('esc-toggle').checked = settings['esc-toggle-window'] || false;
     document.getElementById('smart-download').checked = settings['smart-download'] !== false;
+    updateSmartDownloadVisibility();
+    document.getElementById('download-path-image').value = settings['download-path-image'] || '';
+    document.getElementById('download-path-video').value = settings['download-path-video'] || '';
+    document.getElementById('download-path-audio').value = settings['download-path-audio'] || '';
+    document.getElementById('download-path-document').value = settings['download-path-document'] || '';
     document.getElementById('spellcheck').checked = settings['spellcheck'] !== false;
     document.getElementById('menu-bar').checked = settings['menu-bar'] !== false;
     document.getElementById('menu-bar-auto-hide').checked = settings['menu-bar-auto-hide'] !== false;
@@ -703,6 +752,7 @@
 
     updateBlurSubsettingsVisibility();
     renderDictList();
+    await initDownloadPathInputs();
     isLoaded = true;
   }
 
@@ -780,8 +830,79 @@
     document.getElementById('blur-subsettings').style.display = isBlurOn ? 'flex' : 'none';
   }
 
+  function updateSmartDownloadVisibility() {
+    const isOn = document.getElementById('smart-download').checked;
+    document.getElementById('smart-download-paths').style.display = isOn ? 'flex' : 'none';
+  }
+
+  let defaultDownloadPaths = {};
+
+  async function initDownloadPathInputs() {
+    defaultDownloadPaths = await ipcRenderer.invoke('get-default-download-paths');
+    const map = {
+      'download-path-image':    defaultDownloadPaths.image,
+      'download-path-video':    defaultDownloadPaths.video,
+      'download-path-audio':    defaultDownloadPaths.audio,
+      'download-path-document': defaultDownloadPaths.document,
+    };
+    for (const [id, defaultPath] of Object.entries(map)) {
+      const input = document.getElementById(id);
+      if (!input) continue;
+      
+      // Jika kosong, isi langsung dengan defaultPath supaya user bisa mengeditnya (bukan sekadar placeholder)
+      if (!input.value) {
+        input.value = defaultPath;
+      }
+      input.placeholder = defaultPath;
+      
+      // Validasi awal saat load
+      validateDownloadPath(id, defaultPath);
+
+      // Validate and auto-save on blur
+      input.addEventListener('blur', async () => {
+        await validateDownloadPath(id, defaultPath);
+        await autoSave();
+      });
+    }
+  }
+
+  async function validateDownloadPath(inputId, defaultPath) {
+    const input = document.getElementById(inputId);
+    const descId = 'desc-' + inputId;
+    const desc = document.getElementById(descId);
+    const val = input.value.trim();
+    if (!val) {
+      // Empty = use default, always valid
+      input.style.borderColor = '';
+      if (desc) desc.style.color = '';
+      return;
+    }
+    const exists = await ipcRenderer.invoke('check-path-exists', val);
+    if (exists) {
+      input.style.borderColor = 'var(--accent)';
+      if (desc) { desc.textContent = 'Folder ditemukan'; desc.style.color = 'var(--accent)'; }
+    } else {
+      input.style.borderColor = '#e74c3c';
+      if (desc) { desc.textContent = 'Folder tidak ditemukan'; desc.style.color = '#e74c3c'; }
+    }
+  }
+
+  async function browseFor(inputId) {
+    const folder = await ipcRenderer.invoke('browse-folder');
+    if (folder) {
+      document.getElementById(inputId).value = folder;
+      const defaultPath = defaultDownloadPaths[inputId.replace('download-path-', '')] || '';
+      await validateDownloadPath(inputId, defaultPath);
+      await autoSave();
+    }
+  }
+
   document.getElementById('auto-run').addEventListener('change', () => {
     autoSave();
+  });
+
+  document.getElementById('smart-download').addEventListener('change', () => {
+    updateSmartDownloadVisibility();
   });
   
   document.getElementById('privacy-blur').addEventListener('change', (e) => {
@@ -797,6 +918,7 @@
   });
 
   const autoSaveInputs = ['app-language', 'notif-prefix', 'quit-on-close', 'esc-toggle', 'smart-download', 'spellcheck', 'menu-bar', 'menu-bar-auto-hide', 'user-agent', 'anti-screencast', 'blur-contacts', 'blur-pp', 'blur-messages', 'blur-media', 'blur-input', 'blur-specific', 'blur-amount', 'incognito-antidelete', 'incognito-statussaver', 'incognito-noread', 'incognito-notyping', 'desktop-shortcut', 'custom-app-name'];
+  // download-path-* inputs are handled by blur listener in initDownloadPathInputs()
   autoSaveInputs.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', async () => {
@@ -890,6 +1012,10 @@
       'quit-on-close': document.getElementById('quit-on-close').checked,
       'esc-toggle-window': document.getElementById('esc-toggle').checked,
       'smart-download': document.getElementById('smart-download').checked,
+      'download-path-image': document.getElementById('download-path-image').value,
+      'download-path-video': document.getElementById('download-path-video').value,
+      'download-path-audio': document.getElementById('download-path-audio').value,
+      'download-path-document': document.getElementById('download-path-document').value,
       'spellcheck': document.getElementById('spellcheck').checked,
       'menu-bar': document.getElementById('menu-bar').checked,
       'menu-bar-auto-hide': document.getElementById('menu-bar-auto-hide').checked,

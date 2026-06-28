@@ -26,6 +26,10 @@ import pkg from "../package.json" with { type: "json" };
 import { JsonConfig } from "./json-config.mjs";
 import { defaultKeys } from "./keys.mjs";
 import { Dbus } from "./dbus.mjs";
+import { applyAutoRun, applyDesktopShortcut } from "./shortcuts.mjs";
+import { setupAppMenu } from "./menu.mjs";
+import { setupTray } from "./tray.mjs";
+
 
 const defaultUserAgent =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -203,222 +207,7 @@ function main() {
   }
 
   // Helper untuk memastikan shortcut startup sesuai dengan kondisi terakhir
-  const applyAutoRun = (autoRun) => {
-    if (process.platform === 'win32') {
-      import('fs').then(({ existsSync, unlinkSync }) => {
-        const shortcutPath = path.join(process.env.APPDATA || '', 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', 'WhatsZan.lnk');
-        if (autoRun) {
-          const exePath = app.getPath('exe');
-          const workDir = path.dirname(exePath);
-          const ps = `$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('${shortcutPath}'); $s.TargetPath = '${exePath}'; $s.Arguments = '--hide'; $s.WorkingDirectory = '${workDir}'; $s.Save()`;
-          import('child_process').then(({ execSync }) => {
-            try { execSync(`powershell -NoProfile -Command "${ps}"`, { stdio: 'ignore' }); } catch(e){}
-          });
-        } else {
-          try { if (existsSync(shortcutPath)) unlinkSync(shortcutPath); } catch(e){}
-        }
-      });
-    } else {
-      app.setLoginItemSettings({ openAtLogin: autoRun, args: autoRun ? ['--hide'] : [] });
-    }
-  };
-
-  const applyDesktopShortcut = (create, oldName, newName) => {
-    if (process.platform === 'win32') {
-      import('fs').then(({ existsSync, unlinkSync }) => {
-        const desktopPath = app.getPath('desktop');
-        const startMenuPath = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs');
-        const sendToPath = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'SendTo');
-        
-        const appLang = config.get("app-language", "auto");
-        const lang = appLang !== "auto" ? appLang : app.getLocale();
-        const translations = loadTranslations(lang);
-        const tMedia = translations.share_media || "Bagikan Media";
-        const tDoc = translations.share_document || "Bagikan Dokumen";
-        
-        const oldShortcutPath = path.join(desktopPath, `${oldName || 'WhatsZan'}.lnk`);
-        const newShortcutPath = path.join(desktopPath, `${newName || 'WhatsZan'}.lnk`);
-        const oldStartMenuShortcutPath = path.join(startMenuPath, `${oldName || 'WhatsZan'}.lnk`);
-        const newStartMenuShortcutPath = path.join(startMenuPath, `${newName || 'WhatsZan'}.lnk`);
-        const oldSendToShortcutPath = path.join(sendToPath, `${oldName || 'WhatsZan'}.lnk`);
-        const newSendToShortcutPath = path.join(sendToPath, `${newName || 'WhatsZan'}.lnk`);
-        const oldSendToMediaShortcutPath = path.join(sendToPath, `${oldName || 'WhatsZan'} (${tMedia}).lnk`);
-        const newSendToMediaShortcutPath = path.join(sendToPath, `${newName || 'WhatsZan'} (${tMedia}).lnk`);
-        const oldSendToDocShortcutPath = path.join(sendToPath, `${oldName || 'WhatsZan'} (${tDoc}).lnk`);
-        const newSendToDocShortcutPath = path.join(sendToPath, `${newName || 'WhatsZan'} (${tDoc}).lnk`);
-        
-        try { if (existsSync(oldShortcutPath)) unlinkSync(oldShortcutPath); } catch(e){}
-        try { if (existsSync(oldStartMenuShortcutPath)) unlinkSync(oldStartMenuShortcutPath); } catch(e){}
-        try { if (existsSync(oldSendToShortcutPath)) unlinkSync(oldSendToShortcutPath); } catch(e){}
-        try { if (existsSync(newSendToShortcutPath)) unlinkSync(newSendToShortcutPath); } catch(e){}
-        try { if (existsSync(oldSendToMediaShortcutPath)) unlinkSync(oldSendToMediaShortcutPath); } catch(e){}
-        try { if (existsSync(oldSendToDocShortcutPath)) unlinkSync(oldSendToDocShortcutPath); } catch(e){}
-        
-        if (newName && newName !== 'WhatsZan') {
-          const defaultDesktopShortcut = path.join(desktopPath, 'WhatsZan.lnk');
-          const defaultStartMenuShortcut = path.join(startMenuPath, 'WhatsZan.lnk');
-          const defaultSendToShortcut = path.join(sendToPath, 'WhatsZan.lnk');
-          const defaultSendToMediaShortcut = path.join(sendToPath, `WhatsZan (${tMedia}).lnk`);
-          const defaultSendToDocShortcut = path.join(sendToPath, `WhatsZan (${tDoc}).lnk`);
-          try { if (existsSync(defaultDesktopShortcut)) unlinkSync(defaultDesktopShortcut); } catch(e){}
-          try { if (existsSync(defaultStartMenuShortcut)) unlinkSync(defaultStartMenuShortcut); } catch(e){}
-          try { if (existsSync(defaultSendToShortcut)) unlinkSync(defaultSendToShortcut); } catch(e){}
-          try { if (existsSync(defaultSendToMediaShortcut)) unlinkSync(defaultSendToMediaShortcut); } catch(e){}
-          try { if (existsSync(defaultSendToDocShortcut)) unlinkSync(defaultSendToDocShortcut); } catch(e){}
-        }
-        
-        if (!create) {
-           try { if (existsSync(newShortcutPath)) unlinkSync(newShortcutPath); } catch(e){}
-           try { if (existsSync(newStartMenuShortcutPath)) unlinkSync(newStartMenuShortcutPath); } catch(e){}
-           try { if (existsSync(newSendToMediaShortcutPath)) unlinkSync(newSendToMediaShortcutPath); } catch(e){}
-           try { if (existsSync(newSendToDocShortcutPath)) unlinkSync(newSendToDocShortcutPath); } catch(e){}
-        }
-
-        if (create) {
-          const exePath = app.getPath('exe');
-          const workDir = path.dirname(exePath);
-          const customAppIcon = persistState.get("custom_tray_app");
-          const iconLocation = customAppIcon || exePath;
-          const shortcutOptions = {
-            target: exePath,
-            cwd: workDir,
-            icon: iconLocation,
-            iconIndex: 0,
-            appUserModelId: 'org.uznbt.whatszan',
-            description: 'WhatsZan Desktop Client'
-          };
-          try {
-            shell.writeShortcutLink(newShortcutPath, 'create', shortcutOptions);
-            shell.writeShortcutLink(newStartMenuShortcutPath, 'create', shortcutOptions);
-            shell.writeShortcutLink(newSendToMediaShortcutPath, 'create', { ...shortcutOptions, args: '--share-media' });
-            shell.writeShortcutLink(newSendToDocShortcutPath, 'create', { ...shortcutOptions, args: '--share-document' });
-          } catch(e) {
-            consola.error("Failed to create shortcut using shell API", e);
-          }
-        }
-      });
-    } else if (process.platform === 'linux') {
-      import('fs').then(({ existsSync, unlinkSync, writeFileSync, mkdirSync }) => {
-        const desktopPath = app.getPath('desktop');
-        const applicationsPath = path.join(app.getPath('home'), '.local', 'share', 'applications');
-        const oldDesktopShortcutPath = path.join(desktopPath, `${oldName || 'WhatsZan'}.desktop`);
-        const newDesktopShortcutPath = path.join(desktopPath, `${newName || 'WhatsZan'}.desktop`);
-        const appDesktopFile = path.join(applicationsPath, 'whatszan.desktop');
-        
-        const scriptDirs = [
-          path.join(app.getPath('home'), '.local', 'share', 'nautilus', 'scripts'),
-          path.join(app.getPath('home'), '.local', 'share', 'nemo', 'scripts'),
-          path.join(app.getPath('home'), '.config', 'caja', 'scripts')
-        ];
-
-        const cleanLinuxScripts = (nameToClean) => {
-          scriptDirs.forEach(dir => {
-            import('fs').then(({ readdirSync, lstatSync }) => {
-               try {
-                 if (existsSync(dir)) {
-                   readdirSync(dir).forEach(file => {
-                     if (file.includes(nameToClean)) {
-                       const fp = path.join(dir, file);
-                       if (lstatSync(fp).isFile()) unlinkSync(fp);
-                     }
-                   });
-                 }
-               } catch(e) {}
-            });
-          });
-        };
-
-        try { if (existsSync(oldDesktopShortcutPath)) unlinkSync(oldDesktopShortcutPath); } catch(e){}
-        cleanLinuxScripts(oldName || 'WhatsZan');
-        
-        if (newName && newName !== 'WhatsZan') {
-          const defaultDesktopShortcut = path.join(desktopPath, 'WhatsZan.desktop');
-          try { if (existsSync(defaultDesktopShortcut)) unlinkSync(defaultDesktopShortcut); } catch(e){}
-          cleanLinuxScripts('WhatsZan');
-        }
-        
-        if (!create) {
-           try { if (existsSync(newDesktopShortcutPath)) unlinkSync(newDesktopShortcutPath); } catch(e){}
-           
-           // Remove Linux File Manager Context Menus
-           const kioServices = path.join(app.getPath('home'), '.local', 'share', 'kio', 'servicemenus', 'whatszan-share.desktop');
-           const kservices5 = path.join(app.getPath('home'), '.local', 'share', 'kservices5', 'ServiceMenus', 'whatszan-share.desktop');
-           try { if (existsSync(kioServices)) unlinkSync(kioServices); } catch(e){}
-           try { if (existsSync(kservices5)) unlinkSync(kservices5); } catch(e){}
-
-           cleanLinuxScripts(newName || 'WhatsZan');
-        }
-
-        if (create) {
-          const exePath = app.getPath('exe');
-          const customAppIcon = persistState.get("custom_tray_app");
-          const iconLocation = customAppIcon || 'whatszan';
-          
-          const desktopEntry = `[Desktop Entry]\nName=${newName || 'WhatsZan'}\nExec="${exePath}" %U\nTerminal=false\nType=Application\nIcon=${iconLocation}\nStartupWMClass=${newName || 'WhatsZan'}\nComment=WhatsZan Desktop Client\nCategories=Network;Chat;InstantMessaging;\nMimeType=x-scheme-handler/whatsapp;`;
-
-          try {
-            if (!existsSync(applicationsPath)) mkdirSync(applicationsPath, { recursive: true });
-            writeFileSync(appDesktopFile, desktopEntry);
-            writeFileSync(newDesktopShortcutPath, desktopEntry);
-            
-            // --- Linux File Manager Context Menus ---
-            const appLang = config.get("app-language", "auto");
-            const lang = appLang !== "auto" ? appLang : app.getLocale();
-            const translations = loadTranslations(lang);
-            const tMedia = translations.share_media || "Bagikan Media";
-            const tDoc = translations.share_document || "Bagikan Dokumen";
-
-            const kioServices = path.join(app.getPath('home'), '.local', 'share', 'kio', 'servicemenus');
-            const kservices5 = path.join(app.getPath('home'), '.local', 'share', 'kservices5', 'ServiceMenus');
-            const dolphinEntry = `[Desktop Entry]\nType=Service\nServiceTypes=KonqPopupMenu/Plugin\nMimeType=all/all;\nActions=ShareDocument;ShareMedia;\nX-KDE-Priority=TopLevel\n\n[Desktop Action ShareDocument]\nName=${newName || 'WhatsZan'} (${tDoc})\nIcon=${iconLocation}\nExec="${exePath}" --share-document %F\n\n[Desktop Action ShareMedia]\nName=${newName || 'WhatsZan'} (${tMedia})\nIcon=${iconLocation}\nExec="${exePath}" --share-media %F\n`;
-            
-            [kioServices, kservices5].forEach(dir => {
-              try {
-                if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-                writeFileSync(path.join(dir, 'whatszan-share.desktop'), dolphinEntry);
-              } catch(e) {}
-            });
-
-            const scriptDirs = [
-              path.join(app.getPath('home'), '.local', 'share', 'nautilus', 'scripts'),
-              path.join(app.getPath('home'), '.local', 'share', 'nemo', 'scripts'),
-              path.join(app.getPath('home'), '.config', 'caja', 'scripts')
-            ];
-            
-            const scriptDoc = `#!/bin/bash\n"${exePath}" --share-document "$@"\n`;
-            const scriptMedia = `#!/bin/bash\n"${exePath}" --share-media "$@"\n`;
-
-            scriptDirs.forEach(dir => {
-              try {
-                if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-                const docPath = path.join(dir, `${newName || 'WhatsZan'} (${tDoc})`);
-                const mediaPath = path.join(dir, `${newName || 'WhatsZan'} (${tMedia})`);
-                writeFileSync(docPath, scriptDoc);
-                writeFileSync(mediaPath, scriptMedia);
-                import('child_process').then(({ execSync }) => {
-                   try {
-                     execSync(`chmod +x "${docPath}"`);
-                     execSync(`chmod +x "${mediaPath}"`);
-                   } catch(e){}
-                });
-              } catch(e) {}
-            });
-            // --- End Linux File Manager Context Menus ---
-
-            import('child_process').then(({ execSync }) => {
-               try {
-                 execSync(`chmod +x "${newDesktopShortcutPath}"`);
-                 execSync(`update-desktop-database "${applicationsPath}"`);
-               } catch(e){}
-            });
-          } catch(e) {
-            consola.error("Failed to create linux shortcut", e);
-          }
-        }
-      });
-    }
-  };
-
+  // (Logic moved to src/shortcuts.mjs)
   // Selalu pastikan setting auto-run aktif saat startup (misal pasca-update)
   if (!isDebug) {
     applyAutoRun(persistState.get("auto-run", false));
@@ -432,7 +221,7 @@ function main() {
         try { unlinkSync(flagPath); } catch (e) {}
       }
       const customAppName = persistState.get("custom-app-name", "WhatsZan") || "WhatsZan";
-      applyDesktopShortcut(persistState.get("desktop-shortcut", true), customAppName, customAppName);
+      applyDesktopShortcut(persistState.get("desktop-shortcut", true), customAppName, customAppName, config, persistState);
     }
   }
 
@@ -466,7 +255,7 @@ function main() {
       ...state.windowBounds,
     });
 
-    mainWindow.setContentProtection(config.get("anti-screencast", false));
+    mainWindow.setContentProtection(persistState.get("anti-screencast", false));
 
     if (!config.get("menu-bar", true)) {
       mainWindow.removeMenu();
@@ -873,6 +662,7 @@ function main() {
         return {
           ...config.data,
           "privacy-blur": persistState.get("privacy-blur", false),
+          "anti-screencast": persistState.get("anti-screencast", false),
           "sidebar-width": persistState.get("sidebar-width", 220),
           "auto-run": persistState.get("auto-run", false),
           "desktop-shortcut": persistState.get("desktop-shortcut", true),
@@ -890,9 +680,10 @@ function main() {
       });
 
       ipcMain.handle("settings-save", (ev, newSettings) => {
-        const { 'privacy-blur': blur, 'auto-run': autoRun, 'desktop-shortcut': desktopShortcut, 'custom-app-name': customAppName, ...configSettings } = newSettings;
+        const { 'privacy-blur': blur, 'anti-screencast': antiScreencast, 'auto-run': autoRun, 'desktop-shortcut': desktopShortcut, 'custom-app-name': customAppName, ...configSettings } = newSettings;
         
         persistState.set("privacy-blur", blur);
+        persistState.set("anti-screencast", antiScreencast);
         persistState.set("auto-run", autoRun);
         
         const oldDesktopShortcut = persistState.get("desktop-shortcut", true);
@@ -905,7 +696,7 @@ function main() {
         applyAutoRun(autoRun);
         
         if (oldDesktopShortcut !== desktopShortcut || (desktopShortcut && oldAppName !== newAppName)) {
-           applyDesktopShortcut(desktopShortcut, oldAppName, newAppName);
+           applyDesktopShortcut(desktopShortcut, oldAppName, newAppName, config, persistState);
         }
 
         Object.entries(configSettings).forEach(([k, v]) => {
@@ -995,7 +786,7 @@ function main() {
 
         ev.sender.send("settings-saved");
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.setContentProtection(config.get("anti-screencast", false));
+          mainWindow.setContentProtection(persistState.get("anti-screencast", false));
           mainWindow.webContents.send("settings-saved");
         }
       });
@@ -1018,7 +809,7 @@ function main() {
             if (type === 'app') {
                const desktopShortcut = persistState.get("desktop-shortcut", true);
                const customAppName = persistState.get("custom-app-name", "WhatsZan") || "WhatsZan";
-               applyDesktopShortcut(desktopShortcut, customAppName, customAppName);
+               applyDesktopShortcut(desktopShortcut, customAppName, customAppName, config, persistState);
                updateAppUserModel(customAppName, path.join(import.meta.dirname, '..', 'build', 'icon.ico'));
                updateLiveIcon('app', path.join(import.meta.dirname, '..', 'build', 'icon.ico'));
             } else if (type === 'normal') {
@@ -1066,7 +857,7 @@ function main() {
                    if (type === 'app') {
                      const desktopShortcut = persistState.get("desktop-shortcut", true);
                      const customAppName = persistState.get("custom-app-name", "WhatsZan") || "WhatsZan";
-                     applyDesktopShortcut(desktopShortcut, customAppName, customAppName);
+                     applyDesktopShortcut(desktopShortcut, customAppName, customAppName, config, persistState);
                      updateAppUserModel(customAppName, destPath);
                    }
                  } catch (e) {
@@ -1081,7 +872,7 @@ function main() {
                 if (type === 'app') {
                    const desktopShortcut = persistState.get("desktop-shortcut", true);
                    const customAppName = persistState.get("custom-app-name", "WhatsZan") || "WhatsZan";
-                   applyDesktopShortcut(desktopShortcut, customAppName, customAppName);
+                   applyDesktopShortcut(desktopShortcut, customAppName, customAppName, config, persistState);
                    updateAppUserModel(customAppName, destPath);
                 }
               });
@@ -1103,7 +894,7 @@ function main() {
         if (hadAppIcon) {
            const desktopShortcut = persistState.get("desktop-shortcut", true);
            const customAppName = persistState.get("custom-app-name", "WhatsZan") || "WhatsZan";
-           applyDesktopShortcut(desktopShortcut, customAppName, customAppName);
+           applyDesktopShortcut(desktopShortcut, customAppName, customAppName, config, persistState);
            updateAppUserModel(customAppName, destPath);
         }
         
@@ -1118,6 +909,27 @@ function main() {
       ipcMain.handle("accounts-get", () => []);
       ipcMain.handle("active-account-get", () => "default");
       ipcMain.handle("account-remove", () => {});
+
+      ipcMain.handle("browse-folder", async (event) => {
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (win) win.ignoreBlur = true;
+        const result = await dialog.showOpenDialog(win || mainWindow, {
+          properties: ['openDirectory'],
+        });
+        if (win) win.ignoreBlur = false;
+        return result.canceled ? null : result.filePaths[0];
+      });
+
+      ipcMain.handle("get-default-download-paths", () => ({
+        image:    app.getPath('pictures'),
+        video:    app.getPath('videos'),
+        audio:    app.getPath('music'),
+        document: app.getPath('documents'),
+      }));
+
+      ipcMain.handle("check-path-exists", (ev, p) => {
+        try { return existsSync(p); } catch { return false; }
+      });
 
       ipcMain.on("update-recent-chats", (event, chats) => {
         updateJumpList(chats);
@@ -1241,168 +1053,15 @@ function main() {
         });
 
         setWin.on('blur', () => {
+          if (setWin.ignoreBlur) return;
           if (!setWin.isDestroyed()) setWin.close();
         });
       };
 
       const trayIcon = persistState.get("custom_tray_normal") || getUserIcon("app", state) || path.join(import.meta.dirname, "..", "static", "app.png");
-      let tray;
-      try {
-        tray = new Tray(trayIcon);
-        const trayContextMenu = Menu.buildFromTemplate([
-          {
-            label: translations?.show_hide ?? "Show/Hide",
-            type: "normal",
-            click: () => {
-              toggleVisibility(mainWindow);
-            },
-          },
-          {
-            label: "Pengaturan...",
-            type: "normal",
-            click: () => {
-              openSettings();
-            },
-          },
-          {
-            label: translations?.quit ?? "Quit",
-            type: "normal",
-            click: () => {
-              consola.debug("quit");
-              app.isQuiting = true;
-              app.quit();
-            },
-          },
-        ]);
-        tray.setToolTip(pkg.name);
-        tray.setContextMenu(trayContextMenu);
-        tray.on("click", () => {
-          toggleVisibility(mainWindow);
-        });
-      } catch (err) {
-        consola.error("Failed to load tray icon", err);
-      }
+      let tray = setupTray(trayIcon, translations, mainWindow, openSettings);
 
-      const appMenu = Menu.getApplicationMenu();
-      if (appMenu) {
-        const windowMenu = appMenu.items.find(item => item.role === 'windowmenu' || item.label === 'Window' || item.label === 'Jendela');
-        if (windowMenu && !windowMenu.submenu.items.some(i => i.id === 'auto_run_appmenu')) {
-
-          // Helper: path ke shortcut di folder Startup Windows
-          const getStartupShortcutPath = () => path.join(
-            process.env.APPDATA || '',
-            'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup',
-            'WhatsZan.lnk'
-          );
-
-          // Helper: baca status auto-run saat ini (per-OS)
-          const isAutoRunEnabled = () => {
-            if (process.platform === 'win32') {
-              return existsSync(getStartupShortcutPath());
-            }
-            return app.getLoginItemSettings().openAtLogin;
-          };
-
-          // Helper: set/hapus auto-run (per-OS)
-          const setAutoRun = (enabled) => {
-            if (process.platform === 'win32') {
-              const shortcutPath = getStartupShortcutPath();
-              if (enabled) {
-                // Buat shortcut .lnk di folder Startup via PowerShell
-                const exePath = app.getPath('exe');
-                const workDir = path.dirname(exePath);
-                const ps = [
-                  `$ws = New-Object -ComObject WScript.Shell`,
-                  `$s = $ws.CreateShortcut('${shortcutPath}')`,
-                  `$s.TargetPath = '${exePath}'`,
-                  `$s.Arguments = '--hide'`,
-                  `$s.WorkingDirectory = '${workDir}'`,
-                  `$s.Save()`,
-                ].join('; ');
-                import('child_process').then(({ execSync }) => {
-                  try { execSync(`powershell -NoProfile -Command "${ps}"`, { stdio: 'ignore' }); }
-                  catch (e) { consola.error('AutoRun shortcut error', e); }
-                });
-              } else {
-                // Hapus shortcut
-                try { if (existsSync(shortcutPath)) unlinkSync(shortcutPath); }
-                catch (e) { consola.error('AutoRun remove shortcut error', e); }
-              }
-            } else {
-              // Linux/macOS: gunakan app.setLoginItemSettings (registry/launchd)
-              app.setLoginItemSettings({
-                openAtLogin: enabled,
-                args: enabled ? ['--hide'] : []
-              });
-            }
-          };
-
-          windowMenu.submenu.append(new MenuItem({ type: 'separator' }));
-          
-          windowMenu.submenu.append(new MenuItem({
-            id: 'settings_appmenu',
-            label: "Pengaturan...",
-            accelerator: 'CmdOrCtrl+,',
-            click: openSettings
-          }));
-
-          // Tetap pertahankan shortcut untuk Privacy Blur tanpa harus menampilkannya di menu
-          import('electron').then(({ globalShortcut }) => {
-            const showToast = (msg) => {
-              if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.executeJavaScript(`
-                  (function() {
-                    let t = document.getElementById('wz-toast');
-                    if (!t) {
-                      t = document.createElement('div');
-                      t.id = 'wz-toast';
-                      Object.assign(t.style, {
-                        position: 'fixed', top: '24px', left: '50%', transform: 'translateX(-50%)',
-                        backgroundColor: 'rgba(0, 0, 0, 0.85)', color: '#fff', padding: '10px 20px',
-                        borderRadius: '20px', zIndex: '999999', fontSize: '14px', fontWeight: '500',
-                        transition: 'opacity 0.3s ease', opacity: '0', pointerEvents: 'none',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-                      });
-                      document.body.appendChild(t);
-                    }
-                    t.innerText = ${JSON.stringify(msg)};
-                    t.style.opacity = '1';
-                    if (t.timer) clearTimeout(t.timer);
-                    t.timer = setTimeout(() => t.style.opacity = '0', 2500);
-                  })();
-                `).catch(()=>{});
-              }
-            };
-
-            globalShortcut.register('CommandOrControl+Shift+B', () => {
-              const current = persistState.get("privacy-blur", false);
-              const newState = !current;
-              persistState.set("privacy-blur", newState);
-              updateBlurState(newState);
-              showToast(newState ? 'Privacy Blur: ON' : 'Privacy Blur: OFF');
-            });
-
-            globalShortcut.register('CommandOrControl+Shift+H', () => {
-              const current = persistState.get("anti-screencast", false);
-              const newState = !current;
-              persistState.set("anti-screencast", newState);
-              if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.setContentProtection(newState);
-                mainWindow.webContents.send("settings-saved");
-              }
-              showToast(newState ? 'Anti Screen Cast: ON' : 'Anti Screen Cast: OFF');
-            });
-          });
-        }
-      }
-
-      // Pastikan shortcut Pengaturan tetap berfungsi meskipun Menu Bar disembunyikan
-      mainWindow.webContents.on('before-input-event', (event, input) => {
-        if ((input.control || input.meta || input.alt) && input.key.toLowerCase() === ',') {
-          openSettings();
-          event.preventDefault();
-        }
-      });
+      setupAppMenu(mainWindow, openSettings, persistState, updateBlurState);
 
 
       const notif = (options) => {
@@ -1637,13 +1296,13 @@ function main() {
       let targetDir = app.getPath('downloads');
       
       if (['.mp4', '.mkv', '.avi', '.mov', '.wmv', '.webm'].includes(ext)) {
-        targetDir = app.getPath('videos');
+        targetDir = config.get('download-path-video', '') || app.getPath('videos');
       } else if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'].includes(ext)) {
-        targetDir = app.getPath('pictures');
+        targetDir = config.get('download-path-image', '') || app.getPath('pictures');
       } else if (['.mp3', '.wav', '.ogg', '.m4a', '.flac'].includes(ext)) {
-        targetDir = app.getPath('music');
+        targetDir = config.get('download-path-audio', '') || app.getPath('music');
       } else if (['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.zip', '.rar', '.7z'].includes(ext)) {
-        targetDir = app.getPath('documents');
+        targetDir = config.get('download-path-document', '') || app.getPath('documents');
       }
 
       item.setSaveDialogOptions({
