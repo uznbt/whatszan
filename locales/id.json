@@ -104,5 +104,14 @@
   "screen_picker_empty": "Tidak ada {type} yang tersedia",
   "screen_picker_screens": "layar",
   "screen_picker_windows": "jendela",
-  "webstore_installed": "Berhasil Terpasang"
+  "webstore_installed": "Berhasil Terpasang",
+  "settings_smart_dl_path_image_title": "Foto & Gambar",
+  "settings_smart_dl_path_image_desc": "Folder Gambar sistem",
+  "settings_smart_dl_path_video_title": "Video",
+  "settings_smart_dl_path_video_desc": "Folder Video sistem",
+  "settings_smart_dl_path_audio_title": "Audio",
+  "settings_smart_dl_path_audio_desc": "Folder Musik sistem",
+  "settings_smart_dl_path_document_title": "Dokumen",
+  "settings_smart_dl_path_document_desc": "Folder Dokumen sistem",
+  "settings_btn_browse": "Browse"
 }

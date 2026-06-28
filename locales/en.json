@@ -96,5 +96,14 @@
   "screen_picker_empty": "No {type} available",
   "screen_picker_screens": "screens",
   "screen_picker_windows": "windows",
-  "webstore_installed": "Installed Successfully"
+  "webstore_installed": "Installed Successfully",
+  "settings_smart_dl_path_image_title": "Photos & Images",
+  "settings_smart_dl_path_image_desc": "System Pictures folder",
+  "settings_smart_dl_path_video_title": "Video",
+  "settings_smart_dl_path_video_desc": "System Videos folder",
+  "settings_smart_dl_path_audio_title": "Audio",
+  "settings_smart_dl_path_audio_desc": "System Music folder",
+  "settings_smart_dl_path_document_title": "Documents",
+  "settings_smart_dl_path_document_desc": "System Documents folder",
+  "settings_btn_browse": "Browse"
 }

@@ -339,42 +339,42 @@
       <div id="smart-download-paths" style="display:none; flex-direction:column; gap:10px; padding-left:20px; border-left:2px solid var(--accent);">
         <div class="row" style="flex-direction:column; align-items:flex-start; gap:8px;">
           <div class="row-info">
-            <div class="row-title">Foto &amp; Gambar</div>
-            <div class="row-desc" id="desc-download-path-image">Folder Gambar sistem</div>
+            <div class="row-title"><span data-i18n="settings_smart_dl_path_image_title">Foto & Gambar</span></div>
+            <div class="row-desc" id="desc-download-path-image"><span data-i18n="settings_smart_dl_path_image_desc">Folder Gambar sistem</span></div>
           </div>
           <div style="display:flex; gap:8px; width:100%;">
             <input id="download-path-image" class="text-input" type="text" style="flex:1;" />
-            <button class="btn" onclick="browseFor('download-path-image')" style="flex-shrink:0; padding:8px 12px;">Browse</button>
+            <button class="btn" onclick="browseFor('download-path-image')" style="flex-shrink:0; padding:8px 12px;"><span data-i18n="settings_btn_browse">Browse</span></button>
           </div>
         </div>
         <div class="row" style="flex-direction:column; align-items:flex-start; gap:8px;">
           <div class="row-info">
-            <div class="row-title">Video</div>
-            <div class="row-desc" id="desc-download-path-video">Folder Video sistem</div>
+            <div class="row-title"><span data-i18n="settings_smart_dl_path_video_title">Video</span></div>
+            <div class="row-desc" id="desc-download-path-video"><span data-i18n="settings_smart_dl_path_video_desc">Folder Video sistem</span></div>
           </div>
           <div style="display:flex; gap:8px; width:100%;">
             <input id="download-path-video" class="text-input" type="text" style="flex:1;" />
-            <button class="btn" onclick="browseFor('download-path-video')" style="flex-shrink:0; padding:8px 12px;">Browse</button>
+            <button class="btn" onclick="browseFor('download-path-video')" style="flex-shrink:0; padding:8px 12px;"><span data-i18n="settings_btn_browse">Browse</span></button>
           </div>
         </div>
         <div class="row" style="flex-direction:column; align-items:flex-start; gap:8px;">
           <div class="row-info">
-            <div class="row-title">Audio</div>
-            <div class="row-desc" id="desc-download-path-audio">Folder Musik sistem</div>
+            <div class="row-title"><span data-i18n="settings_smart_dl_path_audio_title">Audio</span></div>
+            <div class="row-desc" id="desc-download-path-audio"><span data-i18n="settings_smart_dl_path_audio_desc">Folder Musik sistem</span></div>
           </div>
           <div style="display:flex; gap:8px; width:100%;">
             <input id="download-path-audio" class="text-input" type="text" style="flex:1;" />
-            <button class="btn" onclick="browseFor('download-path-audio')" style="flex-shrink:0; padding:8px 12px;">Browse</button>
+            <button class="btn" onclick="browseFor('download-path-audio')" style="flex-shrink:0; padding:8px 12px;"><span data-i18n="settings_btn_browse">Browse</span></button>
           </div>
         </div>
         <div class="row" style="flex-direction:column; align-items:flex-start; gap:8px;">
           <div class="row-info">
-            <div class="row-title">Dokumen</div>
-            <div class="row-desc" id="desc-download-path-document">Folder Dokumen sistem</div>
+            <div class="row-title"><span data-i18n="settings_smart_dl_path_document_title">Dokumen</span></div>
+            <div class="row-desc" id="desc-download-path-document"><span data-i18n="settings_smart_dl_path_document_desc">Folder Dokumen sistem</span></div>
           </div>
           <div style="display:flex; gap:8px; width:100%;">
             <input id="download-path-document" class="text-input" type="text" style="flex:1;" />
-            <button class="btn" onclick="browseFor('download-path-document')" style="flex-shrink:0; padding:8px 12px;">Browse</button>
+            <button class="btn" onclick="browseFor('download-path-document')" style="flex-shrink:0; padding:8px 12px;"><span data-i18n="settings_btn_browse">Browse</span></button>
           </div>
         </div>
       </div>
@@ -791,7 +791,7 @@
       const editBtn = document.createElement('button');
       editBtn.className = 'btn';
       editBtn.style.background = '#f39c12';
-      editBtn.innerHTML = '✏️ Edit';
+      editBtn.innerHTML = 'Edit';
       editBtn.onclick = () => {
         document.getElementById('dict-trigger').value = trigger.startsWith('/') ? trigger : '/' + trigger;
         document.getElementById('dict-replacement').value = replacement;
