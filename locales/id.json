@@ -113,5 +113,7 @@
   "settings_smart_dl_path_audio_desc": "Folder Musik sistem",
   "settings_smart_dl_path_document_title": "Dokumen",
   "settings_smart_dl_path_document_desc": "Folder Dokumen sistem",
-  "settings_btn_browse": "Browse"
+  "settings_btn_browse": "Browse",
+  "dnd_mode": "Mode Jangan Ganggu (DND)",
+  "settings": "Pengaturan..."
 }

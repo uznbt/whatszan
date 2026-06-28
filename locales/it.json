@@ -113,5 +113,7 @@
   "settings_smart_dl_path_audio_desc": "Cartella Musica di sistema",
   "settings_smart_dl_path_document_title": "Documenti",
   "settings_smart_dl_path_document_desc": "Cartella Documenti di sistema",
-  "settings_btn_browse": "Sfoglia"
+  "settings_btn_browse": "Sfoglia",
+  "dnd_mode": "Non Disturbare (DND)",
+  "settings": "Impostazioni..."
 }

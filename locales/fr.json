@@ -113,5 +113,7 @@
   "settings_smart_dl_path_audio_desc": "Dossier Musique du système",
   "settings_smart_dl_path_document_title": "Documents",
   "settings_smart_dl_path_document_desc": "Dossier Documents du système",
-  "settings_btn_browse": "Parcourir"
+  "settings_btn_browse": "Parcourir",
+  "dnd_mode": "Ne pas deranger (DND)",
+  "settings": "Parametres..."
 }

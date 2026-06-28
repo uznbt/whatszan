@@ -105,5 +105,7 @@
   "settings_smart_dl_path_audio_desc": "System Music folder",
   "settings_smart_dl_path_document_title": "Documents",
   "settings_smart_dl_path_document_desc": "System Documents folder",
-  "settings_btn_browse": "Browse"
+  "settings_btn_browse": "Browse",
+  "dnd_mode": "Do Not Disturb (DND)",
+  "settings": "Settings..."
 }

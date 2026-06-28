@@ -113,5 +113,7 @@
   "settings_smart_dl_path_audio_desc": "Pasta de Músicas do Sistema",
   "settings_smart_dl_path_document_title": "Documentos",
   "settings_smart_dl_path_document_desc": "Pasta de Documentos do Sistema",
-  "settings_btn_browse": "Procurar"
+  "settings_btn_browse": "Procurar",
+  "dnd_mode": "Nao Perturbar (DND)",
+  "settings": "Configuracoes..."
 }

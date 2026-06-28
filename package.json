@@ -8,7 +8,7 @@
     "email": "uznbt@cachyos.org"
   },
   "homepage": "https://github.com/uznbt/whatszan",
-  "version": "1.1.14",
+  "version": "1.1.15",
   "main": "src/main.mjs",
   "type": "module",
   "scripts": {

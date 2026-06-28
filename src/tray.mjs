@@ -3,11 +3,12 @@ import { consola } from "consola";
 import pkg from "../package.json" with { type: "json" };
 import { toggleVisibility } from "./util.mjs";
 
-export const setupTray = (trayIcon, translations, mainWindow, openSettings) => {
+export const setupTray = (trayIcon, translations, mainWindow, openSettings, initialDND, onToggleDND) => {
   let tray = null;
   try {
     tray = new Tray(trayIcon);
-    const trayContextMenu = Menu.buildFromTemplate([
+
+    const buildMenu = (isDND) => Menu.buildFromTemplate([
       {
         label: translations?.show_hide ?? "Show/Hide",
         type: "normal",
@@ -16,12 +17,23 @@ export const setupTray = (trayIcon, translations, mainWindow, openSettings) => {
         },
       },
       {
-        label: "Pengaturan...",
+        label: translations?.settings ?? "Pengaturan...",
         type: "normal",
         click: () => {
           openSettings();
         },
       },
+      { type: "separator" },
+      {
+        label: translations?.dnd_mode ?? "Mode Jangan Ganggu (DND)",
+        type: "checkbox",
+        checked: isDND,
+        click: (menuItem) => {
+          onToggleDND(menuItem.checked);
+          tray.setContextMenu(buildMenu(menuItem.checked));
+        },
+      },
+      { type: "separator" },
       {
         label: translations?.quit ?? "Quit",
         type: "normal",
@@ -32,8 +44,9 @@ export const setupTray = (trayIcon, translations, mainWindow, openSettings) => {
         },
       },
     ]);
+
     tray.setToolTip(pkg.name);
-    tray.setContextMenu(trayContextMenu);
+    tray.setContextMenu(buildMenu(initialDND));
     tray.on("click", () => {
       toggleVisibility(mainWindow);
     });

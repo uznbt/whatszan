@@ -240,6 +240,9 @@ function main() {
   }
 
   const createWindow = async () => {
+    // DND state (declared here so notifySend handler and toggleDND share the same reference)
+    let isDND = false;
+
     // Create the browser window.
     const customAppName = persistState.get("custom-app-name", "WhatsZan") || "WhatsZan";
     const customAppIcon = persistState.get("custom_tray_app");
@@ -501,6 +504,12 @@ function main() {
       });
 
       ipcMain.handle("notifySend", (ev, id, title, body, iconDataUrl) => {
+        // Block notifications when DND is active
+        if (isDND) {
+          consola.debug("[DND] Notification blocked:", title);
+          return;
+        }
+
         let iconOpts = {};
         if (iconDataUrl) {
           try {
@@ -1060,7 +1069,22 @@ function main() {
       };
 
       const trayIcon = persistState.get("custom_tray_normal") || getUserIcon("app", state) || path.join(import.meta.dirname, "..", "static", "app.png");
-      let tray = setupTray(trayIcon, translations, mainWindow, openSettings);
+
+      // DND state management
+      isDND = persistState.get("dnd", false);
+      if (isDND) {
+        mainWindow.webContents.setAudioMuted(true);
+        consola.info("[DND] Mode aktif saat startup.");
+      }
+
+      const toggleDND = (checked) => {
+        isDND = checked;
+        persistState.set("dnd", checked);
+        mainWindow.webContents.setAudioMuted(checked);
+        consola.info(`[DND] Mode ${checked ? 'diaktifkan' : 'dinonaktifkan'}.`);
+      };
+
+      let tray = setupTray(trayIcon, translations, mainWindow, openSettings, isDND, toggleDND);
 
       setupAppMenu(mainWindow, openSettings, persistState, updateBlurState);
 
