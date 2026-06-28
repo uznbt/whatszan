@@ -154,24 +154,32 @@ function main() {
       import('fs').then(({ existsSync, unlinkSync }) => {
         const desktopPath = app.getPath('desktop');
         const startMenuPath = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs');
+        const sendToPath = path.join(app.getPath('appData'), 'Microsoft', 'Windows', 'SendTo');
+        
         const oldShortcutPath = path.join(desktopPath, `${oldName || 'WhatsZan'}.lnk`);
         const newShortcutPath = path.join(desktopPath, `${newName || 'WhatsZan'}.lnk`);
         const oldStartMenuShortcutPath = path.join(startMenuPath, `${oldName || 'WhatsZan'}.lnk`);
         const newStartMenuShortcutPath = path.join(startMenuPath, `${newName || 'WhatsZan'}.lnk`);
+        const oldSendToShortcutPath = path.join(sendToPath, `${oldName || 'WhatsZan'}.lnk`);
+        const newSendToShortcutPath = path.join(sendToPath, `${newName || 'WhatsZan'}.lnk`);
         
         try { if (existsSync(oldShortcutPath)) unlinkSync(oldShortcutPath); } catch(e){}
         try { if (existsSync(oldStartMenuShortcutPath)) unlinkSync(oldStartMenuShortcutPath); } catch(e){}
+        try { if (existsSync(oldSendToShortcutPath)) unlinkSync(oldSendToShortcutPath); } catch(e){}
         
         if (newName && newName !== 'WhatsZan') {
           const defaultDesktopShortcut = path.join(desktopPath, 'WhatsZan.lnk');
           const defaultStartMenuShortcut = path.join(startMenuPath, 'WhatsZan.lnk');
+          const defaultSendToShortcut = path.join(sendToPath, 'WhatsZan.lnk');
           try { if (existsSync(defaultDesktopShortcut)) unlinkSync(defaultDesktopShortcut); } catch(e){}
           try { if (existsSync(defaultStartMenuShortcut)) unlinkSync(defaultStartMenuShortcut); } catch(e){}
+          try { if (existsSync(defaultSendToShortcut)) unlinkSync(defaultSendToShortcut); } catch(e){}
         }
         
         if (!create) {
            try { if (existsSync(newShortcutPath)) unlinkSync(newShortcutPath); } catch(e){}
            try { if (existsSync(newStartMenuShortcutPath)) unlinkSync(newStartMenuShortcutPath); } catch(e){}
+           try { if (existsSync(newSendToShortcutPath)) unlinkSync(newSendToShortcutPath); } catch(e){}
         }
 
         if (create) {
@@ -190,6 +198,7 @@ function main() {
           try {
             shell.writeShortcutLink(newShortcutPath, 'create', shortcutOptions);
             shell.writeShortcutLink(newStartMenuShortcutPath, 'create', shortcutOptions);
+            shell.writeShortcutLink(newSendToShortcutPath, 'create', shortcutOptions);
           } catch(e) {
             consola.error("Failed to create shortcut using shell API", e);
           }
