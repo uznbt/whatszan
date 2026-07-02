@@ -941,9 +941,6 @@ function main() {
         try { return existsSync(p); } catch { return false; }
       });
 
-      ipcMain.on("update-recent-chats", (event, chats) => {
-        updateJumpList(chats);
-      });
 
       ipcMain.handle("get-pending-share", () => {
         const share = pendingShare;

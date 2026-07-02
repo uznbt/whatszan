@@ -7,49 +7,49 @@ function ewHijackNotif(prefix) {
     construct(target, args) {
       const title = `${prefix}${args[0]}`;
       const opts = args[1] || {};
-      
+
       const dummy = new EventTarget();
-      dummy.close = () => {};
+      dummy.close = () => { };
 
       const sendToMain = async () => {
-         let iconDataUrl = null;
-         if (opts.icon && opts.icon.startsWith('blob:')) {
-            try {
-              const res = await fetch(opts.icon);
-              const blob = await res.blob();
-              iconDataUrl = await new Promise(r => {
-                 const reader = new FileReader();
-                 reader.onloadend = () => r(reader.result);
-                 reader.readAsDataURL(blob);
-              });
-            } catch(e) { console.error("Failed to convert blob icon", e); }
-         } else {
-            iconDataUrl = opts.icon;
-         }
-         
-         const id = Date.now().toString() + Math.random();
-         window.__notifs = window.__notifs || {};
-         window.__notifs[id] = dummy;
-         
-         if (window?.ipc?.notifySend) {
-           window.ipc.logToMain?.(`[WZ Notif] Routing notification to main process: ${title}`);
-           window.ipc.notifySend(id, title, opts.body, iconDataUrl);
-         } else {
-           const thing = new target(title, opts);
-           thing.addEventListener("click", (ev) => {
-             dummy.dispatchEvent(new Event('click'));
-             window?.ipc?.notifyEv?.(JSON.stringify(ev));
-           });
-         }
+        let iconDataUrl = null;
+        if (opts.icon && opts.icon.startsWith('blob:')) {
+          try {
+            const res = await fetch(opts.icon);
+            const blob = await res.blob();
+            iconDataUrl = await new Promise(r => {
+              const reader = new FileReader();
+              reader.onloadend = () => r(reader.result);
+              reader.readAsDataURL(blob);
+            });
+          } catch (e) { console.error("Failed to convert blob icon", e); }
+        } else {
+          iconDataUrl = opts.icon;
+        }
+
+        const id = Date.now().toString() + Math.random();
+        window.__notifs = window.__notifs || {};
+        window.__notifs[id] = dummy;
+
+        if (window?.ipc?.notifySend) {
+          window.ipc.logToMain?.(`[WZ Notif] Routing notification to main process: ${title}`);
+          window.ipc.notifySend(id, title, opts.body, iconDataUrl);
+        } else {
+          const thing = new target(title, opts);
+          thing.addEventListener("click", (ev) => {
+            dummy.dispatchEvent(new Event('click'));
+            window?.ipc?.notifyEv?.(JSON.stringify(ev));
+          });
+        }
       };
-      
+
       sendToMain();
       return dummy;
     },
   };
 
   window.Notification = new Proxy(window.realNotification, override);
-  
+
   if (window?.ipc?.onNotifyClick) {
     window.ipc.onNotifyClick((id) => {
       const dummy = window.__notifs?.[id];
@@ -71,16 +71,16 @@ function ewHijackNotif(prefix) {
             clipboardData: dataTransfer,
             bubbles: true
           });
-          
+
           const composeBox = document.querySelector('#main div[contenteditable="true"]') || document.querySelector('div[contenteditable="true"][data-tab="10"]');
           if (composeBox) {
             window?.ipc?.logToMain?.(`[WZ Notif] Found compose box, pasting text`);
             composeBox.focus();
             composeBox.dispatchEvent(event);
-            
+
             setTimeout(() => {
               composeBox.dispatchEvent(new Event('input', { bubbles: true }));
-              
+
               setTimeout(() => {
                 const sendIcon = document.querySelector('[data-icon="send"]');
                 const sendBtn = sendIcon ? sendIcon.closest('button') : (document.querySelector('button[aria-label="Send"]') || document.querySelector('button[aria-label="Kirim"]'));
@@ -219,7 +219,7 @@ function ewReplaceLogo() {
 
   const processTextNode = (node) => {
     const txt = node.nodeValue || "";
-    
+
     // Meta AI Killer (Text based)
     if (txt === 'Meta AI' || txt === 'Tanya Meta AI' || txt === 'Ask Meta AI') {
       let parent = node.parentElement;
@@ -268,7 +268,7 @@ function ewReplaceLogo() {
       // 1. Check for SVGs inside this element
       const svgs = root.querySelectorAll ? root.querySelectorAll('svg[aria-label="WhatsApp"]') : [];
       if (root.tagName === 'svg' && root.getAttribute('aria-label') === 'WhatsApp') svgs.push(root);
-      
+
       svgs.forEach(svg => {
         const parent = svg.parentElement;
         if (parent && !parent.querySelector('.whatszan-logo')) {
@@ -278,7 +278,7 @@ function ewReplaceLogo() {
           span.textContent = getAppName();
           span.style.fontWeight = 'bold';
           span.style.fontSize = '18px';
-          span.style.color = 'inherit'; 
+          span.style.color = 'inherit';
           parent.appendChild(span);
         }
       });
@@ -287,41 +287,41 @@ function ewReplaceLogo() {
     // 2. Banner Killer (ALWAYS RUNS)
     const text = root.innerText || "";
     const currentAppName = getAppName();
-    if (((text.includes('Unduh WhatsApp untuk Windows') || text.includes(`Unduh ${currentAppName} untuk Windows`)) && text.includes('fitur ekstra')) || 
-        text.includes('Dapatkan WhatsApp untuk Windows') || text.includes(`Dapatkan ${currentAppName} untuk Windows`)) {
-      
+    if (((text.includes('Unduh WhatsApp untuk Windows') || text.includes(`Unduh ${currentAppName} untuk Windows`)) && text.includes('fitur ekstra')) ||
+      text.includes('Dapatkan WhatsApp untuk Windows') || text.includes(`Dapatkan ${currentAppName} untuk Windows`)) {
+
       const textWalker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
       let tNode;
       const targetNodes = [];
       while (tNode = textWalker.nextNode()) {
         const v = tNode.nodeValue || "";
         if (v.includes('Unduh WhatsApp untuk Windows') || v.includes(`Unduh ${currentAppName} untuk Windows`) ||
-            v.includes('Dapatkan WhatsApp untuk Windows') || v.includes(`Dapatkan ${currentAppName} untuk Windows`) ||
-            v.includes('fitur ekstra')) {
-           targetNodes.push(tNode);
+          v.includes('Dapatkan WhatsApp untuk Windows') || v.includes(`Dapatkan ${currentAppName} untuk Windows`) ||
+          v.includes('fitur ekstra')) {
+          targetNodes.push(tNode);
         }
       }
-      
+
       targetNodes.forEach(t => {
         let p = t.parentElement;
         let hiddenModal = false;
         while (p && p.tagName !== 'BODY' && p.id !== 'app') {
           if (p.getAttribute('role') === 'dialog' || p.getAttribute('aria-modal') === 'true') {
-             p.style.display = 'none';
-             let backdrop = p.parentElement;
-             while (backdrop && backdrop.tagName !== 'BODY' && backdrop.id !== 'app') {
-               const style = window.getComputedStyle(backdrop);
-               if (style.position === 'fixed' || style.position === 'absolute' || style.zIndex > 50) {
-                 backdrop.style.display = 'none';
-               }
-               backdrop = backdrop.parentElement;
-             }
-             hiddenModal = true;
-             break;
+            p.style.display = 'none';
+            let backdrop = p.parentElement;
+            while (backdrop && backdrop.tagName !== 'BODY' && backdrop.id !== 'app') {
+              const style = window.getComputedStyle(backdrop);
+              if (style.position === 'fixed' || style.position === 'absolute' || style.zIndex > 50) {
+                backdrop.style.display = 'none';
+              }
+              backdrop = backdrop.parentElement;
+            }
+            hiddenModal = true;
+            break;
           }
           p = p.parentElement;
         }
-        
+
         if (!hiddenModal) {
           let parent = t.parentElement;
           for (let i = 0; i < 6; i++) {
@@ -435,7 +435,7 @@ async function ewSetupDictionary() {
   document.addEventListener('keydown', (ev) => {
     if (!ev.target.isContentEditable) { buffer = ''; return; }
     // window?.ipc?.logToMain?.(`[WZ Dict] keydown: ${ev.key}`);
-    
+
     if (ev.key === 'Backspace') {
       buffer = buffer.slice(0, -1);
     } else if (ev.key === 'Enter' || ev.key === 'Escape' || ev.key === 'Tab') {
@@ -500,7 +500,7 @@ const savedMessages = new Map();
 
 function ewSetupAntiDelete() {
   console.log("Anti-Delete setup initialized.");
-  
+
   const observer = new MutationObserver((mutations) => {
     for (const mut of mutations) {
       if (mut.type === 'childList') {
@@ -517,17 +517,17 @@ function ewSetupAntiDelete() {
             if (node.querySelectorAll) {
               node.querySelectorAll('div[data-id]').forEach(m => msgs.add(m));
             }
-            
+
             msgs.forEach(msg => {
               const id = msg.getAttribute('data-id');
               if (!id) return;
-              
-              const isOut = id.startsWith('true_'); 
+
+              const isOut = id.startsWith('true_');
               if (isOut) return; // We only care about incoming messages
-              
+
               const textNode = msg.querySelector('.copyable-text span.selectable-text') || msg.querySelector('span.selectable-text[dir="ltr"]') || msg.querySelector('span.selectable-text');
               const imgNode = msg.querySelector('img[src^="blob:"]');
-              
+
               // Save message if it's new
               if (!savedMessages.has(id) && (textNode || imgNode)) {
                 // Jangan simpan kalau text-nya ternyata tulisan 'dihapus'
@@ -540,17 +540,17 @@ function ewSetupAntiDelete() {
                   });
                 }
               }
-              
+
               // Prevent memory leak (max 2000 messages in RAM)
               if (savedMessages.size > 2000) {
                 const firstKey = savedMessages.keys().next().value;
                 savedMessages.delete(firstKey);
               }
-              
+
               // Check if this is a deleted message tombstone
-              const isDeleted = msg.querySelector('span[data-icon="recalled"]') || 
-                                (msg.innerText && (msg.innerText.includes('telah dihapus') || msg.innerText.includes('was deleted') || msg.innerText.includes('Pesan ini dihapus')));
-                                
+              const isDeleted = msg.querySelector('span[data-icon="recalled"]') ||
+                (msg.innerText && (msg.innerText.includes('telah dihapus') || msg.innerText.includes('was deleted') || msg.innerText.includes('Pesan ini dihapus')));
+
               // ONLY recover if the setting is currently ON
               if (isDeleted && savedMessages.has(id) && window.wzIncognito?.antiDelete) {
                 const saved = savedMessages.get(id);
@@ -558,14 +558,14 @@ function ewSetupAntiDelete() {
                   const recoveredDiv = document.createElement('div');
                   recoveredDiv.className = 'wz-recovered';
                   recoveredDiv.style.cssText = 'color: #ff3b30; font-style: italic; font-size: 0.9em; margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,59,48,0.3); line-height: 1.4;';
-                  
+
                   let content = `🚫 <b>Pesan Dipulihkan:</b><br/>${saved.text}`;
                   if (saved.img) {
                     content += `<br/><a href="${saved.img}" target="_blank" style="color:#007aff; text-decoration:underline;">[Lihat Media]</a>`;
                   }
-                  
+
                   recoveredDiv.innerHTML = content;
-                  
+
                   const innerBox = msg.querySelector('.copyable-text')?.parentElement || msg.firstElementChild;
                   if (innerBox) {
                     innerBox.appendChild(recoveredDiv);
@@ -587,10 +587,10 @@ function ewSetupStatusSaver() {
   const btn = document.createElement('button');
   btn.innerHTML = 'Simpan Status';
   btn.style.cssText = 'position: fixed !important; top: 20px !important; right: 80px !important; z-index: 2147483647 !important; padding: 8px 16px !important; background: #25D366 !important; color: white !important; border: none !important; border-radius: 20px !important; font-weight: bold !important; cursor: pointer !important; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important; transition: background 0.2s !important;';
-  
+
   btn.onmouseover = () => btn.style.setProperty('background', '#1da851', 'important');
   btn.onmouseout = () => btn.style.setProperty('background', '#25D366', 'important');
-  
+
   document.body.appendChild(btn);
 
   let activeStatusUrl = null;
@@ -598,39 +598,39 @@ function ewSetupStatusSaver() {
   setInterval(() => {
     let isStatus = false;
     let targetMedia = null;
-    
+
     // Check if we are in status viewer (usually dark background, huge media)
     // We can just find the largest media on screen. If it takes up > 40% of window height, it's likely a status or full-screen media viewer.
     const medias = Array.from(document.querySelectorAll('video, img'));
     let maxArea = 0;
-    
+
     for (const m of medias) {
       const rect = m.getBoundingClientRect();
-      
+
       // Ignore tiny icons or avatars
       if (rect.width < 100 || rect.height < 100) continue;
-      
+
       const area = rect.width * rect.height;
-      
+
       // If it takes up a significant portion of the screen (height > 40% of innerHeight)
       if (rect.height > window.innerHeight * 0.4 && area > maxArea) {
         // Check if the left sidebar is hidden, completely removed, or we are in a modal
         const paneSide = document.getElementById('pane-side');
         const isFullscreen = !paneSide || paneSide.getBoundingClientRect().width === 0;
         const hasStatusTestId = !!document.querySelector('[data-testid*="status"], [data-testid*="story"]');
-        
+
         // Also check if it's a blob url (like the reference extension)
         const isBlob = m.src && m.src.includes('blob:https://web.whatsapp.com');
-        
+
         // Check if any ancestor has high z-index
         let hasHighZIndex = false;
         let parent = m;
         while (parent && parent !== document.body) {
-           const z = parseInt(window.getComputedStyle(parent).zIndex);
-           if (z > 50) { hasHighZIndex = true; break; }
-           parent = parent.parentElement;
+          const z = parseInt(window.getComputedStyle(parent).zIndex);
+          if (z > 50) { hasHighZIndex = true; break; }
+          parent = parent.parentElement;
         }
-        
+
         if (isFullscreen || hasStatusTestId || hasHighZIndex || isBlob) {
           maxArea = area;
           targetMedia = m;
@@ -640,7 +640,7 @@ function ewSetupStatusSaver() {
     }
 
     const currentSrc = targetMedia ? (targetMedia.src || (targetMedia.querySelector('source') && targetMedia.querySelector('source').src) || targetMedia.currentSrc) : null;
-    
+
     if (isStatus && targetMedia && currentSrc) {
       activeStatusUrl = currentSrc;
       btn.style.setProperty('display', 'block', 'important');
@@ -661,7 +661,7 @@ function ewSetupStatusSaver() {
         console.log("Shortcut Alt+S ditekan! Menyimpan status...");
         downloadMedia(activeStatusUrl);
       } else {
-        window?.ipc?.notifyEv?.({title: "WhatsZan", body: "Gagal: Tidak ada status yang terdeteksi di layar."});
+        window?.ipc?.notifyEv?.({ title: "WhatsZan", body: "Gagal: Tidak ada status yang terdeteksi di layar." });
       }
     }
   }, true);
@@ -672,7 +672,7 @@ function ewSetupStatusSaver() {
       const response = await fetch(url);
       const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
-      
+
       const a = document.createElement('a');
       a.href = blobUrl;
       const isVideo = blob.type.includes('video') || url.includes('.mp4');
@@ -681,17 +681,17 @@ function ewSetupStatusSaver() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
-      
+
       const originalText = btn.innerHTML;
       btn.innerHTML = 'Tersimpan!';
       setTimeout(() => btn.innerHTML = originalText, 2000);
-      window?.ipc?.notifyEv?.({title: "WhatsZan", body: `Status berhasil disimpan ke folder Download!`});
+      window?.ipc?.notifyEv?.({ title: "WhatsZan", body: `Status berhasil disimpan ke folder Download!` });
     } catch (e) {
       console.error("Failed to download status:", e);
       btn.innerHTML = 'Gagal';
       setTimeout(() => btn.innerHTML = 'Simpan Status', 2000);
-      window?.ipc?.notifyEv?.({title: "WhatsZan", body: "Gagal mengunduh status. Membuka di tab baru..."});
-      
+      window?.ipc?.notifyEv?.({ title: "WhatsZan", body: "Gagal mengunduh status. Membuka di tab baru..." });
+
       // Fallback
       const a = document.createElement('a');
       a.href = url;
@@ -705,12 +705,12 @@ function ewSetupStatusSaver() {
 
 function ewSetupGhostMode() {
   console.log("Ghost Mode Webpack hook starting...");
-  
+
   // WhatsApp uses window.webpackChunkwhatsapp_web_client
   let wpRequire;
   try {
     if (!window.webpackChunkwhatsapp_web_client) return;
-    
+
     window.webpackChunkwhatsapp_web_client.push([
       [Symbol("ghost_mode")],
       {},
@@ -720,11 +720,11 @@ function ewSetupGhostMode() {
     console.error("Failed to extract wpRequire", e);
     return;
   }
-  
+
   if (!wpRequire || !wpRequire.m) return;
-  
+
   const blockFunction = (origFunc, name) => {
-    return function(...args) {
+    return function (...args) {
       if (name === 'Read Receipt' && window.wzIncognito?.noRead) {
         console.log(`[Ghost Mode] Blocked ${name}`);
         return Promise.resolve();
@@ -755,42 +755,42 @@ function ewSetupGhostMode() {
           try {
             const origExport = desc.get();
             if (typeof origExport === 'function' && origExport.toString().includes(searchStr)) {
-               Object.defineProperty(mod, key, {
-                 get: () => blockFunction(origExport, name),
-                 configurable: true
-               });
-               return true;
+              Object.defineProperty(mod, key, {
+                get: () => blockFunction(origExport, name),
+                configurable: true
+              });
+              return true;
             } else if (typeof origExport === 'object' && origExport !== null) {
-               for (const subKey in origExport) {
-                 if (typeof origExport[subKey] === 'function' && origExport[subKey].toString().includes(searchStr)) {
-                    origExport[subKey] = blockFunction(origExport[subKey], name);
-                    return true;
-                 }
-               }
+              for (const subKey in origExport) {
+                if (typeof origExport[subKey] === 'function' && origExport[subKey].toString().includes(searchStr)) {
+                  origExport[subKey] = blockFunction(origExport[subKey], name);
+                  return true;
+                }
+              }
             }
-          } catch(e) {}
+          } catch (e) { }
         }
       }
-    } catch(e) {}
+    } catch (e) { }
     return false;
   };
 
   for (const modId in wpRequire.m) {
     const modStr = wpRequire.m[modId].toString();
-    
+
     // Disable Read Receipts (Blue Ticks)
     if (modStr.includes('sendReadReceipt')) {
       const mod = wpRequire(modId);
       if (patchModule(mod, 'sendReadReceipt', 'Read Receipt')) {
-         console.log(`[Ghost Mode] Successfully patched Read Receipts in module ${modId}`);
+        console.log(`[Ghost Mode] Successfully patched Read Receipts in module ${modId}`);
       }
     }
-    
+
     // Disable Typing Indicator
     if (modStr.includes('sendChatstate')) {
       const mod = wpRequire(modId);
       if (patchModule(mod, 'sendChatstate', 'Typing Indicator')) {
-         console.log(`[Ghost Mode] Successfully patched Typing Indicator in module ${modId}`);
+        console.log(`[Ghost Mode] Successfully patched Typing Indicator in module ${modId}`);
       }
     }
   }
@@ -807,18 +807,18 @@ async function ewSetup() {
   await ewSetupDictionary();
   const useAntiDelete = await window?.ipc?.stateGet?.("incognito-antidelete");
   const useStatusSaver = await window?.ipc?.stateGet?.("incognito-statussaver");
-  
+
   // Set initial window.wzIncognito state
   window.wzIncognito = {
     noRead: await window?.ipc?.stateGet?.("incognito-noread"),
     noTyping: await window?.ipc?.stateGet?.("incognito-notyping"),
     antiDelete: await window?.ipc?.stateGet?.("incognito-antidelete")
   };
-  
+
   ewSetupAntiDelete();
   if (useStatusSaver) ewSetupStatusSaver();
   ewSetupGhostMode();
-  
+
   ewReplaceLogo();
   ewHijackTitle();
   ewSetupJumpList();
@@ -857,7 +857,7 @@ function ewSetupJumpList() {
       // Mengambil setiap baris obrolan
       const listItems = document.querySelectorAll('#pane-side div[role="listitem"], #pane-side div[role="row"]');
       const recentChats = [];
-      
+
       for (const item of listItems) {
         // Obrolan biasanya adalah span ber-title PERTAMA di dalam list item
         const titleEl = item.querySelector('span[title][dir="auto"], span[title]');
@@ -887,7 +887,7 @@ function ewSetupJumpList() {
 
   window?.ipc?.onJumpListAction?.((data) => {
     if (!data) return;
-    
+
     // Attempt the action periodically until successful (e.g. if WA is still loading)
     let attempts = 0;
     const interval = setInterval(() => {
@@ -902,7 +902,7 @@ function ewSetupJumpList() {
           // Select all existing text if any to replace
           document.execCommand('selectAll', false, null);
           document.execCommand('insertText', false, data.name);
-          
+
           setTimeout(() => {
             const results = document.querySelectorAll('#pane-side span[title]');
             for (const el of results) {
@@ -948,11 +948,11 @@ async function processPendingShare() {
   if (!window?.ipc?.getPendingShare) return;
   const share = await window.ipc.getPendingShare();
   if (!share || !share.files || share.files.length === 0) return;
-  
+
   if (share.toastText) window.__wzToastText = share.toastText;
-  
+
   window.ipc.logToMain?.(`[WZ Share] Received share request for ${share.files.length} files as ${share.type}`);
-  
+
   const files = [];
   for (const path of share.files) {
     const data = await window.ipc.readFileBuffer(path);
@@ -969,21 +969,21 @@ async function processPendingShare() {
       else if (ext === 'txt') mimeType = 'text/plain';
       else if (ext === 'csv') mimeType = 'text/csv';
       else if (ext === 'zip') mimeType = 'application/zip';
-      
+
       const file = new File([blob], data.name, { type: mimeType });
       files.push(file);
     }
   }
-  
+
   if (files.length === 0) return;
-  
+
   uploadFiles(files, share.type === 'media');
 }
 
 function uploadFiles(files, asMedia) {
   const dt = new DataTransfer();
   files.forEach(f => dt.items.add(f));
-  
+
   const injectToInput = () => {
     const inputs = document.querySelectorAll('input[type="file"]');
     let targetInput = null;
@@ -992,7 +992,7 @@ function uploadFiles(files, asMedia) {
     } else {
       targetInput = Array.from(inputs).find(i => i.accept === '*');
     }
-    
+
     if (targetInput) {
       targetInput.files = dt.files;
       targetInput.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1001,7 +1001,7 @@ function uploadFiles(files, asMedia) {
     }
     return false;
   };
-  
+
   // To ensure the global "Share with..." modal appears (Picture 1),
   // we must close the current chat if one is open.
   try {
@@ -1010,14 +1010,14 @@ function uploadFiles(files, asMedia) {
       if (typeof ewCloseChat === 'function') ewCloseChat();
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
     }
-  } catch (err) {}
-  
+  } catch (err) { }
+
   setTimeout(() => {
     if (!injectToInput()) {
       window.ipc.logToMain?.(`[WZ Share] Global input not found. Opening New Chat sidebar as fallback...`);
       const chatBtn = document.querySelector('div[title="New chat"], div[title="Chat baru"], span[data-icon="chat"], span[data-icon="new-chat-outline"]');
       if (chatBtn) chatBtn.click();
-      
+
       const pollInterval = setInterval(() => {
         if (injectToInput()) {
           clearInterval(pollInterval);
@@ -1032,7 +1032,7 @@ if (window?.ipc?.onShareFiles) {
   window.ipc.onShareFiles(() => {
     processPendingShare();
   });
-  
+
   setInterval(() => {
     processPendingShare();
   }, 2000);
