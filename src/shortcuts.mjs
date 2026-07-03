@@ -3,17 +3,24 @@ import path from "node:path";
 import { consola } from "consola";
 import { loadTranslations } from "./util.mjs";
 
-export const applyAutoRun = (autoRun) => {
+export const applyAutoRun = (autoRun, force = false) => {
   if (process.platform === 'win32') {
     import('fs').then(({ existsSync, unlinkSync }) => {
       const shortcutPath = path.join(process.env.APPDATA || '', 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup', 'WhatsZan.lnk');
       if (autoRun) {
+        if (!force && existsSync(shortcutPath)) return;
         const exePath = app.getPath('exe');
         const workDir = path.dirname(exePath);
-        const ps = `$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('${shortcutPath}'); $s.TargetPath = '${exePath}'; $s.Arguments = '--hide'; $s.WorkingDirectory = '${workDir}'; $s.Save()`;
-        import('child_process').then(({ execSync }) => {
-          try { execSync(`powershell -NoProfile -Command "${ps}"`, { stdio: 'ignore' }); } catch(e){}
-        });
+        try {
+          shell.writeShortcutLink(shortcutPath, 'create', {
+            target: exePath,
+            args: '--hide',
+            cwd: workDir,
+            description: 'Start WhatsZan hidden on login'
+          });
+        } catch (e) {
+          consola.error("Failed to create auto-run shortcut", e);
+        }
       } else {
         try { if (existsSync(shortcutPath)) unlinkSync(shortcutPath); } catch(e){}
       }
@@ -25,6 +32,7 @@ export const applyAutoRun = (autoRun) => {
       try { if (!existsSync(autostartDir)) mkdirSync(autostartDir, { recursive: true }); } catch (e) {}
 
       if (autoRun) {
+        if (!force && existsSync(desktopFile)) return;
         const exePath = app.getPath('exe');
         const desktopEntry = `[Desktop Entry]\nType=Application\nExec="${exePath}" --hide\nHidden=false\nNoDisplay=false\nX-GNOME-Autostart-enabled=true\nName=WhatsZan\nComment=Start WhatsZan hidden on login`;
         try { writeFileSync(desktopFile, desktopEntry); } catch(e) { consola.error(e) }

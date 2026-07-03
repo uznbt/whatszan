@@ -210,12 +210,13 @@ function main() {
   // (Logic moved to src/shortcuts.mjs)
   // Selalu pastikan setting auto-run aktif saat startup (misal pasca-update)
   if (!isDebug) {
-    applyAutoRun(persistState.get("auto-run", false));
-    
-    // Check if app was just updated or repaired to re-apply custom shortcuts
     const currentVersion = app.getVersion();
     const flagPath = path.join(app.getPath('userData'), 'reapply-shortcuts.flag');
-    if (persistState.get("app-version") !== currentVersion || existsSync(flagPath)) {
+    const isUpdateOrRepair = persistState.get("app-version") !== currentVersion || existsSync(flagPath);
+
+    applyAutoRun(persistState.get("auto-run", false), isUpdateOrRepair);
+    
+    if (isUpdateOrRepair) {
       persistState.set("app-version", currentVersion);
       if (existsSync(flagPath)) {
         try { unlinkSync(flagPath); } catch (e) {}
@@ -692,6 +693,7 @@ function main() {
       ipcMain.handle("settings-save", (ev, newSettings) => {
         const { 'privacy-blur': blur, 'anti-screencast': antiScreencast, 'auto-run': autoRun, 'desktop-shortcut': desktopShortcut, 'custom-app-name': customAppName, ...configSettings } = newSettings;
         
+        const oldAutoRun = persistState.get("auto-run", false);
         persistState.set("privacy-blur", blur);
         persistState.set("anti-screencast", antiScreencast);
         persistState.set("auto-run", autoRun);
@@ -703,7 +705,9 @@ function main() {
         persistState.set("desktop-shortcut", desktopShortcut);
         persistState.set("custom-app-name", customAppName);
         
-        applyAutoRun(autoRun);
+        if (oldAutoRun !== autoRun) {
+          applyAutoRun(autoRun, true);
+        }
         
         if (oldDesktopShortcut !== desktopShortcut || (desktopShortcut && oldAppName !== newAppName)) {
            applyDesktopShortcut(desktopShortcut, oldAppName, newAppName, config, persistState);
