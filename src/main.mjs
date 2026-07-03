@@ -253,7 +253,7 @@ function main() {
       webPreferences: {
         preload: path.join(import.meta.dirname, "..", "src-web", "preload.js"),
         spellcheck: config.get("spellcheck", true),
-        backgroundThrottling: false,
+        backgroundThrottling: true,
       },
       show: isHiddenStartup ? false : state.showAtStartup,
       autoHideMenuBar: config.get("menu-bar-auto-hide", true),
@@ -455,6 +455,16 @@ function main() {
     mainWindow.on("close", saveBounds);
     mainWindow.on("hide", () => {
       closeChat();
+      try { mainWindow.webContents.setBackgroundThrottling(true); } catch (e) {}
+    });
+    mainWindow.on("minimize", () => {
+      try { mainWindow.webContents.setBackgroundThrottling(true); } catch (e) {}
+    });
+    mainWindow.on("show", () => {
+      try { mainWindow.webContents.setBackgroundThrottling(false); } catch (e) {}
+    });
+    mainWindow.on("restore", () => {
+      try { mainWindow.webContents.setBackgroundThrottling(false); } catch (e) {}
     });
 
     mainWindow.on("close", function (event) {
@@ -1303,6 +1313,9 @@ function main() {
   if (appLang !== "auto") {
     app.commandLine.appendSwitch('lang', appLang);
   }
+
+  app.commandLine.appendSwitch('renderer-process-limit', '3');
+  app.commandLine.appendSwitch('enable-low-res-tiling');
 
   app.whenReady().then(async () => {
     
