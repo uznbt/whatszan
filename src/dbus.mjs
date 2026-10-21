@@ -66,6 +66,17 @@ export class Dbus {
           Quit: () => {
             app.quit();
           },
+          // Dipanggil dari shell saat kartu notifikasi diklik.
+          Open: (id) => {
+            if (!this.window) return;
+            windowShow(this.window);
+            this.window.webContents.send("notify-click", String(id));
+          },
+          // Dipanggil dari kolom balas di notifikasi: ID notifikasi + teks.
+          Reply: (id, text) => {
+            if (!this.window) return;
+            this.window.webContents.send("notify-reply", String(id), String(text));
+          },
         },
         OBJECT_PATH,
         {
@@ -76,6 +87,8 @@ export class Dbus {
             ToggleVisibility: ["", "b"],
             Visible: ["", "b"],
             Quit: ["", ""],
+            Open: ["s", ""],
+            Reply: ["ss", ""],
           },
         },
       );

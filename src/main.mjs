@@ -28,6 +28,7 @@ import pkg from "../package.json" with { type: "json" };
 import { JsonConfig } from "./json-config.mjs";
 import { defaultKeys } from "./keys.mjs";
 import { Dbus } from "./dbus.mjs";
+import { showLinuxNotification } from "./notify-linux.mjs";
 import { applyAutoRun, applyDesktopShortcut } from "./shortcuts.mjs";
 import { setupAppMenu } from "./menu.mjs";
 import { setupTray } from "./tray.mjs";
@@ -553,11 +554,25 @@ function main() {
         windowShow(mainWindow);
       });
 
-      ipcMain.handle("notifySend", (ev, id, title, body, iconDataUrl) => {
+      ipcMain.handle("notifySend", async (ev, id, title, body, iconDataUrl) => {
         // Block notifications when DND is active
         if (isDND) {
           consola.debug("[DND] Notification blocked:", title);
           return;
+        }
+
+        // Di Linux, kirim lewat D-Bus dengan hint x-whatszan-id supaya shell
+        // (Quickshell) bisa menampilkan kolom balas langsung di notifikasi.
+        // Kalau server notifikasinya bukan Quickshell, jatuh ke Notification
+        // bawaan Electron di bawah agar klik notifikasi tetap berfungsi.
+        if (process.platform === "linux") {
+          const sent = await showLinuxNotification({
+            id,
+            title,
+            body,
+            icon: iconDataUrl,
+          });
+          if (sent) return;
         }
 
         let iconOpts = {};

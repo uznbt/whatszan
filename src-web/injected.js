@@ -11,6 +11,25 @@ function ewHijackNotif(prefix) {
       const dummy = new EventTarget();
       dummy.close = () => { };
 
+      // WhatsApp memasang handler klik lewat properti `onclick`, bukan
+      // addEventListener. EventTarget biasa tidak memanggil properti itu saat
+      // dispatchEvent(), sehingga klik dari notifikasi tidak pernah membuka
+      // chat. Simpan handler-nya dan panggil sendiri.
+      let clickHandler = null;
+      Object.defineProperty(dummy, "onclick", {
+        configurable: true,
+        get() { return clickHandler; },
+        set(fn) { clickHandler = fn; },
+      });
+      const rawDispatch = dummy.dispatchEvent.bind(dummy);
+      dummy.dispatchEvent = (event) => {
+        if (event?.type === "click" && typeof clickHandler === "function") {
+          try { clickHandler.call(dummy, event); }
+          catch (err) { console.error("notif click", err); }
+        }
+        return rawDispatch(event);
+      };
+
       const sendToMain = async () => {
         let iconDataUrl = null;
         if (opts.icon && opts.icon.startsWith('blob:')) {
@@ -60,43 +79,69 @@ function ewHijackNotif(prefix) {
   if (window?.ipc?.onNotifyReply) {
     window.ipc.onNotifyReply((id, reply) => {
       const dummy = window.__notifs?.[id];
-      if (dummy) {
-        dummy.dispatchEvent(new Event('click'));
+      const text = String(reply ?? "");
+      if (!dummy || !text) return;
 
-        window?.ipc?.logToMain?.(`[WZ Notif] Reply received for: ${id}`);
-        setTimeout(() => {
-          const dataTransfer = new DataTransfer();
-          dataTransfer.setData('text/plain', reply);
-          const event = new ClipboardEvent('paste', {
-            clipboardData: dataTransfer,
-            bubbles: true
-          });
+      // Buka dulu chat yang benar lewat handler klik WhatsApp.
+      dummy.dispatchEvent(new Event('click'));
+      window?.ipc?.logToMain?.(`[WZ Notif] Reply received for: ${id}`);
 
-          const composeBox = document.querySelector('#main div[contenteditable="true"]') || document.querySelector('div[contenteditable="true"][data-tab="10"]');
-          if (composeBox) {
-            window?.ipc?.logToMain?.(`[WZ Notif] Found compose box, pasting text`);
-            composeBox.focus();
-            composeBox.dispatchEvent(event);
+      // Chat butuh waktu untuk dirender. Polling sebentar lebih andal
+      // daripada menebak dengan setTimeout tetap.
+      let tries = 0;
+      const timer = setInterval(() => {
+        tries += 1;
+        const composeBox =
+          document.querySelector('#main footer div[contenteditable="true"]') ||
+          document.querySelector('#main div[contenteditable="true"]') ||
+          document.querySelector('div[contenteditable="true"][data-tab="10"]');
 
-            setTimeout(() => {
-              composeBox.dispatchEvent(new Event('input', { bubbles: true }));
-
-              setTimeout(() => {
-                const sendIcon = document.querySelector('[data-icon="send"]');
-                const sendBtn = sendIcon ? sendIcon.closest('button') : (document.querySelector('button[aria-label="Send"]') || document.querySelector('button[aria-label="Kirim"]'));
-                if (sendBtn) {
-                  window?.ipc?.logToMain?.(`[WZ Notif] Send button found. Clicking it.`);
-                  sendBtn.click();
-                } else {
-                  window?.ipc?.logToMain?.(`[WZ Notif] Send button NOT found!`);
-                }
-              }, 150);
-            }, 50);
-          } else {
-            window?.ipc?.logToMain?.(`[WZ Notif] Compose box NOT found!`);
+        if (!composeBox) {
+          if (tries >= 30) {
+            clearInterval(timer);
+            window?.ipc?.logToMain?.(`[WZ Notif] Compose box NOT found after 3s`);
           }
-        }, 500);
-      }
+          return;
+        }
+        clearInterval(timer);
+        window?.ipc?.logToMain?.(`[WZ Notif] Compose box found, inserting text`);
+
+        composeBox.focus();
+
+        // execCommand("insertText") meniru pengetikan sehingga state
+        // composer WhatsApp ikut ter-update. Kalau gagal, pakai event paste.
+        let inserted = false;
+        try {
+          inserted = document.execCommand("insertText", false, text);
+        } catch (err) { /* fallback di bawah */ }
+
+        if (!inserted || !composeBox.textContent.includes(text.slice(0, 8))) {
+          const dataTransfer = new DataTransfer();
+          dataTransfer.setData("text/plain", text);
+          composeBox.dispatchEvent(new ClipboardEvent("paste", {
+            clipboardData: dataTransfer,
+            bubbles: true,
+            cancelable: true,
+          }));
+        }
+        composeBox.dispatchEvent(new Event("input", { bubbles: true }));
+
+        setTimeout(() => {
+          const sendIcon = document.querySelector('[data-icon="send"]') || document.querySelector('[data-icon="send-light"]');
+          const sendBtn = sendIcon
+            ? sendIcon.closest("button")
+            : (document.querySelector('button[aria-label="Send"]') || document.querySelector('button[aria-label="Kirim"]'));
+          if (sendBtn) {
+            window?.ipc?.logToMain?.(`[WZ Notif] Send button found. Clicking it.`);
+            sendBtn.click();
+          } else {
+            window?.ipc?.logToMain?.(`[WZ Notif] Send button NOT found, trying Enter`);
+            composeBox.dispatchEvent(new KeyboardEvent("keydown", {
+              key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true,
+            }));
+          }
+        }, 250);
+      }, 100);
     });
   }
 }
