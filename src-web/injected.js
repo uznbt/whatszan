@@ -666,13 +666,22 @@ function ewSetupStatusSaver() {
   let statusContext = false;
 
   // Overlay layar penuh (status viewer / media viewer).
+  //
+  // PENTING: #app milik WhatsApp Web sendiri sudah berupa lapisan
+  // position:fixed selebar jendela, jadi kalau tidak disaring, SEMUA gambar
+  // di chat akan terlihat seolah berada di "overlay layar penuh". Wadah yang
+  // memuat panel obrolan (#main) adalah kerangka aplikasi, bukan viewer.
   const inFullscreenLayer = (el) => {
+    const chat = document.getElementById("main");
     let p = el.parentElement;
     while (p && p !== document.body) {
-      const cs = window.getComputedStyle(p);
-      if (cs.position === "fixed" || cs.position === "absolute") {
-        const r = p.getBoundingClientRect();
-        if (r.width >= window.innerWidth * 0.9 && r.height >= window.innerHeight * 0.9) return true;
+      const isAppChrome = p.id === "app" || (chat && p.contains(chat));
+      if (!isAppChrome) {
+        const cs = window.getComputedStyle(p);
+        if (cs.position === "fixed" || cs.position === "absolute") {
+          const r = p.getBoundingClientRect();
+          if (r.width >= window.innerWidth * 0.9 && r.height >= window.innerHeight * 0.9) return true;
+        }
       }
       p = p.parentElement;
     }
@@ -687,9 +696,9 @@ function ewSetupStatusSaver() {
 
       if (t.closest('[data-testid*="status"], [data-testid*="story"]')) {
         statusContext = true;
-      } else if (t.closest("#main") && !inFullscreenLayer(t)) {
-        // Klik di dalam obrolan (termasuk saat membuka foto chat) berarti
-        // pengguna sedang tidak melihat status.
+      } else if ((t.closest("#main") || t.closest("#pane-side")) && !inFullscreenLayer(t)) {
+        // Klik di area obrolan / daftar chat berarti pengguna sedang tidak
+        // melihat status.
         statusContext = false;
       }
     },
@@ -761,10 +770,12 @@ function ewSetupStatusSaver() {
         continue;
       }
 
-      // Status tidak pernah dirender di dalam panel obrolan. Kalau media
-      // berada di #main, itu foto/gambar di dalam chat - bukan status.
-      // Pengecualian: status viewer yang ternyata dirender di dalam #main,
-      // yang selalu berupa overlay layar penuh.
+      // Status selalu dirender sebagai portal overlay, tidak pernah di dalam
+      // panel obrolan. Ini pembeda yang paling andal: apa pun bentuk
+      // ancestor-nya, gambar di dalam #main adalah isi chat, bukan status.
+      const inStatusViewer = !!m.closest('[data-testid*="status-viewer"], [data-testid*="story-viewer"]');
+      if (m.closest('#main') && !inStatusViewer) continue;
+
       // Media viewer (foto chat yang dibuka layar penuh) juga bukan status.
       if (m.closest('[data-testid*="media-viewer"]')) continue;
 
@@ -776,18 +787,11 @@ function ewSetupStatusSaver() {
 
       const area = rect.width * rect.height;
 
-      // Hanya terima media yang berada di overlay layar penuh, atau yang
-      // memakai blob URL khas pemutar status, atau yang memang berada di
-      // dalam elemen viewer status yang dikenal.
+      // Selain di dalam panel obrolan, media harus berada di overlay viewer,
+      // memakai blob URL khas status, atau berada di elemen viewer status.
       const isBlob = !!(m.src && m.src.includes('blob:https://web.whatsapp.com'));
-      const inStatusViewer = !!m.closest('[data-testid*="status-viewer"], [data-testid*="story-viewer"]');
-      const fullscreen = inFullscreenLayer(m);
 
-      // Gambar tinggi di dalam bubble chat (mis. screenshot struk transfer)
-      // tidak boleh dianggap status.
-      if (m.closest('#main') && !fullscreen) continue;
-
-      if (!fullscreen && !isBlob && !inStatusViewer) continue;
+      if (!inFullscreenLayer(m) && !isBlob && !inStatusViewer) continue;
 
       if (area > maxArea) {
         maxArea = area;
