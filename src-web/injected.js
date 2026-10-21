@@ -697,6 +697,22 @@ function ewSetupStatusSaver() {
     let targetMedia = null;
     let maxArea = 0;
 
+    // Status viewer selalu berupa overlay yang menutupi seluruh jendela.
+    // Media di dalam obrolan bisa saja tinggi (mis. screenshot struk
+    // transfer) tetapi tidak pernah berada di lapisan selayar penuh.
+    const inFullscreenOverlay = (el) => {
+      let p = el.parentElement;
+      while (p && p !== document.body) {
+        const cs = window.getComputedStyle(p);
+        if (cs.position === "fixed" || cs.position === "absolute") {
+          const r = p.getBoundingClientRect();
+          if (r.width >= window.innerWidth * 0.9 && r.height >= window.innerHeight * 0.9) return true;
+        }
+        p = p.parentElement;
+      }
+      return false;
+    };
+
     // IntersectionObserver (dan requestAnimationFrame) hanya berjalan kalau
     // renderer benar-benar menghasilkan frame. Kalau jendela sedang tidak
     // dirender - misalnya berada di workspace tersembunyi - observer tidak
@@ -710,37 +726,38 @@ function ewSetupStatusSaver() {
         continue;
       }
 
+      // Status tidak pernah dirender di dalam panel obrolan. Kalau media
+      // berada di #main, itu foto/gambar di dalam chat - bukan status.
+      // Pengecualian: status viewer yang ternyata dirender di dalam #main,
+      // yang selalu berupa overlay layar penuh.
+      // Media viewer (foto chat yang dibuka layar penuh) juga bukan status.
+      if (m.closest('[data-testid*="media-viewer"]')) continue;
+
       const rect = m.getBoundingClientRect();
 
       // Ignore tiny icons or avatars
       if (rect.width < 100 || rect.height < 100) continue;
+      if (rect.height <= window.innerHeight * 0.4) continue;
 
       const area = rect.width * rect.height;
 
-      // If it takes up a significant portion of the screen (height > 40% of innerHeight)
-      if (rect.height > window.innerHeight * 0.4 && area > maxArea) {
-        // Check if the left sidebar is hidden, completely removed, or we are in a modal
-        const paneSide = document.getElementById('pane-side');
-        const isFullscreen = !paneSide || paneSide.getBoundingClientRect().width === 0;
-        const hasStatusTestId = !!document.querySelector('[data-testid*="status"], [data-testid*="story"]');
+      // Hanya terima media yang berada di overlay layar penuh, atau yang
+      // memakai blob URL khas pemutar status, atau yang memang berada di
+      // dalam elemen viewer status yang dikenal.
+      const isBlob = !!(m.src && m.src.includes('blob:https://web.whatsapp.com'));
+      const inStatusViewer = !!m.closest('[data-testid*="status-viewer"], [data-testid*="story-viewer"]');
+      const fullscreen = inFullscreenOverlay(m);
 
-        // Also check if it's a blob url (like the reference extension)
-        const isBlob = m.src && m.src.includes('blob:https://web.whatsapp.com');
+      // Gambar tinggi di dalam bubble chat (mis. screenshot struk transfer)
+      // tidak boleh dianggap status.
+      if (m.closest('#main') && !fullscreen) continue;
 
-        // Check if any ancestor has high z-index
-        let hasHighZIndex = false;
-        let parent = m;
-        while (parent && parent !== document.body) {
-          const z = parseInt(window.getComputedStyle(parent).zIndex);
-          if (z > 50) { hasHighZIndex = true; break; }
-          parent = parent.parentElement;
-        }
+      if (!fullscreen && !isBlob && !inStatusViewer) continue;
 
-        if (isFullscreen || hasStatusTestId || hasHighZIndex || isBlob) {
-          maxArea = area;
-          targetMedia = m;
-          isStatus = true;
-        }
+      if (area > maxArea) {
+        maxArea = area;
+        targetMedia = m;
+        isStatus = true;
       }
     }
 
