@@ -571,6 +571,9 @@ function main() {
             title,
             body,
             icon: iconDataUrl,
+            // Ikuti nama kustom aplikasi supaya label pengirim di notifikasi
+            // tidak selalu "WhatsZan" setelah pengguna mengganti namanya.
+            appName: persistState.get("custom-app-name", "WhatsZan") || "WhatsZan",
           });
           if (sent) return;
         }

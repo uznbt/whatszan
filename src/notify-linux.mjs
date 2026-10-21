@@ -105,7 +105,7 @@ function pruneIcons(dir) {
  * Kirim notifikasi lewat server notifikasi Linux.
  * @returns {Promise<boolean>} true kalau notifikasi benar-benar terkirim.
  */
-export async function showLinuxNotification({ id, title, body, icon }) {
+export async function showLinuxNotification({ id, title, body, icon, appName }) {
   if (!(await isQuickshellNotifications())) return false;
 
   const iconPath = saveIcon(icon, id);
@@ -118,7 +118,7 @@ export async function showLinuxNotification({ id, title, body, icon }) {
   ];
 
   const result = await invoke("Notify", "susssasa{sv}i", [
-    "WhatsZan",
+    String(appName || "WhatsZan"),
     0,
     iconPath,
     String(title ?? ""),
