@@ -98,7 +98,6 @@ npm run build
 ```
 
 ### Mode Sumber Daya Rendah
-
 `"low-resource-mode": true` (default) mematikan layanan-layanan latar belakang
 Chromium yang tidak pernah dipakai WhatsApp Web: Google Translate, Cast /
 MediaRouter, sinkronisasi, deteksi phishing, domain reliability, dan
@@ -108,6 +107,34 @@ dipakai WhatsApp Web, jadi functionality tetap utuh.
 Perubahan ini **berlaku setelah aplikasi dimulai ulang** (flag Chromium hanya
 bisa dibaca saat startup). Buka **Pengaturan → Tampilan** untuk menyalakan /
 mematikannya.
+
+### Pintasan Keyboard di Linux / Wayland
+
+`Ctrl+Shift+B` (Mode Rahasia) dan `Ctrl+Shift+H` (Anti Screen Cast) adalah
+*global shortcut*. Chromium hanya mengimplementasikan global shortcut lewat X11
+(XGrabKey).
+
+Di **Wayland** (Hyprland, Sway, KDE Wayland, GNOME Wayland) `globalShortcut`
+dipaksa bekerja oleh XWayland sehingga tidak pernah meneruskan event ke
+aplikasi. Chromium membuat `globalShortcut.register()` tetap terlihat sukses
+dan `isRegistered()` juga `true`, padahal pintasan tersebut diam-diam tidak
+berfungsi.
+
+Karena itu WhatsZan mendeteksi sesi Wayland lalu memproses kedua pintasan itu
+di sisi renderer. Konsekuensinya:
+
+- Pintasan tetap bekerja **selagi jendela WhatsApp aktif** — persis skenario
+  pemakaian fitur ini (menahan/menekan tombol saat sedang melihat WhatsApp).
+- Di X11 dan Windows, pintasan tetap bersifat global (bisa ditekan dari
+  jendela lain) seperti sebelumnya.
+
+### Fitur Incognito / Power User
+
+* **Ghost Mode: Centang Biru** — lawan bicara tidak tahu pesannya sudah dibaca.
+* **Ghost Mode: Sembunyikan Mengetik** — sembunyikan indikator sedang mengetik.
+* **Anti-Hapus Pesan** — pulihkan pesan yang ditarik pengirim.
+* **Pengunduh Status (Status Saver)** — tombol "Simpan Status" muncul saat
+  melihat Story, dan status bisa diunduh ke folder gambar.
 
 ## Ikon Kustom
 
