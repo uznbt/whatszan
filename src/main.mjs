@@ -723,7 +723,8 @@ function main() {
         persistState.set("custom-app-name", customAppName);
         
         if (oldAutoRun !== autoRun) {
-          applyAutoRun(autoRun, true);
+          // Toggle eksplisit dari user: file autostart boleh dibuat/dihapus.
+          applyAutoRun(autoRun, false);
         }
         
         if (oldDesktopShortcut !== desktopShortcut || (desktopShortcut && oldAppName !== newAppName)) {
@@ -926,7 +927,8 @@ function main() {
            const desktopShortcut = persistState.get("desktop-shortcut", true);
            const customAppName = persistState.get("custom-app-name", "WhatsZan") || "WhatsZan";
            applyDesktopShortcut(desktopShortcut, customAppName, customAppName, config, persistState);
-           updateAppUserModel(customAppName, destPath);
+           // Ikon sudah dihapus dari state, jadi pakai ikon bawaan.
+           updateAppUserModel(customAppName, path.join(import.meta.dirname, '..', 'build', 'icon.ico'));
         }
         
         try {
