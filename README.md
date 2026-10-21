@@ -136,6 +136,35 @@ di sisi renderer. Konsekuensinya:
 * **Pengunduh Status (Status Saver)** — tombol "Simpan Status" muncul saat
   melihat Story, dan status bisa diunduh ke folder gambar.
 
+### Sesi WhatsApp & Logout
+
+Kredensial perangkat tertaut WhatsApp Web disimpan Chromium di dalam folder
+`userData` (`IndexedDB`, `Local Storage`, `Cookies`). Kalau folder itu rusak,
+WhatsApp akan meminta scan QR lagi.
+
+WhatsZan sekarang:
+
+* **Membuat cadangan otomatis** setiap kali dijalankan (5 snapshot terakhir)
+  di `~/.config/WhatsZan/session-backup/`, diambil sebelum Chromium membuka
+  database sehingga isinya konsisten.
+* **Menutup dengan rapi** saat menerima `SIGTERM` / `SIGINT`.
+
+Kalau WhatsApp tiba-tiba minta scan QR padahal sebelumnya sudah login, buka
+**Jendela → Pulihkan Sesi WhatsApp dari Cadangan**. WhatsZan akan menutup,
+memulihkan snapshot terakhir, lalu membuka diri lagi. Data yang rusak tidak
+dihapus — dipindahkan ke folder `rusak-<waktu>`.
+
+Penyebab paling sering sesi rusak:
+
+* aplikasi dibunuh paksa (`kill -9`, `pkill -9`) atau crash;
+* dua instance WhatsZan berjalan bersamaan pada profil yang sama;
+* file `Singleton*` di folder `userData` dihapus saat aplikasi masih hidup —
+  ini mematikan pengunci profil sehingga dua proses bisa menulis database
+  yang sama.
+
+Karena itu: tutup lewat menu tray → **Keluar**, atau `pkill -TERM`, jangan
+`-9`. Dan jangan menjalankan dua WhatsZan sekaligus.
+
 ## Ikon Kustom
 
 Skema penamaan ikon didasarkan pada URL favicon WhatsApp Web:

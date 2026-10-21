@@ -1,5 +1,6 @@
-import { Menu, MenuItem, globalShortcut } from "electron";
+import { app, dialog, Menu, MenuItem, globalShortcut } from "electron";
 import { toggleVisibility, showToastInWindow, isWaylandSession } from "./util.mjs";
+import { requestSessionRestore } from "./session-backup.mjs";
 
 export const setupAppMenu = (mainWindow, openSettings, persistState, updateBlurState) => {
   const appMenu = Menu.getApplicationMenu();
@@ -15,6 +16,54 @@ export const setupAppMenu = (mainWindow, openSettings, persistState, updateBlurS
         label: "Pengaturan...",
         accelerator: 'CmdOrCtrl+,',
         click: openSettings
+      }));
+
+      // ── Pemulihan sesi ────────────────────────────────────────────────────
+      // Kredensial WhatsApp Web disimpan di IndexedDB. Kalau proses sempat
+      // dimatikan paksa, database itu bisa rusak dan WhatsApp minta scan QR
+      // lagi. Snapshot dibuat otomatis setiap kali aplikasi dijalankan,
+      // dan bisa dipulihkan lewat menu ini.
+      windowMenu.submenu.append(new MenuItem({ type: 'separator' }));
+      windowMenu.submenu.append(new MenuItem({
+        id: 'restore_session_appmenu',
+        label: "Pulihkan Sesi WhatsApp dari Cadangan",
+        click: () => {
+          const parent = mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
+          const show = (options) =>
+            parent ? dialog.showMessageBoxSync(parent, options) : dialog.showMessageBoxSync(options);
+
+          const result = requestSessionRestore();
+
+          if (!result.ok) {
+            show({
+              type: 'info',
+              title: 'Cadangan sesi',
+              message: 'Belum ada cadangan sesi.',
+              detail: 'Cadangan dibuat otomatis setiap kali WhatsZan dijalankan.',
+            });
+            return;
+          }
+
+          const choice = show({
+            type: 'question',
+            title: 'Pulihkan sesi WhatsApp',
+            message: 'Pulihkan sesi dari cadangan?',
+            detail:
+              `Cadangan: ${result.snapshot}\n\n` +
+              'WhatsZan akan ditutup lalu dibuka kembali secara otomatis.\n\n' +
+              'Gunakan ini hanya kalau WhatsApp meminta scan QR padahal sebelumnya ' +
+              'sudah login — biasanya setelah aplikasi tertutup paksa atau crash.',
+            buttons: ['Pulihkan & Mulai Ulang', 'Batal'],
+            defaultId: 1,
+            cancelId: 1,
+            noLink: true,
+          });
+
+          if (choice !== 0) return;
+
+          app.relaunch();
+          app.quit();
+        }
       }));
 
       // ── Global shortcut ─────────────────────────────────────────────────────

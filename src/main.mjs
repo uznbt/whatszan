@@ -31,6 +31,7 @@ import { Dbus } from "./dbus.mjs";
 import { applyAutoRun, applyDesktopShortcut } from "./shortcuts.mjs";
 import { setupAppMenu } from "./menu.mjs";
 import { setupTray } from "./tray.mjs";
+import { backupSessionData, restoreSessionBackupIfRequested } from "./session-backup.mjs";
 
 
 const defaultUserAgent =
@@ -145,6 +146,15 @@ function handleShareArgs(window, commandLine) {
 }
 
 function main() {
+  // Cadangan / pemulihan sesi harus berjalan sebelum Chromium membuka
+  // database-nya (IndexedDB, Local Storage), jadi dilakukan paling awal.
+  const restoredSession = restoreSessionBackupIfRequested();
+  if (restoredSession) {
+    consola.info("Sesi WhatsApp dipulihkan dari cadangan.");
+  } else {
+    backupSessionData();
+  }
+
   const config = new JsonConfig(path.join(app.getPath("userData"), "config.json"));
 
   // Configure log level: CLI option takes priority over config option
@@ -1538,6 +1548,17 @@ function main() {
   app.on("window-all-closed", () => {
     consola.debug("window-all-closed");
     if (process.platform !== "darwin") app.quit();
+  });
+}
+
+// Tutup dengan rapi saat menerima sinyal dari sistem (mis. `kill` atau logout
+// sesi desktop). Chromium perlu waktu untuk menutup IndexedDB/LevelDB dengan
+// benar; kalau proses dibunuh paksa (SIGKILL) database-nya bisa rusak dan
+// WhatsApp akan meminta scan QR lagi.
+for (const signal of ["SIGTERM", "SIGINT", "SIGHUP"]) {
+  process.on(signal, () => {
+    consola.info(`${signal} diterima, menutup WhatsZan dengan rapi...`);
+    app.quit();
   });
 }
 
