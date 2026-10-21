@@ -17,6 +17,8 @@ import {
   urlScheme,
   getBadgedTrayIcon,
   monitorSystemTheme,
+  showToastInWindow,
+  isWaylandSession,
 } from "./util.mjs";
 import contextMenu from "electron-context-menu";
 import { debounce } from "lodash-es";
@@ -194,11 +196,31 @@ function main() {
     get keys() {
       return { ...defaultKeys, ...config.get("keys", {}) };
     },
+    // Di sesi Wayland, globalShortcut tidak berfungsi, jadi shortcut
+    // privacy-blur / anti-screencast ditangani di sisi renderer.
+    rendererShortcuts: isWaylandSession(),
     get userAgent() {
       return config.get("user-agent", defaultUserAgent);
     },
     get iconsDir() {
       return config.get("icons-directory", path.join(app.getPath("userData"), "user-icons"));
+    },
+    // ── Fitur Incognito / Power User ─────────────────────────────────────────
+    // Semua ini dibaca dari renderer lewat stateGet(). Kalau tidak
+    // diekspos di sini, nilainya undefined sehingga fiturnya tidak pernah
+    // aktif sama sekali - tombolnya tidak muncul dan settingnya tidak
+    // berpengaruh apa pun.
+    get "incognito-noread"() {
+      return config.get("incognito-noread", false);
+    },
+    get "incognito-notyping"() {
+      return config.get("incognito-notyping", false);
+    },
+    get "incognito-antidelete"() {
+      return config.get("incognito-antidelete", false);
+    },
+    get "incognito-statussaver"() {
+      return config.get("incognito-statussaver", false);
     },
   };
 
@@ -591,6 +613,33 @@ function main() {
         if (config.get("esc-toggle-window", false)) {
           toggleVisibility(mainWindow);
         }
+      });
+
+      // ── Toggle Mode Rahasia & Anti Screen Cast ─────────────────────────────
+      // Dipakai oleh shortcut Ctrl+Shift+B / Ctrl+Shift+H. Pada sesi Wayland
+      // shortcut dikirim dari renderer karena globalShortcut tidak berfungsi
+      // di Wayland (butuh X11/XGrabKey).
+      ipcMain.handle("toggle-privacy-blur", () => {
+        const current = persistState.get("privacy-blur", false);
+        const newState = !current;
+        consola.debug("toggle-privacy-blur:", current, "->", newState);
+        persistState.set("privacy-blur", newState);
+        updateBlurState(newState);
+        showToastInWindow(mainWindow, newState ? "Privacy Blur: ON" : "Privacy Blur: OFF");
+        return newState;
+      });
+
+      ipcMain.handle("toggle-anti-screencast", () => {
+        const current = persistState.get("anti-screencast", false);
+        const newState = !current;
+        consola.debug("toggle-anti-screencast:", current, "->", newState);
+        persistState.set("anti-screencast", newState);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.setContentProtection(newState);
+          mainWindow.webContents.send("settings-saved");
+        }
+        showToastInWindow(mainWindow, newState ? "Anti Screen Cast: ON" : "Anti Screen Cast: OFF");
+        return newState;
       });
       ipcMain.handle("insert-text", (ev, text) => {
         console.log("[Main] Menerima request insertText dari WhatsApp:", text);

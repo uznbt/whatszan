@@ -1,4 +1,5 @@
 import { Menu, MenuItem, globalShortcut } from "electron";
+import { toggleVisibility, showToastInWindow, isWaylandSession } from "./util.mjs";
 
 export const setupAppMenu = (mainWindow, openSettings, persistState, updateBlurState) => {
   const appMenu = Menu.getApplicationMenu();
@@ -16,51 +17,36 @@ export const setupAppMenu = (mainWindow, openSettings, persistState, updateBlurS
         click: openSettings
       }));
 
-      // Setup global shortcuts for features
-      const showToast = (msg) => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.executeJavaScript(`
-            (function() {
-              let t = document.getElementById('wz-toast');
-              if (!t) {
-                t = document.createElement('div');
-                t.id = 'wz-toast';
-                Object.assign(t.style, {
-                  position: 'fixed', top: '24px', left: '50%', transform: 'translateX(-50%)',
-                  backgroundColor: 'rgba(0, 0, 0, 0.85)', color: '#fff', padding: '10px 20px',
-                  borderRadius: '20px', zIndex: '999999', fontSize: '14px', fontWeight: '500',
-                  transition: 'opacity 0.3s ease', opacity: '0', pointerEvents: 'none',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-                });
-                document.body.appendChild(t);
-              }
-              t.innerText = ${JSON.stringify(msg)};
-              t.style.opacity = '1';
-              if (t.timer) clearTimeout(t.timer);
-              t.timer = setTimeout(() => t.style.opacity = '0', 2500);
-            })();
-          `).catch(()=>{});
-        }
-      };
+      // ── Global shortcut ─────────────────────────────────────────────────────
+      // CATATAN PENTING: globalShortcut Chromium di Linux hanya bekerja lewat
+      // X11 (XGrabKey). Di Wayland, register() tetap sukses dan
+      // isRegistered() juga true, TAPI shortcutionya tidak pernah terpicu -
+      // sehingga Ctrl+Shift+B (Mode Rahasia) dan Ctrl+Shift+H (Anti Screen
+      // Cast) diam-diam tidak berfungsi.
+      //
+      // Karena itu pada sesi Wayland shortcut-nya ditangani di sisi renderer
+      // (src-web/injected.js), di mana tombol ditekan saat window WhatsApp
+      // sedang aktif - persis skenario pemakaian fitur ini.
+      if (!isWaylandSession()) {
+        globalShortcut.register('CommandOrControl+Shift+B', () => {
+          const current = persistState.get("privacy-blur", false);
+          const newState = !current;
+          persistState.set("privacy-blur", newState);
+          updateBlurState(newState);
+          showToastInWindow(mainWindow, newState ? 'Privacy Blur: ON' : 'Privacy Blur: OFF');
+        });
 
-      globalShortcut.register('CommandOrControl+Shift+B', () => {
-        const current = persistState.get("privacy-blur", false);
-        const newState = !current;
-        persistState.set("privacy-blur", newState);
-        updateBlurState(newState);
-        showToast(newState ? 'Privacy Blur: ON' : 'Privacy Blur: OFF');
-      });
-
-      globalShortcut.register('CommandOrControl+Shift+H', () => {
-        const current = persistState.get("anti-screencast", false);
-        const newState = !current;
-        persistState.set("anti-screencast", newState);
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.setContentProtection(newState);
-          mainWindow.webContents.send("settings-saved");
-        }
-        showToast(newState ? 'Anti Screen Cast: ON' : 'Anti Screen Cast: OFF');
-      });
+        globalShortcut.register('CommandOrControl+Shift+H', () => {
+          const current = persistState.get("anti-screencast", false);
+          const newState = !current;
+          persistState.set("anti-screencast", newState);
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.setContentProtection(newState);
+            mainWindow.webContents.send("settings-saved");
+          }
+          showToastInWindow(mainWindow, newState ? 'Anti Screen Cast: ON' : 'Anti Screen Cast: OFF');
+        });
+      }
     }
   }
 

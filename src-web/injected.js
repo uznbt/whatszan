@@ -665,8 +665,10 @@ function ewSetupStatusSaver() {
   // Kita hanya memeriksa elemen yang benar-benar terlihat di layar (biasanya
   // 0-5 buah), bukan seluruh elemen media di halaman.
   const visibleMedia = new Set();
+  let observerActive = false;
   const mediaObserver = new IntersectionObserver(
     (entries) => {
+      observerActive = true;
       for (const entry of entries) {
         if (entry.isIntersecting) visibleMedia.add(entry.target);
         else visibleMedia.delete(entry.target);
@@ -695,7 +697,14 @@ function ewSetupStatusSaver() {
     let targetMedia = null;
     let maxArea = 0;
 
-    for (const m of visibleMedia) {
+    // IntersectionObserver (dan requestAnimationFrame) hanya berjalan kalau
+    // renderer benar-benar menghasilkan frame. Kalau jendela sedang tidak
+    // dirender - misalnya berada di workspace tersembunyi - observer tidak
+    // pernah memberi laporan, dan status tidak akan terdeteksi. Untuk itu
+    // ada jalur cadangan yang memindai langsung.
+    const candidates = observerActive ? Array.from(visibleMedia) : Array.from(medias);
+
+    for (const m of candidates) {
       if (!m.isConnected) {
         visibleMedia.delete(m);
         continue;
@@ -768,6 +777,24 @@ function ewSetupStatusSaver() {
     }
   }, true);
 
+  // Petakan MIME type ke ekstensi file. Dulu selalu dipaksa ".jpg" untuk
+  // gambar sehingga status PNG/WebP/GIF tersimpan dengan ekstensi yang salah.
+  const extFromMime = (mime, url) => {
+    const m = (mime || "").toLowerCase();
+    if (m.includes("mp4")) return "mp4";
+    if (m.includes("webm")) return "webm";
+    if (m.includes("quicktime")) return "mov";
+    if (m.includes("png")) return "png";
+    if (m.includes("webp")) return "webp";
+    if (m.includes("gif")) return "gif";
+    if (m.includes("jpeg") || m.includes("jpg")) return "jpg";
+    // Fallback: ambil dari URL (abaikan query string)
+    const fromUrl = (url || "").split("?")[0].split("#")[0];
+    const m2 = fromUrl.match(/\.([a-z0-9]{2,4})$/i);
+    if (m2) return m2[1].toLowerCase();
+    return "jpg";
+  };
+
   async function downloadMedia(url) {
     if (!url) return;
     try {
@@ -777,12 +804,13 @@ function ewSetupStatusSaver() {
 
       const a = document.createElement('a');
       a.href = blobUrl;
-      const isVideo = blob.type.includes('video') || url.includes('.mp4');
-      a.download = `Status_WhatsApp_${Date.now()}.${isVideo ? 'mp4' : 'jpg'}`;
+      a.download = `Status_WhatsApp_${Date.now()}.${extFromMime(blob.type, url)}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
+      // Jangan langsung revoke: proses unduhan berjalan asinkron dan bisa
+      // dibatalkan kalau object URL dicabut sebelum transfer selesai.
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
 
       const originalText = btn.innerHTML;
       btn.innerHTML = 'Tersimpan!';
@@ -898,7 +926,64 @@ function ewSetupGhostMode() {
   }
 }
 
+/**
+ * Fallback shortcut global untuk sesi Wayland.
+ *
+ * Chromium hanya mengimplementasikan globalShortcut lewat X11 (XGrabKey).
+ * Di Wayland, register() tetap sukses dan isRegistered() juga true, TAPI
+ * shortcutionya tidak pernah terpicu - sehingga Ctrl+Shift+B (Mode Rahasia)
+ * dan Ctrl+Shift+H (Anti Screen Cast) diam-diam tidak berfungsi.
+ *
+ * Karena itu di sesi Wayland tombolnya ditangkap di sini. Skenario pemakaian
+ * fitur ini memang menekan tombol saat sedang melihat WhatsApp, jadi window
+ * sedang fokus dan keyevent-nya sampai ke renderer.
+ */
+async function ewSetupGlobalShortcutFallback() {
+  const useFallback = await window?.ipc?.stateGet?.("rendererShortcuts");
+  if (!useFallback) return;
+
+  console.log("wz: fallback shortcut global aktif (sesi Wayland)");
+
+  // Kalau tombol ditahan, browser mengirim keydown berulang dengan
+  // repeat=true. Tanpa guard ini blur akan berkedip nyala-mati.
+  let lastToggle = 0;
+
+  document.addEventListener(
+    "keydown",
+    (ev) => {
+      if (!ev.ctrlKey || !ev.shiftKey || ev.altKey || ev.metaKey) return;
+      if (ev.repeat) return;
+
+      const now = Date.now();
+      if (now - lastToggle < 300) return;
+      lastToggle = now;
+
+      const key = (ev.key || "").toLowerCase();
+      if (key === "b") {
+        ev.preventDefault();
+        ev.stopPropagation();
+        window?.ipc?.togglePrivacyBlur?.();
+      } else if (key === "h") {
+        ev.preventDefault();
+        ev.stopPropagation();
+        window?.ipc?.toggleAntiScreencast?.();
+      }
+    },
+    true,
+  );
+}
+
 async function ewSetup() {
+  // Idempotensi: script ini disuntikkan tiap kali halaman selesai dimuat
+  // (did-finish-load). Kalau somehow terpasang dua kali, semua listener,
+  // observer, dan tombol akan terduplikasi - shortcut jadi ter-toggle dua
+  // kali (efeknya nol) dan tombol Status Saver muncul dobel.
+  if (window.__wzSetupDone) {
+    console.log("ewSetup: sudah pernah dijalankan, lewati");
+    return;
+  }
+  window.__wzSetupDone = true;
+
   console.log("ewSetup");
   ewHijackClick();
 
@@ -924,6 +1009,7 @@ async function ewSetup() {
   ewReplaceLogo();
   ewHijackTitle();
   ewSetupJumpList();
+  await ewSetupGlobalShortcutFallback();
 
   addEventListener(
     "keydown",

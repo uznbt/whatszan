@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld("ipc", {
   stateGet: (name) => ipcRenderer.invoke("stateGet", name),
   windowToggle: () => ipcRenderer.invoke("windowToggle"),
   escapePressed: () => ipcRenderer.invoke("escapePressed"),
+  togglePrivacyBlur: () => ipcRenderer.invoke("toggle-privacy-blur"),
+  toggleAntiScreencast: () => ipcRenderer.invoke("toggle-anti-screencast"),
   ...(isDebug && {
     ping: () => ipcRenderer.invoke("ping"),
   }),
