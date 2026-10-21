@@ -654,6 +654,48 @@ function ewSetupStatusSaver() {
 
   let activeStatusUrl = null;
 
+  // ── Konteks: apakah media dibuka dari daftar Status? ─────────────────────
+  // Foto yang dikirim di obrolan pun bisa dibuka layar penuh (media viewer),
+  // dan overlay-nya sama-sama menutupi jendela. Karena itu ukuran saja tidak
+  // cukup untuk membedakan status dari foto chat.
+  //
+  // Pembeda yang pasti: status SELALU dibuka dengan mengklik baris di daftar
+  // Status, sedangkan foto chat dibuka dengan mengklik sesuatu di dalam #main.
+  // Jadi kita catat asal klik terakhir, dan tombol hanya boleh muncul kalau
+  // konteksnya memang status.
+  let statusContext = false;
+
+  // Overlay layar penuh (status viewer / media viewer).
+  const inFullscreenLayer = (el) => {
+    let p = el.parentElement;
+    while (p && p !== document.body) {
+      const cs = window.getComputedStyle(p);
+      if (cs.position === "fixed" || cs.position === "absolute") {
+        const r = p.getBoundingClientRect();
+        if (r.width >= window.innerWidth * 0.9 && r.height >= window.innerHeight * 0.9) return true;
+      }
+      p = p.parentElement;
+    }
+    return false;
+  };
+
+  document.addEventListener(
+    "click",
+    (ev) => {
+      const t = ev.target;
+      if (!(t instanceof Element)) return;
+
+      if (t.closest('[data-testid*="status"], [data-testid*="story"]')) {
+        statusContext = true;
+      } else if (t.closest("#main") && !inFullscreenLayer(t)) {
+        // Klik di dalam obrolan (termasuk saat membuka foto chat) berarti
+        // pengguna sedang tidak melihat status.
+        statusContext = false;
+      }
+    },
+    true,
+  );
+
   // ── Deteksi status viewer ──────────────────────────────────────────────────
   // Versi lama setiap detik menjalankan:
   //   querySelectorAll('video, img')  → bisa ratusan elemen di chat yang ramai
@@ -693,25 +735,18 @@ function ewSetupStatusSaver() {
     const medias = document.querySelectorAll('video, img');
     for (const m of medias) observeMedia(m);
 
+    // Tombol hanya relevan saat pengguna sedang berada di alur Status.
+    // Ini yang mencegah tombol muncul di chat, termasuk saat foto kiriman
+    // dibuka layar penuh.
+    if (!statusContext) {
+      activeStatusUrl = null;
+      btn.style.setProperty('display', 'none', 'important');
+      return;
+    }
+
     let isStatus = false;
     let targetMedia = null;
     let maxArea = 0;
-
-    // Status viewer selalu berupa overlay yang menutupi seluruh jendela.
-    // Media di dalam obrolan bisa saja tinggi (mis. screenshot struk
-    // transfer) tetapi tidak pernah berada di lapisan selayar penuh.
-    const inFullscreenOverlay = (el) => {
-      let p = el.parentElement;
-      while (p && p !== document.body) {
-        const cs = window.getComputedStyle(p);
-        if (cs.position === "fixed" || cs.position === "absolute") {
-          const r = p.getBoundingClientRect();
-          if (r.width >= window.innerWidth * 0.9 && r.height >= window.innerHeight * 0.9) return true;
-        }
-        p = p.parentElement;
-      }
-      return false;
-    };
 
     // IntersectionObserver (dan requestAnimationFrame) hanya berjalan kalau
     // renderer benar-benar menghasilkan frame. Kalau jendela sedang tidak
@@ -746,7 +781,7 @@ function ewSetupStatusSaver() {
       // dalam elemen viewer status yang dikenal.
       const isBlob = !!(m.src && m.src.includes('blob:https://web.whatsapp.com'));
       const inStatusViewer = !!m.closest('[data-testid*="status-viewer"], [data-testid*="story-viewer"]');
-      const fullscreen = inFullscreenOverlay(m);
+      const fullscreen = inFullscreenLayer(m);
 
       // Gambar tinggi di dalam bubble chat (mis. screenshot struk transfer)
       // tidak boleh dianggap status.
