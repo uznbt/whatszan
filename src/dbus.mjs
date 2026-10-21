@@ -1,7 +1,7 @@
 import * as os from "node:os";
 import * as path from "node:path";
 import { app } from "electron";
-import { toggleVisibility, windowShow } from "./util.mjs";
+import { toggleVisibility, windowShow, getSessionBus } from "./util.mjs";
 import { consola } from "consola";
 
 
@@ -20,16 +20,12 @@ export class Dbus {
     }
     this.window = window;
 
-    // Dynamic import agar tidak crash di Windows jika modul opsional tidak tersedia
-    import("@homebridge/dbus-native").then((mod) => {
-      const dbus = mod.default;
+    // Pakai koneksi session bus yang sama dengan deteksi tema supaya tidak
+    // ada dua socket D-Bus di process yang sama.
+    getSessionBus().then((bus) => {
+      const dbus = bus?.__dbusModule;
       this.dbusRef = dbus;
-      try {
-        this.sessionBus = dbus.sessionBus();
-      } catch (err) {
-        this.sessionBus = null;
-      }
-
+      this.sessionBus = bus;
       if (!this.sessionBus) {
         consola.error("DBus: not connected to session bus");
         return;

@@ -89,12 +89,25 @@ npm run build
   "css": [],
   "spellcheck": true,
   "spellcheck-languages": ["id", "en-US", "fr"],
+  "low-resource-mode": true,
   "user-agent": "...",
   "open-dev-tools": false,
   "scripts": [],
   "icons-directory": "..."
 }
 ```
+
+### Mode Sumber Daya Rendah
+
+`"low-resource-mode": true` (default) mematikan layanan-layanan latar belakang
+Chromium yang tidak pernah dipakai WhatsApp Web: Google Translate, Cast /
+MediaRouter, sinkronisasi, deteksi phishing, domain reliability, dan
+preconnect/prefetch di latar belakang. Tidak ada satu pun dari fitur itu yang
+dipakai WhatsApp Web, jadi functionality tetap utuh.
+
+Perubahan ini **berlaku setelah aplikasi dimulai ulang** (flag Chromium hanya
+bisa dibaca saat startup). Buka **Pengaturan → Tampilan** untuk menyalakan /
+mematikannya.
 
 ## Ikon Kustom
 

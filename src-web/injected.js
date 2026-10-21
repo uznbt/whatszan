@@ -285,56 +285,75 @@ function ewReplaceLogo() {
     }
 
     // 2. Banner Killer (ALWAYS RUNS)
-    const text = root.innerText || "";
+    // PENTING: pakai textContent untuk deteksi cepat, BUKAN innerText.
+    // innerText adalah teks yang sadar-layout: setiap pembacaannya memaksa
+    // browser melakukan layout pass. WhatsApp Web terus mengubah DOM (indikator
+    // mengetik, animasi, daftar chat), sehingga satu innerText per mutasi
+    // berarti puluhan layout pass paksa per detik - ini penyebab utama
+    // renderer WhatsZan makan CPU.
+    //
+    // textContent hanya menelusuri DOM (tanpa layout) dan jauh lebih murah.
+    // Karena textContent juga ikut membaca teks dari elemen yang disembunyikan,
+    // hasilnya dikonfirmasi ulang dengan innerText (yang sadar visibilitas)
+    // HANYA ketika kandidat ditemukan - kasus yang jarang, jadi biayanya
+    // tidak terasa.
+    const text = root.textContent || "";
     const currentAppName = getAppName();
     if (((text.includes('Unduh WhatsApp untuk Windows') || text.includes(`Unduh ${currentAppName} untuk Windows`)) && text.includes('fitur ekstra')) ||
       text.includes('Dapatkan WhatsApp untuk Windows') || text.includes(`Dapatkan ${currentAppName} untuk Windows`)) {
+      // Konfirmasi dengan innerText (sadar visibilitas) sebelum menyapa apa pun.
+      const visibleText = root.innerText || "";
+      const reallyVisible =
+        (visibleText.includes('Unduh WhatsApp untuk Windows') || visibleText.includes(`Unduh ${currentAppName} untuk Windows`)) ||
+        visibleText.includes('Dapatkan WhatsApp untuk Windows') || visibleText.includes(`Dapatkan ${currentAppName} untuk Windows`);
+      if (reallyVisible) {
 
-      const textWalker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
-      let tNode;
-      const targetNodes = [];
-      while (tNode = textWalker.nextNode()) {
-        const v = tNode.nodeValue || "";
-        if (v.includes('Unduh WhatsApp untuk Windows') || v.includes(`Unduh ${currentAppName} untuk Windows`) ||
-          v.includes('Dapatkan WhatsApp untuk Windows') || v.includes(`Dapatkan ${currentAppName} untuk Windows`) ||
-          v.includes('fitur ekstra')) {
-          targetNodes.push(tNode);
+        const textWalker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+        let tNode;
+        const targetNodes = [];
+        while (tNode = textWalker.nextNode()) {
+          const v = tNode.nodeValue || "";
+          if (v.includes('Unduh WhatsApp untuk Windows') || v.includes(`Unduh ${currentAppName} untuk Windows`) ||
+            v.includes('Dapatkan WhatsApp untuk Windows') || v.includes(`Dapatkan ${currentAppName} untuk Windows`) ||
+            v.includes('fitur ekstra')) {
+            targetNodes.push(tNode);
+          }
         }
+
+        targetNodes.forEach(t => {
+          let p = t.parentElement;
+          let hiddenModal = false;
+          while (p && p.tagName !== 'BODY' && p.id !== 'app') {
+            if (p.getAttribute('role') === 'dialog' || p.getAttribute('aria-modal') === 'true') {
+              p.style.display = 'none';
+              let backdrop = p.parentElement;
+              while (backdrop && backdrop.tagName !== 'BODY' && backdrop.id !== 'app') {
+                const style = window.getComputedStyle(backdrop);
+                if (style.position === 'fixed' || style.position === 'absolute' || style.zIndex > 50) {
+                  backdrop.style.display = 'none';
+                }
+                backdrop = backdrop.parentElement;
+              }
+              hiddenModal = true;
+              break;
+            }
+            p = p.parentElement;
+          }
+
+          if (!hiddenModal) {
+            let parent = t.parentElement;
+            for (let i = 0; i < 6; i++) {
+              if (parent && parent.tagName !== 'BODY' && parent.id !== 'app') {
+                const rect = parent.getBoundingClientRect();
+                if (rect.height > 10 && rect.height < 300) {
+                  parent.style.display = 'none';
+                }
+                parent = parent.parentElement;
+              }
+            }
+          }
+        });
       }
-
-      targetNodes.forEach(t => {
-        let p = t.parentElement;
-        let hiddenModal = false;
-        while (p && p.tagName !== 'BODY' && p.id !== 'app') {
-          if (p.getAttribute('role') === 'dialog' || p.getAttribute('aria-modal') === 'true') {
-            p.style.display = 'none';
-            let backdrop = p.parentElement;
-            while (backdrop && backdrop.tagName !== 'BODY' && backdrop.id !== 'app') {
-              const style = window.getComputedStyle(backdrop);
-              if (style.position === 'fixed' || style.position === 'absolute' || style.zIndex > 50) {
-                backdrop.style.display = 'none';
-              }
-              backdrop = backdrop.parentElement;
-            }
-            hiddenModal = true;
-            break;
-          }
-          p = p.parentElement;
-        }
-
-        if (!hiddenModal) {
-          let parent = t.parentElement;
-          for (let i = 0; i < 6; i++) {
-            if (parent && parent.tagName !== 'BODY' && parent.id !== 'app') {
-              const rect = parent.getBoundingClientRect();
-              if (rect.height > 10 && rect.height < 300) {
-                parent.style.display = 'none';
-              }
-              parent = parent.parentElement;
-            }
-          }
-        }
-      });
     }
 
     // 2.5 Meta AI Killer
@@ -361,13 +380,53 @@ function ewReplaceLogo() {
   // Run once immediately on existing body
   processElement(document.body);
 
+  // ── Antrean pemrosesan ────────────────────────────────────────────────────
+  // WhatsApp Web menghasilkan banyak mutasi DOM per detik. Memproses setiap
+  // mutasi satu-per-satu berarti menjalankan querySelectorAll + textContent
+  // berulang kali untuk subtree yang sama. Dengan mengumpulkan elemen yang baru
+  // lalu memprosesnya sekaligus per frame (requestAnimationFrame), pekerjaan
+  // yang sama selesai jauh lebih sedikit.
+  const pendingRoots = new Set();
+  let flushScheduled = false;
+  let flushTimer = null;
+
+  const flushQueue = () => {
+    flushScheduled = false;
+    if (flushTimer) {
+      clearTimeout(flushTimer);
+      flushTimer = null;
+    }
+    if (pendingRoots.size === 0) return;
+    const roots = Array.from(pendingRoots);
+    pendingRoots.clear();
+    for (const root of roots) {
+      try {
+        processElement(root);
+      } catch (err) {
+        console.debug("wz processElement error", err);
+      }
+    }
+  };
+
+  const scheduleFlush = () => {
+    if (flushScheduled) return;
+    flushScheduled = true;
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(flushQueue);
+    }
+    // Cadangan: requestAnimationFrame tidak jalan saat window disembunyikan,
+    // jadi pastikan antrean tetap kosong.
+    flushTimer = setTimeout(flushQueue, 1000);
+  };
+
   // Instantly process all new mutations
   const uiObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       if (mutation.type === 'childList') {
         for (const node of mutation.addedNodes) {
           if (node.nodeType === Node.ELEMENT_NODE) {
-            processElement(node);
+            pendingRoots.add(node);
+            scheduleFlush();
           } else if (node.nodeType === Node.TEXT_NODE) {
             processTextNode(node);
           }
@@ -595,16 +654,53 @@ function ewSetupStatusSaver() {
 
   let activeStatusUrl = null;
 
-  setInterval(() => {
+  // ── Deteksi status viewer ──────────────────────────────────────────────────
+  // Versi lama setiap detik menjalankan:
+  //   querySelectorAll('video, img')  → bisa ratusan elemen di chat yang ramai
+  //   getBoundingClientRect()         → memaksa layout sinkron (forced layout)
+  // yang membuat WA Web melakukan layout pass penuh pada frame tersebut.
+  //
+  // Sekarang IntersectionObserver dipakai: browser menghitung sendiri
+  // rect-nya saat layout biasa, sehingga tidak ada forced layout dari JS.
+  // Kita hanya memeriksa elemen yang benar-benar terlihat di layar (biasanya
+  // 0-5 buah), bukan seluruh elemen media di halaman.
+  const visibleMedia = new Set();
+  const mediaObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) visibleMedia.add(entry.target);
+        else visibleMedia.delete(entry.target);
+      }
+    },
+    { threshold: 0.1 },
+  );
+
+  const observeMedia = (el) => {
+    if (!el || el.__wzObserved) return;
+    el.__wzObserved = true;
+    try {
+      mediaObserver.observe(el);
+    } catch (err) {
+      /* element sudah dilepas dari DOM */
+    }
+  };
+
+  const scanMedia = () => {
+    // Daftarkan elemen media baru. Query ini murah dibandingkan
+    // getBoundingClientRect() pada ratusan elemen.
+    const medias = document.querySelectorAll('video, img');
+    for (const m of medias) observeMedia(m);
+
     let isStatus = false;
     let targetMedia = null;
-
-    // Check if we are in status viewer (usually dark background, huge media)
-    // We can just find the largest media on screen. If it takes up > 40% of window height, it's likely a status or full-screen media viewer.
-    const medias = Array.from(document.querySelectorAll('video, img'));
     let maxArea = 0;
 
-    for (const m of medias) {
+    for (const m of visibleMedia) {
+      if (!m.isConnected) {
+        visibleMedia.delete(m);
+        continue;
+      }
+
       const rect = m.getBoundingClientRect();
 
       // Ignore tiny icons or avatars
@@ -649,6 +745,12 @@ function ewSetupStatusSaver() {
       activeStatusUrl = null;
       btn.style.setProperty('display', 'none', 'important');
     }
+  };
+
+  setInterval(() => {
+    // Jangan kerja sama sekali saat tab tidak terlihat.
+    if (document.hidden) return;
+    scanMedia();
   }, 1000);
 
   // Tambahkan shortcut keyboard dengan useCapture = true agar tidak diblokir WhatsApp
@@ -1033,7 +1135,11 @@ if (window?.ipc?.onShareFiles) {
     processPendingShare();
   });
 
+  // Fallback untuk kasus di mana event "share-files-ready" datang sebelum
+  // halaman siap (mis. saat WhatsApp Web reload). Poll 2 detik terlalu
+  // sering: itu 43.000 IPC round-trip per hari hanya untuk memeriksa antrean
+  // yang hampir selalu kosong.
   setInterval(() => {
     processPendingShare();
-  }, 2000);
+  }, 15000);
 }

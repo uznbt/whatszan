@@ -254,6 +254,13 @@ function main() {
         preload: path.join(import.meta.dirname, "..", "src-web", "preload.js"),
         spellcheck: config.get("spellcheck", true),
         backgroundThrottling: true,
+        // Cache bytecode V8 supaya halaman lebih cepat dibuka pada sesi berikutnya.
+        v8CacheOptions: "code",
+        // Jangan izinkan dialog JS menumpuk-numpuk (setiap dialog menahan
+        // renderer process dari tidur).
+        safeDialogs: true,
+        // Drag & drop file ke jendela tidak boleh memaksa navigasi halaman.
+        navigateOnDragDrop: false,
       },
       show: isHiddenStartup ? false : state.showAtStartup,
       autoHideMenuBar: config.get("menu-bar-auto-hide", true),
@@ -1314,8 +1321,67 @@ function main() {
     app.commandLine.appendSwitch('lang', appLang);
   }
 
-  app.commandLine.appendSwitch('renderer-process-limit', '3');
   app.commandLine.appendSwitch('enable-low-res-tiling');
+
+  // ── Mode Sumber Daya Rendah ───────────────────────────────────────────────
+  // Electron/Chromium membawa banyak layanan latar belakang yang tidak
+  // pernah dipakai WhatsApp Web (variations/component updater, Translate,
+  // MediaRouter/Cast, domain reliability, deteksi phishing, dsb). Semuanya
+  // tetap berjalan di latar belakang: menjalankan koneksi jaringan, occupy
+  // memori, dan membangunkan CPU.
+  //
+  // Flag di bawah mematikan semuanya. Tidak ada satupun yang dipakai
+  // WhatsApp Web, jadi functionality tetap utuh.
+  //
+  // CATATAN: config dibaca di sini (sebelum app.whenReady) karena flag
+  // Chromium hanya bisa dibaca saat startup.
+  const lowResource = config.get("low-resource-mode", true);
+
+  if (lowResource) {
+    // Matikan seluruh layanan jaringan latar belakang Chromium.
+    app.commandLine.appendSwitch("disable-background-networking");
+    app.commandLine.appendSwitch("disable-domain-reliability");
+    app.commandLine.appendSwitch("disable-client-side-phishing-detection");
+    app.commandLine.appendSwitch("no-pings");
+    app.commandLine.appendSwitch("no-service-autorun");
+    app.commandLine.appendSwitch("disable-sync");
+
+    // Don't bother detecting the display's colour profile.
+    app.commandLine.appendSwitch("force-color-profile", "srgb");
+
+    // Features that cost CPU/RAM but are useless for a chat client.
+    app.commandLine.appendSwitch(
+      "disable-features",
+      [
+        "Translate",                            // Google Translate
+        "MediaRouter",                          // Cast / second screen
+        "DialMediaRouteProvider",
+        "GlobalMediaControls",                  // media session handler
+        "HardwareMediaKeyHandling",
+        "OptimizationHints",                    // background preconnect/prefetch
+        "CalculateNativeWinOcclusion",          // occlusion tracking (mahal di Wayland)
+        "InterestFeedContentSuggestions",
+        "CertificateTransparencyComponentUpdater",
+        "UseChromeOSDirectVideoDecoder",
+      ].join(","),
+    );
+
+    // WhatsApp Web hanya butuh SATU renderer. Batas 2 memberi ruang untuk
+    // service worker / worker keamanan tanpa memunculkan proses tambahan.
+    app.commandLine.appendSwitch("renderer-process-limit", "2");
+  } else {
+    app.commandLine.appendSwitch("renderer-process-limit", "3");
+  }
+
+  // ── Akselerasi GPU ─────────────────────────────────────────────────────────
+  // Proses GPU Chromium memakan sekitar 50-70 MB RAM. Mematikannya menghemat
+  // memori itu, tetapi rendering dipindahkan ke CPU sehingga scrolling dan
+  // animasi bisa terasa kurang mulus dan CPU naik sekitar 1-2%.
+  // Tidak ada yang bisa dicepat; biarkan user yang memilih.
+  if (config.get("disable-gpu", false)) {
+    app.disableHardwareAcceleration();
+    consola.info("Akselerasi GPU dimatikan (mode hemat memori)");
+  }
 
   app.whenReady().then(async () => {
     

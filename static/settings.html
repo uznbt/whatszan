@@ -548,6 +548,22 @@
         </div>
         <label class="toggle"><input type="checkbox" id="spellcheck" /><span class="slider"></span></label>
       </div>
+
+      <div class="row">
+        <div class="row-info">
+          <div class="row-title"><span data-i18n="settings_lowresource_title">Mode Sumber Daya Rendah</span></div>
+          <div class="row-desc"><span data-i18n="settings_lowresource_desc">Matikan layanan latar belakang Chromium yang tidak dipakai WhatsApp (Translate, Cast, sinkronisasi, deteksi phishing). Menghemat RAM dan CPU. Perubahan berlaku setelah aplikasi dimulai ulang.</span></div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="low-resource-mode" /><span class="slider"></span></label>
+      </div>
+
+      <div class="row">
+        <div class="row-info">
+          <div class="row-title"><span data-i18n="settings_disablegpu_title">Matikan Akselerasi GPU</span></div>
+          <div class="row-desc"><span data-i18n="settings_disablegpu_desc">Menghemat sekitar 50-70 MB RAM karena proses GPU Chromium dimatikan, tetapi rendering dipindah ke CPU sehingga scrolling bisa kurang mulus. Perubahan berlaku setelah aplikasi dimulai ulang.</span></div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="disable-gpu" /><span class="slider"></span></label>
+      </div>
     </div>
 
     <!-- Tab LANJUTAN -->
@@ -706,6 +722,8 @@
     document.getElementById('download-path-audio').value = settings['download-path-audio'] || '';
     document.getElementById('download-path-document').value = settings['download-path-document'] || '';
     document.getElementById('spellcheck').checked = settings['spellcheck'] !== false;
+    document.getElementById('low-resource-mode').checked = settings['low-resource-mode'] !== false;
+    document.getElementById('disable-gpu').checked = settings['disable-gpu'] === true;
     document.getElementById('menu-bar').checked = settings['menu-bar'] !== false;
     document.getElementById('menu-bar-auto-hide').checked = settings['menu-bar-auto-hide'] !== false;
     document.getElementById('user-agent').value = settings['user-agent'] || '';
@@ -917,7 +935,7 @@
     autoSave();
   });
 
-  const autoSaveInputs = ['app-language', 'notif-prefix', 'quit-on-close', 'esc-toggle', 'smart-download', 'spellcheck', 'menu-bar', 'menu-bar-auto-hide', 'user-agent', 'anti-screencast', 'blur-contacts', 'blur-pp', 'blur-messages', 'blur-media', 'blur-input', 'blur-specific', 'blur-amount', 'incognito-antidelete', 'incognito-statussaver', 'incognito-noread', 'incognito-notyping', 'desktop-shortcut', 'custom-app-name'];
+  const autoSaveInputs = ['app-language', 'notif-prefix', 'quit-on-close', 'esc-toggle', 'smart-download', 'spellcheck', 'low-resource-mode', 'disable-gpu', 'menu-bar', 'menu-bar-auto-hide', 'user-agent', 'anti-screencast', 'blur-contacts', 'blur-pp', 'blur-messages', 'blur-media', 'blur-input', 'blur-specific', 'blur-amount', 'incognito-antidelete', 'incognito-statussaver', 'incognito-noread', 'incognito-notyping', 'desktop-shortcut', 'custom-app-name'];
   // download-path-* inputs are handled by blur listener in initDownloadPathInputs()
   autoSaveInputs.forEach(id => {
     const el = document.getElementById(id);
@@ -1017,6 +1035,8 @@
       'download-path-audio': document.getElementById('download-path-audio').value,
       'download-path-document': document.getElementById('download-path-document').value,
       'spellcheck': document.getElementById('spellcheck').checked,
+      'low-resource-mode': document.getElementById('low-resource-mode').checked,
+      'disable-gpu': document.getElementById('disable-gpu').checked,
       'menu-bar': document.getElementById('menu-bar').checked,
       'menu-bar-auto-hide': document.getElementById('menu-bar-auto-hide').checked,
       'user-agent': document.getElementById('user-agent').value || null,
