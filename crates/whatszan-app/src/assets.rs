@@ -1,7 +1,7 @@
 //! Default artwork compiled into the binary.
 //!
-//! Every image lives under `rust/crates/whatszan-app/assets`, so the Rust tree
-//! no longer borrows files from the Electron sources at build time. Branding
+//! Every image lives under `crates/whatszan-app/assets`, so the binary is
+//! self-contained at build time. Branding
 //! still works when `/usr/share/whatszan` is absent, and user-selected custom
 //! icons remain ordinary files on disk.
 

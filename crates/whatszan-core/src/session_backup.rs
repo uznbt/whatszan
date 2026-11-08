@@ -10,7 +10,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use chrono::Utc;
+use chrono::{NaiveDateTime, Utc};
 use walkdir::WalkDir;
 
 pub const ITEMS: [&str; 8] = [
@@ -28,7 +28,11 @@ pub const ITEMS: [&str; 8] = [
     // WebView2 profile used by the Windows Rust build.
     "webview2",
 ];
-pub const KEEP: usize = 5;
+pub const KEEP: usize = 3;
+/// Do not copy the multi-hundred-megabyte profile on every launch. A snapshot
+/// from the last few hours is still a valid recovery point and keeps startup
+/// fast when the app is restarted in quick succession.
+pub const MIN_INTERVAL_HOURS: i64 = 6;
 pub const FLAG: &str = "restore-session.flag";
 
 #[derive(Debug, thiserror::Error)]
@@ -97,6 +101,17 @@ pub fn latest_snapshot_name(user_data: &Path) -> Option<String> {
     list_snapshots(user_data).pop()
 }
 
+/// Caches can be regenerated and are not needed to keep the WhatsApp session.
+/// Skipping them makes snapshots smaller and startup faster.
+fn is_cache_entry(relative: &Path) -> bool {
+    relative.components().any(|component| {
+        matches!(
+            component.as_os_str().to_str(),
+            Some("WebKitCache" | "CacheStorage" | "serviceworkers")
+        )
+    })
+}
+
 fn copy_path(src: &Path, dst: &Path) -> Result<(), BackupError> {
     if src.is_file() {
         if let Some(parent) = dst.parent() {
@@ -108,7 +123,11 @@ fn copy_path(src: &Path, dst: &Path) -> Result<(), BackupError> {
 
     fs::create_dir_all(dst)?;
 
-    for entry in WalkDir::new(src) {
+    let entries = WalkDir::new(src).into_iter().filter_entry(|entry| {
+        let relative = entry.path().strip_prefix(src).unwrap_or(entry.path());
+        !is_cache_entry(relative)
+    });
+    for entry in entries {
         let entry = entry?;
         let relative = entry.path().strip_prefix(src).unwrap_or(entry.path());
         let target = dst.join(relative);
@@ -146,9 +165,36 @@ fn remove_path(path: &Path) -> std::io::Result<()> {
     }
 }
 
+fn prune_snapshots(user_data: &Path) {
+    let root = backup_root(user_data);
+    let snapshots = list_snapshots(user_data);
+    let excess = snapshots.len().saturating_sub(KEEP);
+    for old in snapshots.into_iter().take(excess) {
+        let _ = remove_path(&root.join(old));
+    }
+}
+
 /// Create a snapshot. Returns the snapshot path, or `None` when there is no
-/// session data yet (first launch / freshly logged out profile).
+/// session data yet (first launch / freshly logged out profile) or when the
+/// newest snapshot is still recent enough.
 pub fn backup_session_data(user_data: &Path) -> Result<Option<PathBuf>, BackupError> {
+    // Keep the disk bounded even when this launch skips the copy.
+    prune_snapshots(user_data);
+
+    if let Some(latest) = latest_snapshot_name(user_data) {
+        if let Ok(stamp) = NaiveDateTime::parse_from_str(&latest, "%Y-%m-%dT%H-%M-%S") {
+            let age = Utc::now().signed_duration_since(stamp.and_utc());
+            if age.num_hours() < MIN_INTERVAL_HOURS {
+                tracing::debug!(
+                    snapshot = %latest,
+                    age_minutes = age.num_minutes(),
+                    "skipping session snapshot; recent snapshot exists"
+                );
+                return Ok(None);
+            }
+        }
+    }
+
     let root = backup_root(user_data);
     let destination = root.join(stamp());
     let mut copied = 0usize;
@@ -168,11 +214,7 @@ pub fn backup_session_data(user_data: &Path) -> Result<Option<PathBuf>, BackupEr
         return Ok(None);
     }
 
-    let snapshots = list_snapshots(user_data);
-    let excess = snapshots.len().saturating_sub(KEEP);
-    for old in snapshots.into_iter().take(excess) {
-        let _ = remove_path(&root.join(old));
-    }
+    prune_snapshots(user_data);
 
     tracing::info!(
         snapshot = %destination.file_name().and_then(|n| n.to_str()).unwrap_or("?"),
@@ -303,7 +345,7 @@ mod tests {
     }
 
     #[test]
-    fn keeps_only_five_snapshots() {
+    fn keeps_only_recent_snapshots() {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path().join("session-backup");
         for day in 1..=7 {
@@ -315,5 +357,35 @@ mod tests {
         let snapshots = list_snapshots(dir.path());
         assert_eq!(snapshots.len(), KEEP);
         assert!(!snapshots.contains(&"2026-11-01T00-00-00".to_string()));
+    }
+
+    #[test]
+    fn skips_recent_snapshot() {
+        let dir = tempfile::tempdir().unwrap();
+        seed_profile(dir.path());
+        assert!(backup_session_data(dir.path()).unwrap().is_some());
+        assert!(backup_session_data(dir.path()).unwrap().is_none());
+        assert_eq!(list_snapshots(dir.path()).len(), 1);
+    }
+
+    #[test]
+    fn snapshot_skips_regenerable_caches() {
+        let dir = tempfile::tempdir().unwrap();
+        seed_profile(dir.path());
+        fs::create_dir_all(dir.path().join("webkit/WebKitCache/Version 17")).unwrap();
+        fs::write(
+            dir.path().join("webkit/WebKitCache/Version 17/blob"),
+            b"cache",
+        )
+        .unwrap();
+        fs::create_dir_all(dir.path().join("webkit/CacheStorage/cache")).unwrap();
+        fs::write(dir.path().join("webkit/CacheStorage/cache/blob"), b"cache").unwrap();
+        fs::create_dir_all(dir.path().join("webkit/localstorage")).unwrap();
+        fs::write(dir.path().join("webkit/localstorage/state"), b"session").unwrap();
+
+        let snapshot = backup_session_data(dir.path()).unwrap().expect("snapshot");
+        assert!(snapshot.join("webkit/localstorage/state").exists());
+        assert!(!snapshot.join("webkit/WebKitCache").exists());
+        assert!(!snapshot.join("webkit/CacheStorage").exists());
     }
 }

@@ -118,6 +118,10 @@
   "settings_smart_dl_path_document_title": "Documenti",
   "settings_smart_dl_path_document_desc": "Cartella Documenti di sistema",
   "settings_btn_browse": "Sfoglia",
+  "notification_reply_placeholder": "Rispondi al messaggio...",
+  "notification_reply_action": "Rispondi",
+  "notification_reply_send": "Invia",
+  "notification_reply_open": "Apri chat",
   "dnd_mode": "Non Disturbare (DND)",
   "settings": "Impostazioni..."
 }

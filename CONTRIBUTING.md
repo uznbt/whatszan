@@ -20,7 +20,7 @@ Jika kamu sudah siap untuk menulis kode:
    ```bash
    git checkout -b fitur-baru-kamu
    ```
-4. Lakukan perubahan pada kode. Pastikan kamu menjalankan `npm start` untuk mengetes perubahanmu secara lokal.
+4. Lakukan perubahan pada kode. Pastikan kamu menjalankan `cargo run -p whatszan` untuk mengetes perubahanmu secara lokal (butuh dependensi build Tauri/WebKitGTK, lihat `README.md`).
 5. Lakukan *Commit* perubahanmu dengan pesan yang jelas dan deskriptif:
    ```bash
    git commit -m "feat: tambahkan fitur keren"

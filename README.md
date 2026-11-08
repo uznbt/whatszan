@@ -1,181 +1,479 @@
-# WhatsZan - Unofficial WhatsApp Desktop Client untuk Linux
+# WhatsZan
 
-<p align="center">
-<img width="400" alt="whatszan" src="assets/images.jpg" />
-</p>
+WhatsZan is an unofficial WhatsApp desktop client written in Rust with Tauri 2.
+It does **not** run Electron or Node.js at runtime. Linux uses WebKitGTK;
+Windows uses WebView2.
 
-## Fitur
+Everything the binary needs at build time lives in this repository: icons and
+artwork in `crates/whatszan-app/assets/`, locales in `locales/`, and the
+Windows settings page and debug page in `crates/whatszan-app/frontend/`. The
+client reuses the existing `~/.config/WhatsZan` profile, so settings and
+sessions survive an upgrade from the old Electron build.
 
-* **[BARU] Jendela Pengaturan Terpusat**: Mengatur seluruh aplikasi dari satu jendela (`Ctrl + ,`) dengan fitur **Simpan Otomatis** (Auto-Save).
-* **[BARU] Mode Rahasia Lanjutan (Privacy Blur)**: Sensor (blur) layar secara otomatis saat ada orang lewat. Dilengkapi pengaturan spesifik untuk blur Foto Profil, Pesan, Media, dan **bahkan hanya untuk kontak tertentu saja**!
-* **[BARU] Integrasi Ekstensi Chrome**: Pasang berbagai ekstensi secara langsung dari Chrome Web Store lewat Jendela Pengaturan.
-* **[BARU] Personalisasi UI**: Merubah logo dan tulisan jendela antarmuka web WhatsApp menjadi identitas "WhatsZan" secara mulus.
-* **Deteksi Tema Sistem Universal**: Secara akurat mendeteksi dan mensinkronisasi tema Gelap/Terang (*Dark/Light Mode*) secara *real-time* di berbagai Desktop Environment Linux (bekerja mulus di GNOME/GTK, maupun KDE Plasma/Hyprland berbasis Qt).
-* **Jalankan Otomatis & Minimalkan**: Menyala otomatis di latar belakang saat komputer dihidupkan (Dapat diatur melalui Menu Jendela/Window).
-* **Routing Link Mulus (Anti-Reload)**: Menangani tautan `chat.whatsapp.com`, `wa.me`, dan `whatsapp://` secara *native* tanpa memuat ulang halaman (*reload*) atau menyebabkan layar putih.
-* **Anti Tracker Bypass**: Otomatis membongkar pelacak tautan internal WhatsApp (`l.wl.co`) sehingga mencegah browser eksternal terbuka secara tidak sengaja.
-* **Dukungan Multi-Bahasa**: Menu diterjemahkan sepenuhnya ke dalam bahasa Indonesia, Inggris, Jerman, Prancis, Italia, dan Portugis.
-* Notifikasi desktop
-* Panggilan Telepon / Video berfungsi (kamu harus bergabung dengan WhatsApp Web Beta)
-* Ikon tray dengan jumlah pesan belum dibaca (AppIndicator), [ikon tray kustom](#ikon-kustom).
-* Pintasan keyboard kustom
-* CSS Kustom & Pemeriksa Ejaan (*Spellcheck*)
-* Antarmuka CLI & D-Bus untuk memunculkan/menyembunyikan jendela
-* Lencana jumlah pesan belum dibaca pada dock & Menyimpan posisi jendela terakhir
-* Skrip pengguna kustom di `~/.config/whatszan/user-scripts/*.js`
+## Status
 
-## Mengapa?
+Implemented:
 
-Saya membuat *fork* dari [elecwhat](https://github.com/piec/elecwhat) ini untuk memperbaiki masalah kestabilan pada cara penanganan tautan (`wa.me` / `chat.whatsapp.com`), mencegah jendela browser eksternal terbuka secara tak terduga, dan menambahkan fitur latar belakang yang penting seperti "Jalankan Otomatis & Minimalkan". Aplikasi ini tetap mempertahankan sifatnya yang sederhana, ringan, dan stabil seperti klien aslinya.
+- Main WhatsApp Web window with a Rust-owned feature configuration. The DOM
+  shim (privacy blur, incognito helpers, keyboard shortcuts, custom app name,
+  notification routing, share-file queue) is compiled into the binary from
+  `renderer/injected.rs`; the only shipped HTML pages are the Windows settings
+  page and the debug page.
+  Keybinding parsing and shared-file MIME detection also live in Rust
+  (`whatszan-core`).
+- Native GTK settings window built entirely in Rust (`settings_ui.rs`) on
+  Linux with all tabs from the Electron page: general, privacy, dictionary,
+  appearance, advanced, and branding. A custom `ToggleButton` sidebar drives a
+  `GtkStack` (with a re-entrancy guard so programmatic tab activation cannot
+  bounce between pages), and the page uses a themed header, cards, switches,
+  entries, combos, sliders, a status toast, and light/dark palettes. It shares
+  validation and side effects with the IPC `settings_save` command, auto-saves
+  with a debounce, and rebuilds itself when the language changes so labels
+  update immediately. Windows loads the same Electron-derived
+  `frontend/settings.html` in a Tauri webview and talks to the same commands.
+- Native application menu, tray icon, D-Bus service (`org.uznbt.whatszan`) and
+  Unity launcher badge on Linux. Linux uses `ksni` (no libappindicator) and
+  Windows uses Tauri's `tray-icon` backend with the same show/hide, settings,
+  DND, and quit menu. The tray title and tooltip use the configured custom app
+  name.
+- Native GTK message dialogs for About, session restore, configuration parse
+  errors, and unsupported extensions. They use GTK directly instead of `rfd`'s
+  portal/zenity fallback, so they work on desktops without `zenity`.
+- Desktop notifications via XDG (`notify-rust`) on Linux and WinRT toasts on
+  Windows, including click-to-open and sender avatars. Inline replies work on
+  Windows and on notification servers that implement the KDE `inline-reply`
+  extension (KDE Plasma 5.18+, SwayNotificationCenter). Servers without that
+  extension get a "Reply" action that opens a small WhatsZan quick-reply
+  window; the reply text routes through the renderer's `notify-reply` handler.
+  Branding and avatar caching is shared in `notifications_common.rs`.
+- System theme detection through the XDG Settings portal with
+  `gsettings` / KDE fallbacks on Linux, and the
+  `AppsUseLightTheme` registry value on Windows.
+- Encrypted config compatible with `src/json-config.mjs`
+  (AES-256-GCM + scrypt), persistent state, and session snapshots. A parse
+  error shows the Electron-style Continue/Quit dialog after the main window is
+  created.
+- Linux autostart, launcher entry, desktop shortcut, `whatsapp://` handler,
+  and file-manager "Share with WhatsZan" actions. Windows autostart, Desktop /
+  Start Menu / Send To `.lnk` shortcuts, `whatsapp://` registry handler, jump
+  lists, and AppUserModelID registration. Shortcut repair follows Electron's
+  `app-version` / `reapply-shortcuts.flag` logic, so normal launches do not
+  rewrite the user's application entries unnecessarily.
+- Smart downloads, custom user scripts/CSS, custom branding icons,
+  spellcheck settings, WebKit preferred languages, and load-failure retry with
+  an XDG notification (cancelled navigations are suppressed).
+- Single-instance handling, `whatsapp://` links, `--share-media`,
+  `--share-document`, `--open-chat=`, `--action=`, `--hide`, `--toggle`,
+  `--quit`, and `--settings` (open the settings window directly).
 
-## Instalasi
+## Requirements
 
-### Ubuntu/Kubuntu:
-* [Snap](#)
-* **atau** file `.deb` di tab [Releases] dengan `--no-sandbox` karena ada [isu Electron]
-* **atau** file `AppImage` di tab [Releases] dengan `--no-sandbox` karena ada [isu Electron]
+### Linux
 
-### Arch Linux:
-* Paket AUR: `yay -S whatszan-bin` *(jika tersedia)*
-* **atau** paket Pacman di tab [Releases]
-* **atau** file `AppImage` di tab [Releases]
+- Rust stable (the workspace uses edition 2021).
+- GTK 3 and WebKitGTK 4.1 development packages.
+- `libsoup-3.0`, `dbus-1`, `pkg-config`, and a C toolchain.
+- GStreamer base/good plugins for WhatsApp voice notes and calls, plus
+  `gst-plugins-bad` (`webrtcbin`), `gst-libav` (H.264), and
+  `gst-plugin-pipewire` (camera/screen capture). Without `autoaudiosink`
+  WebKit logs `GStreamer element autoaudiosink not found`; the app still runs
+  but audio playback may be silent.
+- `libenchant` plus a dictionary backend (hunspell/nuspell) for spellcheck.
+  Missing backends only produce `libenchant-WARNING` messages.
+- `xdg-mime` and `update-desktop-database` for desktop integration
+  (optional; failures are logged and ignored).
+- `zip` for sharing directories as documents (optional).
 
-### Debian:
-* file `.deb` di tab [Releases]
-* **atau** file `AppImage` di tab [Releases]
+On Arch-based systems the native packages are typically:
 
-### Fedora:
-* file `.rpm` di tab [Releases]
-* **atau** file `AppImage` di tab [Releases]
-
----
-
-**Instalasi Manual (dari Source Code):**
-
-```bash
-# Clone repositori
-git clone https://github.com/username-kamu/whatszan-electron.git
-cd whatszan-electron
-
-# Instal dependensi
-npm install
-
-# Jalankan aplikasi
-npm start
-
-# Build aplikasi (hasilnya akan ada di folder /dist atau /out)
-npm run build
+```sh
+sudo pacman -S --needed base-devel pkgconf gtk3 webkit2gtk-4.1 libsoup3 dbus
 ```
 
-## Konfigurasi
+Debian/Ubuntu names are usually `libgtk-3-dev`, `libwebkit2gtk-4.1-dev`,
+`libsoup-3.0-dev`, and `libdbus-1-dev`.
 
-`~/.config/whatszan/config.json`:
+### Windows
 
-```json
-{
-  "log-level": "info",
-  "notification-prefix": "whatszan - ",
-  "quit-on-close": false,
-  "show-at-startup": false,
-  "dbus": true,
-  "menu-bar": true,
-  "menu-bar-auto-hide": true,
-  "keys": {
-    "C ArrowDown": {
-      "whatsappAction": "GO_TO_NEXT_CHAT"
-    }
-  },
-  "esc-toggle-window": false,
-  "css": [],
-  "spellcheck": true,
-  "spellcheck-languages": ["id", "en-US", "fr"],
-  "low-resource-mode": true,
-  "user-agent": "...",
-  "open-dev-tools": false,
-  "scripts": [],
-  "icons-directory": "..."
-}
+- Rust stable with the `x86_64-pc-windows-msvc` toolchain.
+- Visual Studio Build Tools with the MSVC C++ workload and the Windows SDK.
+- The WebView2 runtime. It is included with Windows 10/11; older systems may
+  need the Evergreen Runtime from Microsoft.
+- No GTK, WebKitGTK, D-Bus, or `zip` dependency is needed.
+
+Cross-checking the Windows target from Linux is possible without a full SDK
+by installing `cargo-xwin`; it downloads the MSVC CRT/SDK headers and links
+against the Windows import libraries:
+
+```sh
+cargo install cargo-xwin --locked
+cargo xwin check --target x86_64-pc-windows-msvc
 ```
 
-### Mode Sumber Daya Rendah
-`"low-resource-mode": true` (default) mematikan layanan-layanan latar belakang
-Chromium yang tidak pernah dipakai WhatsApp Web: Google Translate, Cast /
-MediaRouter, sinkronisasi, deteksi phishing, domain reliability, dan
-preconnect/prefetch di latar belakang. Tidak ada satu pun dari fitur itu yang
-dipakai WhatsApp Web, jadi functionality tetap utuh.
+A real Windows build should still be produced on Windows with
+`cargo tauri build`.
 
-Perubahan ini **berlaku setelah aplikasi dimulai ulang** (flag Chromium hanya
-bisa dibaca saat startup). Buka **Pengaturan → Tampilan** untuk menyalakan /
-mematikannya.
+## Build and run
 
-### Pintasan Keyboard di Linux / Wayland
+On Linux:
 
-`Ctrl+Shift+B` (Mode Rahasia) dan `Ctrl+Shift+H` (Anti Screen Cast) adalah
-*global shortcut*. Chromium hanya mengimplementasikan global shortcut lewat X11
-(XGrabKey).
+```sh
+source "$HOME/.cargo/env"
 
-Di **Wayland** (Hyprland, Sway, KDE Wayland, GNOME Wayland) `globalShortcut`
-dipaksa bekerja oleh XWayland sehingga tidak pernah meneruskan event ke
-aplikasi. Chromium membuat `globalShortcut.register()` tetap terlihat sukses
-dan `isRegistered()` juga `true`, padahal pintasan tersebut diam-diam tidak
-berfungsi.
+# Fast compile check
+cargo check -p whatszan
 
-Karena itu WhatsZan mendeteksi sesi Wayland lalu memproses kedua pintasan itu
-di sisi renderer. Konsekuensinya:
+# Platform-independent logic (30 tests)
+cargo test -p whatszan-core
 
-- Pintasan tetap bekerja **selagi jendela WhatsApp aktif** — persis skenario
-  pemakaian fitur ini (menahan/menekan tombol saat sedang melihat WhatsApp).
-- Di X11 dan Windows, pintasan tetap bersifat global (bisa ditekan dari
-  jendela lain) seperti sebelumnya.
+# Embedded renderer/config and asset tests (14 tests)
+cargo test -p whatszan
 
-### Fitur Incognito / Power User
+# Debug binary
+cargo build -p whatszan
+./target/debug/whatszan
 
-* **Ghost Mode: Centang Biru** — lawan bicara tidak tahu pesannya sudah dibaca.
-* **Ghost Mode: Sembunyikan Mengetik** — sembunyikan indikator sedang mengetik.
-* **Anti-Hapus Pesan** — pulihkan pesan yang ditarik pengirim.
-* **Pengunduh Status (Status Saver)** — tombol "Simpan Status" muncul saat
-  melihat Story, dan status bisa diunduh ke folder gambar.
+# Release binary
+cargo build --release -p whatszan
+./target/release/whatszan
+```
 
-### Sesi WhatsApp & Logout
+On Windows (PowerShell or `cmd.exe`):
 
-Kredensial perangkat tertaut WhatsApp Web disimpan Chromium di dalam folder
-`userData` (`IndexedDB`, `Local Storage`, `Cookies`). Kalau folder itu rusak,
-WhatsApp akan meminta scan QR lagi.
+```powershell
+cargo check -p whatszan
+cargo test -p whatszan-core
+cargo test -p whatszan
+cargo build -p whatszan
+.\target\debug\whatszan.exe
 
-WhatsZan sekarang:
+cargo build --release -p whatszan
+.\target\release\whatszan.exe
+```
 
-* **Membuat cadangan otomatis** setiap kali dijalankan (5 snapshot terakhir)
-  di `~/.config/WhatsZan/session-backup/`, diambil sebelum Chromium membuka
-  database sehingga isinya konsisten.
-* **Menutup dengan rapi** saat menerima `SIGTERM` / `SIGINT`.
+The Tauri CLI is not required for a plain `cargo build`. To produce an
+installer/bundle, install `cargo-tauri` and run `cargo tauri build` from
+`crates/whatszan-app` after reviewing `tauri.conf.json`.
 
-Kalau WhatsApp tiba-tiba minta scan QR padahal sebelumnya sudah login, buka
-**Jendela → Pulihkan Sesi WhatsApp dari Cadangan**. WhatsZan akan menutup,
-memulihkan snapshot terakhir, lalu membuka diri lagi. Data yang rusak tidak
-dihapus — dipindahkan ke folder `rusak-<waktu>`.
+Useful runtime flags (Linux paths shown; use `.\target\debug\whatszan.exe`
+on Windows):
 
-Penyebab paling sering sesi rusak:
+```sh
+./target/debug/whatszan            # normal start
+./target/debug/whatszan --hide     # start hidden (tray only)
+./target/debug/whatszan --settings # settings only; stays open until closed
+./target/debug/whatszan --toggle   # toggle an existing instance
+./target/debug/whatszan --quit     # ask an existing instance to exit
+```
 
-* aplikasi dibunuh paksa (`kill -9`, `pkill -9`) atau crash;
-* dua instance WhatsZan berjalan bersamaan pada profil yang sama;
-* file `Singleton*` di folder `userData` dihapus saat aplikasi masih hidup —
-  ini mematikan pengunci profil sehingga dua proses bisa menulis database
-  yang sama.
+### Debug mode
 
-Karena itu: tutup lewat menu tray → **Keluar**, atau `pkill -TERM`, jangan
-`-9`. Dan jangan menjalankan dua WhatsZan sekaligus.
+`DEBUG=1 ./target/debug/whatszan` on Linux (or `$env:DEBUG=1` followed by
+`.\target\debug\whatszan.exe` in PowerShell) loads the Rust-owned
+`crates/whatszan-app/frontend/debug.html`, opens WebKit/WebView2 developer
+tools, and matches the Electron `DEBUG=1` behaviour. The normal
+`open-dev-tools` config key also works.
 
-## Ikon Kustom
+The debug page has no external script: Rust installs the equivalent `ping`,
+`notify`, and `but1` handlers against `window.__wzIpc` after the page reports
+ready, and the bridge's `debug` flag is set from the Rust configuration
+snapshot. On Linux it is the only frontend page loaded through Tauri's
+`frontendDist`; Windows also loads `frontend/settings.html` there. WhatsApp
+itself is remote.
 
-Skema penamaan ikon didasarkan pada URL favicon WhatsApp Web:
+## Asset and profile locations
 
-* `~/.config/whatszan/user-icons/app.png` saat startup
-* `~/.config/whatszan/user-icons/favicon.png` ketika tidak ada pesan belum dibaca
-* `~/.config/whatszan/user-icons/f01.png` di mana fXX.png adalah jumlah pesan yang belum dibaca
+The Rust binary is self-contained for its normal pages and artwork:
 
-## Kredit & Ucapan Terima Kasih
+- Default icons live in `crates/whatszan-app/assets/` and are embedded at
+  compile time by `crates/whatszan-app/src/assets.rs`.
+- Locale catalogs live in `locales/` and are embedded by
+  `whatszan-core/src/translations.rs`. `WHATZAN_LOCALES_DIR` remains an
+  optional filesystem override, which is useful while editing translations.
+- Renderer JavaScript and privacy CSS come from the embedded
+  `crates/whatszan-app/src/renderer/` modules.
+- The debug page and Windows settings page live in
+  `crates/whatszan-app/frontend/` and are embedded through Tauri's
+  `frontendDist` at build time.
+- User data comes from `~/.config/WhatsZan` on Linux and
+  `%APPDATA%\WhatsZan` on Windows (or `WHATZAN_USER_DATA`). A `portable` file
+  next to the Windows executable redirects the profile to `WhatsZan-data` in
+  the same folder.
+- The WebKit profile lives in `<userData>/webkit`; the WebView2 profile lives
+  in `<userData>/webview2`.
+- Tauri bundle icons live in `crates/whatszan-app/icons/`; Linux uses the
+  RGBA PNGs and Windows also embeds `icon.ico`.
 
-Proyek ini adalah *fork* yang dimodifikasi secara ekstensif dari **[elecwhat](https://github.com/piec/elecwhat)**.
-Terima kasih yang sebesar-besarnya kepada kreator asli, [piec](https://github.com/piec), yang telah membangun fondasi Electron yang sangat stabil, integrasi DBus, dan struktur *preload script* yang sangat rapi.
+Override paths when packaging or testing:
 
-Modifikasi pada repositori ini (seperti fitur *Auto-Run*, routing tautan internal yang mulus, pemblokiran *tracker*, dan terjemahan bahasa Indonesia) dikembangkan secara spesifik untuk aplikasi WhatsZan dengan bantuan *AI coding assistant*.
+```sh
+WHATZAN_USER_DATA=/tmp/whatszan-profile
+WHATZAN_LOCALES_DIR=/usr/share/whatszan/locales
+```
+
+## Migration notes
+
+- The encrypted `config.json` format is intentionally compatible with the
+  Electron client. Existing settings should load without conversion.
+- WebKitGTK cannot read Chromium's IndexedDB/Local Storage, and the Windows
+  build keeps WebView2 data in its own `webview2` profile instead of reusing
+  Electron's Chromium profile. A WhatsApp QR scan is required once when
+  switching from the Electron build. Session snapshots include Chromium,
+  WebKit, and WebView2 directory names so switching back and forth does not
+  destroy any profile.
+- Close the Electron client before the first Rust run if both use the same
+  profile directory (`~/.config/WhatsZan` on Linux, `%APPDATA%\WhatsZan` on
+  Windows). The config files are compatible, but concurrent writes are not
+  coordinated.
+- `--hide` starts hidden regardless of `DEBUG`/`quit-on-close`, matching
+  Electron's `show: isHiddenStartup ? false : ...`.
+- `--settings` keeps the main window hidden and leaves the settings window open
+  until the user closes it. Openings from the menu/tray keep the Electron
+  popup behavior and close on focus loss; native file choosers temporarily
+  suppress that via `settings_ignore_blur`.
+- WebKit occasionally cancels the first WhatsApp navigation
+  (`Operation was cancelled`) in this environment and then leaves an empty
+  document. The `load-failed` handler re-navigates to the configured URL after
+  `retry-interval` (default 15 s) unless the page already became ready, so the
+  app recovers without user action. Real failures also send a "Failed to load"
+  notification; cancellation errors are suppressed to avoid retry noise.
+- WebView2 on Windows installs the equivalent permission, user-agent, and mute
+  handlers. `low-resource-mode`, `disable-gpu`, and `app-language` become
+  Chromium command-line switches, and the main profile lives in
+  `<userData>/webview2`.
+- WebKit's `Accept-Language` and spellcheck languages follow Electron:
+  `app-language` (plus `en` when explicitly set) drives preferred languages,
+  and an unset `spellcheck-languages` falls back to the system preference list.
+- If `config.json` cannot be parsed, the Rust build starts with defaults and
+  shows a Continue/Quit dialog, matching Electron's `config.parseError`
+  handling. Persistent-state parse errors are logged but do not block startup.
+- The renderer API is exposed as `window.__wzIpc`, not `window.ipc`. WRY
+  reserves `window.ipc` on Linux for Tauri's own frozen `postMessage` channel,
+  so the embedded shim is rewritten while Rust composes the injection script.
+- Rust injects `window.__wzConfig` before the shim runs. The shim's
+  `stateGet` calls resolve from that snapshot, and settings changes push a
+  fresh snapshot into the live page. Feature setup (anti-delete, ghost mode,
+  status saver, jump list) is gated by Rust decisions, not started blindly.
+- Remote WhatsApp pages may call the app's commands only because
+  `build.rs` generates an application ACL manifest and
+  `permissions/default.toml` allows each command in the `default` capability.
+  Add new IPC commands to all three places: `generate_handler!`, the
+  `build.rs` list, and `permissions/default.toml`.
+- `window.open()` targets that belong to WhatsApp (`about:blank`, `blob:`,
+  `data:`, `web.whatsapp.com`, and `*.whatsapp.net`) open in a real Tauri popup
+  window. The popup shares the opener's WebKit context and receives the same
+  Electron user agent, `navigator` shim, IPC bridge, media settings, and
+  auto-allow permission handler. External URLs are sent to the desktop browser,
+  matching Electron's `setWindowOpenHandler`. The capability file uses the
+  `popup-*` glob so those windows can reach the renderer bridge.
+- Every WebKit permission request is granted (`request.allow()`), matching
+  Electron's `setPermissionRequestHandler`/`setPermissionCheckHandler`:
+  notifications, microphone, camera, display capture, clipboard, and device
+  info. Popups inherit the same handler and media settings.
+- Permission *checks* report `granted` immediately, like Electron's
+  `setPermissionCheckHandler`. The init script overrides
+  `Notification.permission`, `Notification.requestPermission()`, and
+  `navigator.permissions.query()` for notifications, push, microphone, camera,
+  display capture, and clipboard. Without this, WhatsApp shows the
+  "message and call notifications are off" banner even though requests would
+  be allowed.
+- Page-level notifications go through the injected `Notification` proxy. As a
+  fallback, WebKitGTK's `show-notification` signal (used by service-worker
+  notifications) is routed to the same XDG backend and honours Do Not Disturb.
+- Electron's legacy `accounts-get`, `active-account-get`, and `account-remove`
+  handlers were constants/no-ops and were never exposed by the preload, so the
+  Rust build intentionally omits them.
+
+## Known limitations / differences
+
+- **Chrome extensions are not supported.** WebKitGTK has no Chromium extension
+  API, and WebView2 does not expose extension loading to the app. The settings
+  page explains this and links to the Chrome Web Store; `install-extension` is
+  a no-op that reports the limitation.
+- **Notification inline replies depend on the notification server.** WinRT
+  toasts and the KDE `inline-reply` extension (KDE Plasma 5.18+,
+  SwayNotificationCenter) provide a reply field. GNOME Shell, Cinnamon, MATE,
+  XFCE, LXQt, dunst, mako, and fnott do not advertise that capability; on
+  those servers WhatsZan adds a "Reply" action that opens a small quick-reply
+  window. Dunst exposes the action through its context menu, and mako uses the
+  notification body click because it renders no action buttons. Discord on
+  Linux likewise has no inline reply. On Windows, a stale toast activated from
+  Action Center after WhatsZan has exited does not carry the reply text,
+  because that cold-start path needs a registered COM activator.
+- **Menu auto-hide is approximated.** When `menu-bar-auto-hide` is enabled the
+  menu starts hidden and Alt toggles it on both backends.
+- **Anti-screencast is best-effort.** Windows uses
+  `SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)`, which covers most screen
+  capture tools. Linux calls `set_content_protected`, but WebKitGTK/GTK does
+  not provide Chromium's content protection.
+- **`disable-gpu` is startup-only.** Linux sets
+  `WEBKIT_DISABLE_COMPOSITING_MODE=1` and
+  `WEBKIT_DISABLE_DMABUF_RENDERER=1` before GTK starts; Windows adds
+  `--disable-gpu` to the WebView2 browser arguments. Restart the app after
+  changing it.
+- **`low-resource-mode` only affects Windows.** On Windows it adds Chromium
+  background/feature switches and lowers the renderer process limit; WebKitGTK
+  has no equivalent switches, so it is a no-op on Linux.
+- **Screen sharing uses the platform picker.** Linux delegates
+  `getDisplayMedia()` to the desktop portal; Windows uses WebView2's native
+  picker. The custom `static/screen-picker.html` flow is not wired to the Rust
+  build on either platform.
+- **Recent-chat jump lists are Windows-only.** Linux reports `jumpList: false`
+  so the shim skips the scan entirely; Windows updates the taskbar jump list
+  with up to five recent chats and New Chat/New Call tasks.
+- **Service-worker notifications are only intercepted on Linux.** WebKitGTK's
+  `show-notification` signal is routed to the XDG backend. WebView2
+  service-worker notifications are not intercepted yet; page-level
+  notifications still go through the injected bridge and WinRT backend.
+- **`whatsapp://` registration depends on the desktop environment.** On Linux
+  the Rust build writes `MimeType=x-scheme-handler/whatsapp` and calls
+  `xdg-mime default WhatsZan.desktop x-scheme-handler/whatsapp`; some desktops
+  require a logout or a manual default-app refresh. On Windows the handler is
+  written under `HKCU\Software\Classes\whatsapp`, but Windows 10+ may still ask
+  the user to confirm a default-app change.
+- **WhatsApp Web compatibility is not guaranteed.** The default Electron-style
+  user agent is preserved (including the `Electron/<version>` token, so linked
+  devices are reported as a desktop app rather than Chrome/Safari), but neither
+  WebKitGTK nor WebView2 is Electron's exact Chromium build. If WhatsApp changes
+  its browser checks, the user agent can be overridden in settings.
+
+## Architecture
+
+```
+Cargo.toml                 workspace
+  crates/whatszan-core/      platform-independent logic
+    config.rs                encrypted JSON config (Node-compatible)
+    keys.rs                  default keybindings + binding parser
+    mime.rs                  MIME type detection for shared files
+    paths.rs                 profile/asset locations
+    session_backup.rs        snapshot create/restore/retention
+    shortcuts.rs             autostart, launcher, share actions, URL handler
+    translations.rs          locale loading
+    url.rs                   WhatsApp URL helpers
+  crates/whatszan-app/       Tauri GUI/backend
+    main.rs                  CLI, plugins, setup, signals
+    assets.rs                embedded default icons
+    app_state.rs             shared state + Rust-owned renderer config
+    webview.rs               main window, injection, downloads, retry
+    settings_ui.rs           native GTK settings window (Linux)
+    settings_window.rs       HTML settings window (Windows)
+    commands.rs              Tauri IPC commands + shared settings logic
+    menu.rs                  native application menu
+    tray.rs                  StatusNotifierItem tray (Linux)
+    tray_windows.rs          Tauri tray-icon backend (Windows)
+    dbus.rs                  D-Bus service and Unity badge (Linux)
+    dialogs.rs               native message dialogs
+    notifications.rs         XDG notifications (Linux)
+    notifications_windows.rs WinRT toasts (Windows)
+    notifications_reply_window.rs  quick-reply window fallback (Linux)
+    notifications_common.rs  branding/avatar cache shared by both
+    theme.rs                 portal/gsettings/KDE theme detection (Linux)
+    theme_windows.rs         registry theme detection (Windows)
+    shell_windows.rs         AUMID, shortcuts, autostart, protocol, jump lists
+    webview2.rs              WebView2 permission/UA/mute handlers
+    renderer/mod.rs          composes config + shim for injection
+    renderer/bridge.rs       embedded Tauri IPC bridge (Electron-compatible)
+    renderer/injected.rs     embedded WhatsApp DOM shim
+    renderer/privacy.rs      embedded privacy-blur CSS
+    frontend/                settings.html (Windows) and debug.html
+    icons/                   Tauri bundle icons (PNG + icon.ico)
+```
+
+The renderer contract is the same as the Electron preload:
+
+- `window.__wzIpc.*` methods are backed by Tauri commands. The name differs
+  from Electron because WRY owns `window.ipc` on Linux.
+- The embedded bridge is a Tauri initialization script. It reports
+  `page_ready` from the real document (on `load`, with a 15 s fallback timer),
+  and Rust then injects the embedded DOM shim. WebKit's
+  `PageLoadEvent::Finished` can fire while the JavaScript context is still
+  `about:blank`, so it is not used as the injection trigger. The same bridge
+  runs inside WebView2 on Windows.
+- Rust parses keyboard bindings into `__wzConfig.keyBindings`; the shim only
+  compares them with DOM keyboard events and maps digit keys for non-QWERTY
+  layouts. Shared-file MIME types come from `whatszan-core::mime`, not from a
+  JavaScript extension table.
+- Privacy CSS and user CSS are inserted as `<style>` elements.
+- `settings-saved` is still emitted to all windows for renderer-side reloads;
+  the native settings window calls Rust directly and does not need it.
+- The Linux GTK settings window is transient for the main window and closes
+  when it loses focus, except while a native file/folder chooser is open. The
+  Windows HTML settings window uses the same close-on-blur behavior and also
+  suppresses blur while its file/folder pickers are open. Changing the language
+  closes and rebuilds the Linux window from the new translations; the Windows
+  page re-reads translations through `settings_get_translations`.
+
+## Verification
+
+```sh
+source "$HOME/.cargo/env"
+cargo test -p whatszan-core   # 28 platform-independent tests
+cargo test -p whatszan        # 10 renderer/config/asset tests
+cargo check -p whatszan
+
+# Windows target cross-check from Linux (requires cargo-xwin)
+cargo xwin check --target x86_64-pc-windows-msvc
+# Also verifies import libraries and the resource/icon link step
+cargo xwin build --target x86_64-pc-windows-msvc
+```
+
+CI runs the same formatting, check, and test steps on `ubuntu-latest` and
+`windows-latest` (see `.github/workflows/rust.yml`). The Windows job is the
+authoritative build check because it uses the real MSVC toolchain and WebView2
+SDK instead of cross-compiling.
+
+For a safe smoke test that does not touch the live profile or desktop entries:
+
+```sh
+tmp=$(mktemp -d)
+mkdir -p "$tmp/profile"
+printf '%s\n' '{"dbus":false,"quit-on-close":true}' > "$tmp/profile/config.json"
+HOME="$tmp" WHATZAN_USER_DATA="$tmp/profile" \
+  GDK_BACKEND=x11 WEBKIT_DISABLE_DMABUF_RENDERER=1 RUST_LOG=info \
+  timeout 75s ./target/debug/whatszan --hide
+```
+
+Allow 45–75 seconds: tray registration and the WhatsApp retry can both take a
+while. A successful run logs `[bridge] IPC ready on web.whatsapp.com`,
+`renderer page_ready`, and `injecting WhatsApp integration`.
+
+To exercise the settings window instead:
+
+```sh
+HOME="$tmp" WHATZAN_USER_DATA="$tmp/profile" \
+  GDK_BACKEND=x11 WEBKIT_DISABLE_DMABUF_RENDERER=1 RUST_LOG=info \
+  timeout 45s ./target/debug/whatszan --settings
+```
+
+On Windows, a non-destructive smoke test can use a temporary profile:
+
+```powershell
+$profile = Join-Path $env:TEMP "whatszan-profile"
+New-Item -ItemType Directory -Force $profile | Out-Null
+'{"quit-on-close":true}' | Set-Content (Join-Path $profile "config.json")
+$env:WHATZAN_USER_DATA = $profile
+$env:RUST_LOG = "info"
+.\target\debug\whatszan.exe --hide
+```
+
+Close it from the tray menu when finished.
+
+The Linux settings window is a native GTK window titled `Pengaturan`; it is
+created on the GTK main thread and shares `commands::save_settings` with the
+IPC path. No `settings.html` is loaded on Linux. With AT-SPI enabled, toggling
+a switch, editing the notification prefix, or adding a dictionary entry can be
+verified by decrypting the resulting `config.json` /
+`persistent-state.json` with the same scrypt key described in
+`whatszan-core::config`.
+
+On Windows, `--settings` opens `frontend/settings.html` inside a Tauri WebView2
+window. Toggling settings, changing the
+language, and uploading a custom icon exercise the same Rust commands; the
+window closes when it loses focus, so use the title bar or a native picker to
+keep it open while testing.
+
+(Close the Electron client first if you want to test against the real profile.)
+
+## License
+
+GPL-3.0-or-later, matching the original project.

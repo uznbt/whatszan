@@ -1,30 +1,108 @@
-console.log("injected.js");
+//! WhatsApp DOM integration, embedded in the Rust binary.
+//!
+//! The script is the minimal DOM/webpack shim required by WhatsApp Web;
+//! feature flags and persisted settings are supplied by Rust.
+
+pub const INJECTED_JS: &str = r###"console.log("injected.js");
 
 function ewHijackNotif(prefix) {
   window.realNotification = window.Notification;
 
   const override = {
+    get(target, prop, receiver) {
+      if (prop === 'permission') return 'granted';
+      if (prop === 'requestPermission') return () => Promise.resolve('granted');
+      return Reflect.get(target, prop, receiver);
+    },
     construct(target, args) {
       const title = `${prefix}${args[0]}`;
       const opts = args[1] || {};
+
+      // WhatsApp's notification fallback for a chat without a profile picture
+      // is a static asset rather than the initial-based avatar used in the
+      // chat list. Detect that asset and draw the same kind of initial badge
+      // locally so notifications match the list.
+      const isDefaultIcon = (icon) => {
+        if (!icon) return true;
+        try {
+          const url = new URL(icon, location.href);
+          return url.pathname.includes('/rsrc.php/');
+        } catch (e) {
+          return false;
+        }
+      };
+
+      const initialsAvatar = (name) => {
+        const words = String(name || '')
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean);
+        let initials = '';
+        for (const word of words) {
+          const char = Array.from(word).find((c) => /[\p{L}\p{N}]/u.test(c));
+          if (!char) continue;
+          initials += char.toUpperCase();
+          if (initials.length === 2) break;
+        }
+        if (!initials) return null;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 192;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+
+        let hash = 0;
+        for (const char of String(name || '')) {
+          hash = (hash * 31 + char.codePointAt(0)) >>> 0;
+        }
+        const palette = [
+          '#1f4e79', '#2e7d32', '#6a1b9a', '#ad1457',
+          '#ef6c00', '#00838f', '#4e342e', '#283593',
+        ];
+        ctx.fillStyle = palette[hash % palette.length];
+        ctx.beginPath();
+        ctx.arc(96, 96, 96, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'white';
+        ctx.font = `bold ${initials.length === 1 ? 104 : 78}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(initials, 96, 100);
+        return canvas.toDataURL('image/png');
+      };
 
       const dummy = new EventTarget();
       dummy.close = () => { };
 
       const sendToMain = async () => {
+        // Electron used `opts.icon` as the notification image. Keep that
+        // image (usually the sender's profile picture) as a data URL so Rust
+        // can attach it as `image-path`, while the desktop branding icon is
+        // sent separately as `app_icon`.
         let iconDataUrl = null;
-        if (opts.icon && opts.icon.startsWith('blob:')) {
-          try {
-            const res = await fetch(opts.icon);
-            const blob = await res.blob();
-            iconDataUrl = await new Promise(r => {
-              const reader = new FileReader();
-              reader.onloadend = () => r(reader.result);
-              reader.readAsDataURL(blob);
-            });
-          } catch (e) { console.error("Failed to convert blob icon", e); }
-        } else {
-          iconDataUrl = opts.icon;
+        const icon = typeof opts.icon === 'string' ? opts.icon : null;
+        if (isDefaultIcon(icon)) {
+          iconDataUrl = initialsAvatar(args[0]);
+        } else if (icon) {
+          if (icon.startsWith('data:')) {
+            iconDataUrl = icon;
+          } else {
+            try {
+              const res = await fetch(icon);
+              if (res.ok) {
+                const blob = await res.blob();
+                iconDataUrl = await new Promise((resolve) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result);
+                  reader.onerror = () => resolve(null);
+                  reader.readAsDataURL(blob);
+                });
+              }
+            } catch (e) {
+              console.error("Failed to convert notification icon", e);
+            }
+            if (!iconDataUrl) iconDataUrl = initialsAvatar(args[0]);
+          }
         }
 
         const id = Date.now().toString() + Math.random();
@@ -125,34 +203,21 @@ function ewDoWhatsappAction(whatsappAction) {
 }
 
 async function ewSetupKeys() {
-  const keys = await window?.ipc?.stateGet("keys");
+  // Rust parses the binding strings and ships the result in __wzConfig.
+  const bindings = window?.__wzConfig?.keyBindings ?? [];
   const kMap = await navigator.keyboard?.getLayoutMap?.();
 
-  const parsedCache = {};
-  function parseBinding(binding) {
-    if (binding in parsedCache) {
-      return parsedCache[binding];
-    }
-    const [modifiers, key] = binding.split(" ");
-    let mapped;
+  const layoutKey = (key) => {
     // if key is digit, use correct key for other keyboard layouts (like azerty)
     if (kMap && key.length == 1 && key >= "0" && key <= "9") {
-      mapped = kMap.get(`Digit${key}`);
+      const mapped = kMap.get(`Digit${key}`);
       console.debug("mapped", key, "to", mapped);
+      return mapped ?? key;
     }
+    return key;
+  };
 
-    const parsed = {
-      key: mapped ?? key,
-      ctrlKey: modifiers.includes("C"),
-      shiftKey: modifiers.includes("S"),
-      altKey: modifiers.includes("A"),
-      metaKey: modifiers.includes("M"),
-    };
-    parsedCache[binding] = parsed;
-    return parsed;
-  }
-
-  console.debug("keys", keys);
+  console.debug("keys", bindings);
 
   async function doAction(effect) {
     await {
@@ -199,15 +264,16 @@ async function ewSetupKeys() {
   }
 
   addEventListener("keydown", async (ev) => {
-    for (let [binding, effect] of Object.entries(keys)) {
-      const parsed = parseBinding(binding);
-      let match = true;
-      for (let [k, v] of Object.entries(parsed)) {
-        match &&= ev?.[k] == v;
-      }
+    for (const binding of bindings) {
+      const match =
+        ev.key == layoutKey(binding.key) &&
+        ev.ctrlKey == binding.ctrl &&
+        ev.shiftKey == binding.shift &&
+        ev.altKey == binding.alt &&
+        ev.metaKey == binding.meta;
       if (match) {
-        console.log("effect", effect);
-        await executeEffects(effect);
+        console.log("effect", binding.effect);
+        await executeEffects(binding.effect);
       }
     }
   });
@@ -561,6 +627,10 @@ function ewSetupAntiDelete() {
   console.log("Anti-Delete setup initialized.");
 
   const observer = new MutationObserver((mutations) => {
+    // The observer stays installed so toggling the setting works without a
+    // reload, but scanning every DOM mutation is expensive. Do nothing while
+    // the feature is off (the default).
+    if (!window.wzIncognito?.antiDelete) return;
     for (const mut of mutations) {
       if (mut.type === 'childList') {
         mut.addedNodes.forEach(node => {
@@ -608,7 +678,7 @@ function ewSetupAntiDelete() {
 
               // Check if this is a deleted message tombstone
               const isDeleted = msg.querySelector('span[data-icon="recalled"]') ||
-                (msg.innerText && (msg.innerText.includes('telah dihapus') || msg.innerText.includes('was deleted') || msg.innerText.includes('Pesan ini dihapus')));
+                (msg.textContent && (msg.textContent.includes('telah dihapus') || msg.textContent.includes('was deleted') || msg.textContent.includes('Pesan ini dihapus')));
 
               // ONLY recover if the setting is currently ON
               if (isDeleted && savedMessages.has(id) && window.wzIncognito?.antiDelete) {
@@ -1201,19 +1271,8 @@ async function processPendingShare() {
   for (const path of share.files) {
     const data = await window.ipc.readFileBuffer(path);
     if (data && data.buffer) {
-      const blob = new Blob([data.buffer]);
-      let mimeType = 'application/octet-stream';
-      const ext = data.name.split('.').pop().toLowerCase();
-      if (['jpg', 'jpeg'].includes(ext)) mimeType = 'image/jpeg';
-      else if (ext === 'png') mimeType = 'image/png';
-      else if (ext === 'gif') mimeType = 'image/gif';
-      else if (ext === 'webp') mimeType = 'image/webp';
-      else if (ext === 'mp4') mimeType = 'video/mp4';
-      else if (ext === 'pdf') mimeType = 'application/pdf';
-      else if (ext === 'txt') mimeType = 'text/plain';
-      else if (ext === 'csv') mimeType = 'text/csv';
-      else if (ext === 'zip') mimeType = 'application/zip';
-
+      const mimeType = data.type || 'application/octet-stream';
+      const blob = new Blob([data.buffer], { type: mimeType });
       const file = new File([blob], data.name, { type: mimeType });
       files.push(file);
     }
@@ -1285,3 +1344,4 @@ if (window?.ipc?.onShareFiles) {
     processPendingShare();
   }, 15000);
 }
+"###;

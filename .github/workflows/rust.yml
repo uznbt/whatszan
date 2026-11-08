@@ -4,11 +4,17 @@ on:
   push:
     branches: [main, rust-native]
     paths:
-      - "rust/**"
+      - "crates/**"
+      - "locales/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
       - ".github/workflows/rust.yml"
   pull_request:
     paths:
-      - "rust/**"
+      - "crates/**"
+      - "locales/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
       - ".github/workflows/rust.yml"
 
 jobs:
@@ -35,15 +41,12 @@ jobs:
             libdbus-1-dev libxdo-dev librsvg2-dev
 
       - name: Check formatting
-        working-directory: rust
         run: cargo fmt --all -- --check
 
       - name: Check
-        working-directory: rust
         run: cargo check --workspace
 
       - name: Test
-        working-directory: rust
         run: cargo test --workspace
 
   windows:
@@ -59,9 +62,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Check
-        working-directory: rust
         run: cargo check --workspace
 
       - name: Test
-        working-directory: rust
         run: cargo test --workspace

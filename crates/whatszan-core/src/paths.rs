@@ -58,7 +58,7 @@ pub fn user_icons_dir() -> PathBuf {
 }
 
 /// Directory that contains `en.json`, `id.json`, ... In a source checkout this
-/// is `<rust>/locales`; installed builds use `/usr/share/whatszan/locales`.
+/// is `<repo>/locales`; installed builds use `/usr/share/whatszan/locales`.
 pub fn locales_dir() -> PathBuf {
     if let Some(path) = std::env::var_os("WHATZAN_LOCALES_DIR") {
         return PathBuf::from(path);

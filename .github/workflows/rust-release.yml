@@ -40,7 +40,7 @@ jobs:
             build-essential pkg-config libssl-dev \
             libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev \
             libdbus-1-dev libxdo-dev librsvg2-dev \
-            libayatana-appindicator3-dev patchelf rpm
+            libayatana-appindicator3-dev patchelf rpm libfuse2t64
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -48,14 +48,14 @@ jobs:
       - name: Cache Rust build
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: rust
+          workspaces: .
 
       - name: Build and publish release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          projectPath: rust/crates/whatszan-app
+          projectPath: crates/whatszan-app
           tagName: ${{ github.event.inputs.tag || github.ref_name }}
           releaseName: "WhatsZan ${{ github.event.inputs.tag || github.ref_name }} (Rust)"
           releaseBody: |
@@ -63,5 +63,7 @@ jobs:
 
             - Linux: `.deb`, `.rpm`, `.AppImage`
             - Windows: installer / `.exe`
+            - Arch/CachyOS: install the matching `.pkg.tar.zst` with
+              `sudo pacman -U <file>` (uploaded separately when available)
           releaseDraft: false
           prerelease: false

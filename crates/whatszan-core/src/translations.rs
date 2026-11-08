@@ -1,6 +1,6 @@
 //! Locale loading, ported from `loadTranslations` in `src/util.mjs`.
 //!
-//! Catalogs are compiled into `whatszan-core` from `rust/locales`, so the Rust
+//! Catalogs are compiled into `whatszan-core` from `locales/`, so the Rust
 //! tree is self-contained and an installed build does not need any files from
 //! the Electron sources. A `WHATZAN_LOCALES_DIR` override still takes
 //! precedence, which keeps translation work and testing convenient.
@@ -9,7 +9,7 @@ use std::{fs, io::ErrorKind, path::Path};
 
 use serde_json::{Map, Value};
 
-/// Mirrors the JSON files in `rust/locales`.
+/// Mirrors the JSON files in `locales/`.
 const EMBEDDED_LOCALES: &[(&str, &str)] = &[
     ("de", include_str!("../../../locales/de.json")),
     ("en", include_str!("../../../locales/en.json")),

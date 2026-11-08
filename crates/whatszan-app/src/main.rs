@@ -69,17 +69,6 @@ fn main() {
 
     let user_data = paths::user_data_dir();
 
-    // Session snapshots must happen before WebKit opens the profile database.
-    match restore_session_backup_if_requested(&user_data) {
-        Ok(true) => tracing::info!("WhatsApp session restored from snapshot"),
-        Ok(false) => {
-            if let Err(err) = backup_session_data(&user_data) {
-                tracing::warn!(%err, "cannot create session snapshot");
-            }
-        }
-        Err(err) => tracing::warn!(%err, "cannot restore session snapshot"),
-    }
-
     let config = JsonConfig::new(paths::config_file(), Map::new());
     let persist = JsonConfig::new(paths::persistent_state_file(), Map::new());
 
@@ -175,6 +164,29 @@ fn main() {
         .on_menu_event(menu::on_menu_event)
         .setup(move |app| {
             let handle = app.handle().clone();
+            let setup_started = std::time::Instant::now();
+            tracing::info!("app setup started");
+
+            // Session snapshots must happen before WebKit opens the profile
+            // database, but only after the single-instance plugin has decided
+            // whether this process is the primary instance. Doing this earlier
+            // made every secondary launch copy the whole WebKit profile before
+            // it could simply show the existing window.
+            let backup_started = std::time::Instant::now();
+            match restore_session_backup_if_requested(&user_data) {
+                Ok(true) => tracing::info!("WhatsApp session restored from snapshot"),
+                Ok(false) => {
+                    if let Err(err) = backup_session_data(&user_data) {
+                        tracing::warn!(%err, "cannot create session snapshot");
+                    }
+                }
+                Err(err) => tracing::warn!(%err, "cannot restore session snapshot"),
+            }
+            tracing::info!(
+                elapsed_ms = backup_started.elapsed().as_millis() as u64,
+                "session backup step finished"
+            );
+
             app.manage(AppState::new(
                 user_data,
                 config,
@@ -183,12 +195,18 @@ fn main() {
                 is_debug,
             ));
 
+            let theme_started = std::time::Instant::now();
             let dark = tauri::async_runtime::block_on(async {
                 tokio::time::timeout(std::time::Duration::from_secs(2), theme::detect_theme()).await
             })
             .ok()
             .flatten()
             .unwrap_or(false);
+            tracing::info!(
+                elapsed_ms = theme_started.elapsed().as_millis() as u64,
+                dark,
+                "theme detection finished"
+            );
             app.state::<AppState>().set_theme_dark(dark);
 
             // Register the AppUserModelId and its branding before the first
@@ -196,7 +214,12 @@ fn main() {
             #[cfg(target_os = "windows")]
             shell_windows::register_app_identity(&handle);
 
+            let window_started = std::time::Instant::now();
             webview::create_main_window(&handle, window_visible)?;
+            tracing::info!(
+                elapsed_ms = window_started.elapsed().as_millis() as u64,
+                "main window created"
+            );
             show_config_error_dialog(&handle);
             tray::spawn(handle.clone());
             #[cfg(target_os = "linux")]
@@ -214,12 +237,17 @@ fn main() {
             commands::reapply_desktop_integration(&handle);
             handle_initial_args(&handle, &setup_args);
             spawn_signal_handler(handle.clone());
+            tracing::info!(
+                elapsed_ms = setup_started.elapsed().as_millis() as u64,
+                "app setup finished"
+            );
 
             Ok(())
         })
         .build(tauri::generate_context!())
         .expect("error while building WhatsZan");
 
+    tracing::info!("tauri app built, starting event loop");
     app.run(|app, event| {
         if let tauri::RunEvent::ExitRequested { .. } = event {
             tracing::debug!(app = %app.package_info().name, "exit requested");

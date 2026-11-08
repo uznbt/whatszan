@@ -1,7 +1,5 @@
-node_modules/
-
-out/
-dist/
+/target/
+/crates/whatszan-app/gen/
 
 .idea/
 
