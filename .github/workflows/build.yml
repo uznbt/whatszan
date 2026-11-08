@@ -3,7 +3,9 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'
+      # Electron is the v1.x line. Rust releases use v2.* and are handled by
+      # .github/workflows/rust-release.yml.
+      - 'v1.*'
 
 jobs:
   release:

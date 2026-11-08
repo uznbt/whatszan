@@ -2,7 +2,7 @@ name: Rust
 
 on:
   push:
-    branches: [main]
+    branches: [main, rust-native]
     paths:
       - "rust/**"
       - ".github/workflows/rust.yml"

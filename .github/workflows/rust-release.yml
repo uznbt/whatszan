@@ -1,0 +1,65 @@
+name: Rust Release
+
+on:
+  push:
+    tags:
+      - "v2.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (for example v2.0.0)"
+        required: true
+        default: "v2.0.0"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux (x86_64)
+            os: ubuntu-24.04
+          - name: Windows (x86_64)
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential pkg-config libssl-dev \
+            libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev \
+            libdbus-1-dev libxdo-dev librsvg2-dev \
+            libayatana-appindicator3-dev patchelf rpm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: Build and publish release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: rust/crates/whatszan-app
+          tagName: ${{ github.event.inputs.tag || github.ref_name }}
+          releaseName: "WhatsZan ${{ github.event.inputs.tag || github.ref_name }} (Rust)"
+          releaseBody: |
+            WhatsZan native Rust/Tauri release.
+
+            - Linux: `.deb`, `.rpm`, `.AppImage`
+            - Windows: installer / `.exe`
+          releaseDraft: false
+          prerelease: false
