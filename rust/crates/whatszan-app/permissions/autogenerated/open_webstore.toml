@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-open-webstore"
+description = "Enables the open_webstore command without any pre-configured scope."
+commands.allow = ["open_webstore"]
+
+[[permission]]
+identifier = "deny-open-webstore"
+description = "Denies the open_webstore command without any pre-configured scope."
+commands.deny = ["open_webstore"]

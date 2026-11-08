@@ -1,0 +1,25 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/whatszan-core",
+    "crates/whatszan-app",
+]
+
+[workspace.package]
+version = "2.0.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+authors = ["uznbt <uznbt@cachyos.org>"]
+homepage = "https://github.com/uznbt/whatszan"
+repository = "https://github.com/uznbt/whatszan"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tracing = "0.1"
+url = "2"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+walkdir = "2"
+dirs = "6"
+tempfile = "3"

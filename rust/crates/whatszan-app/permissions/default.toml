@@ -1,0 +1,40 @@
+# Permissions for the WhatsZan application commands.
+#
+# `tauri-build` generates one `allow-<command>` permission per entry listed in
+# build.rs. The default set below is attached to the `default` capability, which
+# covers both the local settings window and the remote WhatsApp Web origin.
+[default]
+description = "Allows the renderer bridge to call WhatsZan's own IPC commands."
+permissions = [
+  "allow-ping",
+  "allow-state-get",
+  "allow-settings-get",
+  "allow-settings-get-translations",
+  "allow-window-toggle",
+  "allow-escape-pressed",
+  "allow-open-settings",
+  "allow-toggle-menu",
+  "allow-toggle-privacy-blur",
+  "allow-toggle-anti-screencast",
+  "allow-open-url",
+  "allow-notify-ev",
+  "allow-notify-send",
+  "allow-log-to-main",
+  "allow-page-ready",
+  "allow-insert-text",
+  "allow-update-recent-chats",
+  "allow-update-unread",
+  "allow-get-pending-share",
+  "allow-read-file-buffer",
+  "allow-browse-folder",
+  "allow-get-default-download-paths",
+  "allow-check-path-exists",
+  "allow-settings-ignore-blur",
+  "allow-open-webstore",
+  "allow-install-extension",
+  "allow-screen-share-select",
+  "allow-settings-save",
+  "allow-branding-upload-icon",
+  "allow-branding-upload-bytes",
+  "allow-branding-reset-icons",
+]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-notify-ev"
+description = "Enables the notify_ev command without any pre-configured scope."
+commands.allow = ["notify_ev"]
+
+[[permission]]
+identifier = "deny-notify-ev"
+description = "Denies the notify_ev command without any pre-configured scope."
+commands.deny = ["notify_ev"]

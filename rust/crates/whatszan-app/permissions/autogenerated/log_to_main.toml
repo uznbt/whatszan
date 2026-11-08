@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-log-to-main"
+description = "Enables the log_to_main command without any pre-configured scope."
+commands.allow = ["log_to_main"]
+
+[[permission]]
+identifier = "deny-log-to-main"
+description = "Denies the log_to_main command without any pre-configured scope."
+commands.deny = ["log_to_main"]

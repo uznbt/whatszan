@@ -1,0 +1,27 @@
+[package]
+name = "whatszan-core"
+description = "Platform-independent core logic for the WhatsZan Rust rewrite"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+url.workspace = true
+chrono.workspace = true
+walkdir.workspace = true
+dirs.workspace = true
+
+aes-gcm = "0.10.3"
+scrypt = "0.11.0"
+rand = "0.8.5"
+hex = "0.4"
+
+[dev-dependencies]
+tempfile.workspace = true

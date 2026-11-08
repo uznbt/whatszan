@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-toggle-anti-screencast"
+description = "Enables the toggle_anti_screencast command without any pre-configured scope."
+commands.allow = ["toggle_anti_screencast"]
+
+[[permission]]
+identifier = "deny-toggle-anti-screencast"
+description = "Denies the toggle_anti_screencast command without any pre-configured scope."
+commands.deny = ["toggle_anti_screencast"]

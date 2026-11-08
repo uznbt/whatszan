@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-screen-share-select"
+description = "Enables the screen_share_select command without any pre-configured scope."
+commands.allow = ["screen_share_select"]
+
+[[permission]]
+identifier = "deny-screen-share-select"
+description = "Denies the screen_share_select command without any pre-configured scope."
+commands.deny = ["screen_share_select"]

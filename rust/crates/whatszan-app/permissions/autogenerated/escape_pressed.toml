@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-escape-pressed"
+description = "Enables the escape_pressed command without any pre-configured scope."
+commands.allow = ["escape_pressed"]
+
+[[permission]]
+identifier = "deny-escape-pressed"
+description = "Denies the escape_pressed command without any pre-configured scope."
+commands.deny = ["escape_pressed"]

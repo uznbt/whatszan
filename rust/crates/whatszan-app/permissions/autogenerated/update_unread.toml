@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-update-unread"
+description = "Enables the update_unread command without any pre-configured scope."
+commands.allow = ["update_unread"]
+
+[[permission]]
+identifier = "deny-update-unread"
+description = "Denies the update_unread command without any pre-configured scope."
+commands.deny = ["update_unread"]

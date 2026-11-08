@@ -1,0 +1,47 @@
+[package]
+name = "whatszan"
+description = "Unofficial WhatsApp desktop client for Linux, rewritten in Rust"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+default-run = "whatszan"
+
+[build-dependencies]
+tauri-build = { version = "2.7.4", features = [] }
+
+[dependencies]
+whatszan-core = { path = "../whatszan-core" }
+
+tauri = { version = "2.12.5", features = ["devtools"] }
+tauri-plugin-single-instance = "2.5.5"
+tauri-plugin-global-shortcut = "2.4.1"
+
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+url.workspace = true
+chrono.workspace = true
+dirs.workspace = true
+
+tokio = { version = "1", features = ["time", "sync", "rt-multi-thread", "macros", "process", "signal"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1"
+zbus = { version = "6", features = ["tokio"] }
+ksni = "0.3.7"
+notify-rust = { version = "4", default-features = false, features = ["z-with-tokio"] }
+ashpd = { version = "0.14", default-features = false, features = ["tokio", "settings"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "bmp", "ico", "webp", "tiff"] }
+base64 = "0.22"
+open = "5"
+rfd = { version = "0.17", default-features = false, features = ["xdg-portal"] }
+ureq = { version = "2.12", default-features = false, features = ["tls"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+webkit2gtk = { version = "2", features = ["v2_40"] }
+# Tauri already links GTK 3; using it directly lets the settings window be a
+# native GTK dialog instead of an embedded HTML page.
+gtk = "0.18"

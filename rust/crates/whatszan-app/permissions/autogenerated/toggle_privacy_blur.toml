@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-toggle-privacy-blur"
+description = "Enables the toggle_privacy_blur command without any pre-configured scope."
+commands.allow = ["toggle_privacy_blur"]
+
+[[permission]]
+identifier = "deny-toggle-privacy-blur"
+description = "Denies the toggle_privacy_blur command without any pre-configured scope."
+commands.deny = ["toggle_privacy_blur"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-browse-folder"
+description = "Enables the browse_folder command without any pre-configured scope."
+commands.allow = ["browse_folder"]
+
+[[permission]]
+identifier = "deny-browse-folder"
+description = "Denies the browse_folder command without any pre-configured scope."
+commands.deny = ["browse_folder"]

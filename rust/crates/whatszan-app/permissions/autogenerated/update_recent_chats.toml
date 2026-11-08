@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-update-recent-chats"
+description = "Enables the update_recent_chats command without any pre-configured scope."
+commands.allow = ["update_recent_chats"]
+
+[[permission]]
+identifier = "deny-update-recent-chats"
+description = "Denies the update_recent_chats command without any pre-configured scope."
+commands.deny = ["update_recent_chats"]

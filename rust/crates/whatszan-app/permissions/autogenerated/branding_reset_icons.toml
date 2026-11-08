@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-branding-reset-icons"
+description = "Enables the branding_reset_icons command without any pre-configured scope."
+commands.allow = ["branding_reset_icons"]
+
+[[permission]]
+identifier = "deny-branding-reset-icons"
+description = "Denies the branding_reset_icons command without any pre-configured scope."
+commands.deny = ["branding_reset_icons"]
