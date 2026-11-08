@@ -36,6 +36,7 @@ open = "5"
 ureq = { version = "2.12", default-features = false, features = ["tls"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
+futures-util = "0.3"
 zbus = { version = "6", features = ["tokio"] }
 ksni = "0.3.7"
 notify-rust = { version = "4", default-features = false, features = ["z-with-tokio"] }

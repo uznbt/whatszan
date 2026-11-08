@@ -42,10 +42,11 @@ Implemented:
   errors, and unsupported extensions. They use GTK directly instead of `rfd`'s
   portal/zenity fallback, so they work on desktops without `zenity`.
 - Desktop notifications via XDG (`notify-rust`) on Linux and WinRT toasts on
-  Windows, including click-to-open and sender avatars. Windows toasts also
-  provide an inline reply field that routes through the renderer's
-  `notify-reply` handler. Branding and avatar caching is shared in
-  `notifications_common.rs`.
+  Windows, including click-to-open and sender avatars. Inline replies work on
+  Windows and on notification servers that implement the KDE `inline-reply`
+  extension (KDE Plasma 5.18+, SwayNotificationCenter); the reply text routes
+  through the renderer's `notify-reply` handler. Branding and avatar caching is
+  shared in `notifications_common.rs`.
 - System theme detection through the XDG Settings portal with
   `gsettings` / KDE fallbacks on Linux, and the
   `AppsUseLightTheme` registry value on Windows.
@@ -295,12 +296,13 @@ WHATZAN_LOCALES_DIR=/usr/share/whatszan/locales
   API, and WebView2 does not expose extension loading to the app. The settings
   page explains this and links to the Chrome Web Store; `install-extension` is
   a no-op that reports the limitation.
-- **Notification inline replies are Windows-only.** WinRT toasts expose an
-  `<input>` action, so the Windows backend emits `notify-reply` with the typed
-  text while the app is running. XDG notifications have no portable reply-text
-  action; on Linux clicking the notification only opens the chat. A stale toast
-  activated from Action Center after WhatsZan has exited does not carry the
-  reply text, because that cold-start path needs a registered COM activator.
+- **Notification inline replies depend on the notification server.** WinRT
+  toasts and the KDE `inline-reply` extension (KDE Plasma 5.18+,
+  SwayNotificationCenter) provide a reply field. GNOME Shell does not advertise
+  that capability, so there the notification only opens the chat; Discord on
+  Linux likewise has no inline reply. On Windows, a stale toast activated from
+  Action Center after WhatsZan has exited does not carry the reply text,
+  because that cold-start path needs a registered COM activator.
 - **Menu auto-hide is approximated.** When `menu-bar-auto-hide` is enabled the
   menu starts hidden and Alt toggles it on both backends.
 - **Anti-screencast is best-effort.** Windows uses

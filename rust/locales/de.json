@@ -119,6 +119,7 @@
   "settings_smart_dl_path_document_desc": "System-Dokumentenordner",
   "settings_btn_browse": "Durchsuchen",
   "notification_reply_placeholder": "Auf Nachricht antworten...",
+  "notification_reply_action": "Antworten",
   "notification_reply_send": "Senden",
   "dnd_mode": "Nicht storen (DND)",
   "settings": "Einstellungen..."

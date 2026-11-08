@@ -193,6 +193,8 @@ fn main() {
             if enable_dbus {
                 tauri::async_runtime::spawn(dbus::start(handle.clone()));
             }
+            #[cfg(target_os = "linux")]
+            tauri::async_runtime::spawn(notifications::start_reply_listener(handle.clone()));
             theme::start(handle.clone());
 
             if !app_state::is_wayland_session() {

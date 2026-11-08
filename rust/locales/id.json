@@ -119,6 +119,7 @@
   "settings_smart_dl_path_document_desc": "Folder Dokumen sistem",
   "settings_btn_browse": "Browse",
   "notification_reply_placeholder": "Balas pesan...",
+  "notification_reply_action": "Balas",
   "notification_reply_send": "Kirim",
   "dnd_mode": "Mode Jangan Ganggu (DND)",
   "settings": "Pengaturan..."
