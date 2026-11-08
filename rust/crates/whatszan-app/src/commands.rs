@@ -538,6 +538,111 @@ fn desktop_integration() -> DesktopIntegration {
     DesktopIntegration::new(home, desktop, stable_exe_path())
 }
 
+/// Write the current app branding to a stable-per-content PNG and return its
+/// path. `.desktop` files cannot embed the image, and icon names such as
+/// `whatszan` resolve to the package artwork, which never follows branding.
+fn resolve_desktop_icon(state: &AppState) -> Result<PathBuf, String> {
+    use std::{
+        collections::hash_map::DefaultHasher,
+        hash::{Hash, Hasher},
+    };
+
+    let (choice, custom) = {
+        let persist = state.persist.read().unwrap();
+        (
+            persist.get_str("icon-choice-app", "whatszan").to_string(),
+            persist.get_str("custom_tray_app", "").to_string(),
+        )
+    };
+
+    let mut bytes = match choice.as_str() {
+        "custom" if !custom.is_empty() => {
+            fs::read(&custom).map_err(|err| format!("cannot read {custom}: {err}"))?
+        }
+        "whatsapp" => crate::assets::WHATSAPP_ICON_PNG.to_vec(),
+        _ => crate::assets::APP_ICON_PNG.to_vec(),
+    };
+
+    let image = match image::load_from_memory(&bytes) {
+        Ok(image) => image,
+        Err(err) if choice == "custom" => {
+            tracing::warn!(%err, "cannot decode custom app icon; using default");
+            bytes = crate::assets::APP_ICON_PNG.to_vec();
+            image::load_from_memory(&bytes).map_err(|err| format!("embedded app.png: {err}"))?
+        }
+        Err(err) => return Err(format!("cannot decode app icon: {err}")),
+    };
+
+    // Content-addressed name: changing the artwork changes the file name, so
+    // launchers that cache by path notice the update.
+    let mut hasher = DefaultHasher::new();
+    bytes.hash(&mut hasher);
+    let destination = state
+        .user_data
+        .join(format!("app-icon-{:016x}.png", hasher.finish()));
+
+    if !destination.exists() {
+        image
+            .resize(512, 512, image::imageops::FilterType::Lanczos3)
+            .save(&destination)
+            .map_err(|err| format!("cannot save {}: {err}", destination.display()))?;
+    }
+
+    // Remove artwork from previous choices; entries never point at it again.
+    if let Ok(entries) = fs::read_dir(&state.user_data) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path == destination {
+                continue;
+            }
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            if name.starts_with("app-icon-") && name.ends_with(".png") {
+                let _ = fs::remove_file(path);
+            }
+        }
+    }
+
+    Ok(destination)
+}
+
+/// Create the desktop entry named after the window's app id when it is
+/// missing or still points at an older branding. Upgrades from versions that
+/// only wrote `WhatsZan.desktop` rely on this to fix the dock icon without
+/// requiring the user to change settings first.
+fn ensure_app_desktop_entry(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let integration = desktop_integration();
+    let app_id = integration.app_id();
+    let path = integration.app_desktop_path();
+
+    let name = {
+        let persist = state.persist.read().unwrap();
+        let name = persist
+            .get_str("custom-app-name", "WhatsZan")
+            .trim()
+            .to_string();
+        if name.is_empty() {
+            "WhatsZan".to_string()
+        } else {
+            name
+        }
+    };
+    let Ok(icon) = resolve_desktop_icon(&state) else {
+        apply_branding_shortcut(app);
+        return;
+    };
+    let icon = icon.display().to_string();
+
+    let current = fs::read_to_string(&path).unwrap_or_default();
+    let up_to_date = current.contains(&format!("\nName={name}\n"))
+        && current.contains(&format!("\nIcon={icon}\n"))
+        && current.contains(&format!("\nStartupWMClass={app_id}\n"));
+    if !up_to_date {
+        apply_branding_shortcut(app);
+    }
+}
+
 fn apply_auto_run(app: &AppHandle, auto_run: bool, startup_run: bool) {
     if let Err(err) = desktop_integration().apply_auto_run(auto_run, startup_run) {
         tracing::warn!(%err, "cannot update autostart entry");
@@ -567,7 +672,7 @@ fn apply_desktop_integration(app: &AppHandle, register_url_handler: bool) {
         .read()
         .unwrap()
         .get_bool("register-url-scheme", true);
-    let (create, name, icon_choice, custom_icon, translations) = {
+    let (create, name, translations) = {
         let persist = state.persist.read().unwrap();
         (
             persist.get_bool("desktop-shortcut", true),
@@ -575,11 +680,6 @@ fn apply_desktop_integration(app: &AppHandle, register_url_handler: bool) {
                 .get_str("custom-app-name", "WhatsZan")
                 .trim()
                 .to_string(),
-            persist.get_str("icon-choice-app", "whatszan").to_string(),
-            persist
-                .get_str("custom_tray_app", "")
-                .to_string()
-                .into_option(),
             state.translations(),
         )
     };
@@ -589,15 +689,20 @@ fn apply_desktop_integration(app: &AppHandle, register_url_handler: bool) {
         name
     };
 
+    // Desktop entries cannot reference the embedded artwork, so materialize
+    // the current choice as an ordinary PNG and point the entries at it.
+    let icon_location = match resolve_desktop_icon(&state) {
+        Ok(path) => path.display().to_string(),
+        Err(err) => {
+            tracing::warn!(%err, "cannot prepare branded desktop icon");
+            "whatszan".to_string()
+        }
+    };
+
     let integration = desktop_integration();
-    if let Err(err) = integration.apply_desktop_shortcut(
-        create,
-        &name,
-        &name,
-        &icon_choice,
-        custom_icon.as_deref(),
-        &translations,
-    ) {
+    if let Err(err) =
+        integration.apply_desktop_shortcut(create, &name, &name, &icon_location, &translations)
+    {
         tracing::warn!(%err, "cannot update desktop shortcut");
     }
     if register_url_handler && register_scheme {
@@ -762,27 +867,14 @@ fn after_branding_change(app: &AppHandle, kind: &str) {
     });
 }
 
-trait IntoOption {
-    fn into_option(self) -> Option<PathBuf>;
-}
-
-impl IntoOption for String {
-    fn into_option(self) -> Option<PathBuf> {
-        if self.is_empty() {
-            None
-        } else {
-            Some(PathBuf::from(self))
-        }
-    }
-}
-
 /// Re-apply desktop integration at startup, following Electron's
 /// `app-version` / `reapply-shortcuts.flag` logic.
 ///
 /// `applyAutoRun` runs on every start (so a missing autostart file is repaired
 /// when the setting is enabled), but the `.desktop` shortcut and URL handler
-/// are only rewritten after an upgrade or when the repair flag exists. This
-/// keeps normal launches from touching `~/.local/share/applications`.
+/// are only rewritten after an upgrade or when the repair flag exists. The
+/// app-id entry used by docks is still checked on every start because older
+/// builds never created it; identical content is left untouched.
 pub fn reapply_desktop_integration(app: &AppHandle) {
     let state = app.state::<AppState>();
     if state.is_debug {
@@ -813,5 +905,7 @@ pub fn reapply_desktop_integration(app: &AppHandle) {
             }
         }
         apply_desktop_shortcut(app);
+    } else {
+        ensure_app_desktop_entry(app);
     }
 }

@@ -44,6 +44,28 @@ impl DesktopIntegration {
         self.home.join(".local/share/applications")
     }
 
+    /// Wayland app id (and GTK program name) of the running binary.
+    pub fn app_id(&self) -> String {
+        let fallback = "whatszan".to_string();
+        let Some(name) = self.exe.file_name() else {
+            return fallback;
+        };
+        let name = name.to_string_lossy();
+        let name = name.strip_suffix(".exe").unwrap_or(&name).to_string();
+        if name.is_empty() {
+            fallback
+        } else {
+            name
+        }
+    }
+
+    /// User-level desktop entry matching [`Self::app_id`]. It overrides the
+    /// package entry so docks and launchers pick up the current branding.
+    pub fn app_desktop_path(&self) -> PathBuf {
+        self.applications_dir()
+            .join(format!("{}.desktop", self.app_id()))
+    }
+
     fn autostart_dir(&self) -> PathBuf {
         self.home.join(".config/autostart")
     }
@@ -100,8 +122,7 @@ impl DesktopIntegration {
         create: bool,
         old_name: &str,
         new_name: &str,
-        icon_choice: &str,
-        custom_icon: Option<&Path>,
+        icon_location: &str,
         translations: &Map<String, Value>,
     ) -> std::io::Result<()> {
         let applications = self.applications_dir();
@@ -143,15 +164,12 @@ impl DesktopIntegration {
             self.clean_scripts(new_name);
         }
 
-        let icon_location = match icon_choice {
-            "whatszan" | "whatsapp" => icon_choice.to_string(),
-            _ => custom_icon
-                .map(|path| path.display().to_string())
-                .unwrap_or_else(|| "whatszan".to_string()),
-        };
-
+        // Task switchers and docks look the app up by its Wayland app id,
+        // which is the executable name. The generated entry must use the same
+        // id (not the customizable display name) so the branded icon is found.
+        let app_id = self.app_id();
         let desktop_entry = format!(
-            "[Desktop Entry]\nName={new_name}\nExec=\"{}\" %U\nTerminal=false\nType=Application\nIcon={icon_location}\nStartupWMClass={new_name}\nComment=WhatsZan Desktop Client\nCategories=Network;Chat;InstantMessaging;\nMimeType=x-scheme-handler/whatsapp;",
+            "[Desktop Entry]\nName={new_name}\nExec=\"{}\" %U\nTerminal=false\nType=Application\nIcon={icon_location}\nStartupWMClass={app_id}\nComment=WhatsZan Desktop Client\nCategories=Network;Chat;InstantMessaging;\nMimeType=x-scheme-handler/whatsapp;",
             self.exe.display()
         );
 
@@ -171,6 +189,11 @@ impl DesktopIntegration {
         fs::create_dir_all(&applications)?;
         write_atomic(&app_desktop, final_entry.as_bytes())?;
         let _ = fs::remove_file(&legacy_app_desktop);
+
+        // Keep an entry under the window's app id so docks and launchers show
+        // the branded icon instead of the static package artwork. This is
+        // written after the legacy cleanup in case the app id is `whatszan`.
+        write_atomic(&self.app_desktop_path(), final_entry.as_bytes())?;
 
         if create {
             fs::create_dir_all(&self.desktop_dir)?;
@@ -452,13 +475,13 @@ mod tests {
         assert!(content.contains("NoDisplay=true"));
 
         let translations = Map::new();
+        let icon = home.path().join("branded-icon.png");
         integration
             .apply_desktop_shortcut(
                 true,
                 "WhatsZan",
                 "WhatsZan",
-                "whatszan",
-                None,
+                &icon.display().to_string(),
                 &translations,
             )
             .unwrap();
@@ -469,7 +492,21 @@ mod tests {
         assert!(app_entry.exists());
         let app_content = fs::read_to_string(&app_entry).unwrap();
         assert!(app_content.contains("MimeType=x-scheme-handler/whatsapp;"));
-        assert!(app_content.contains("StartupWMClass=WhatsZan"));
-        assert!(desktop.join("WhatsZan.desktop").exists());
+        assert!(app_content.contains("StartupWMClass=whatszan"));
+        assert!(app_content.contains(&format!("Icon={}", icon.display())));
+
+        // The id-named entry is what docks resolve the running window to.
+        let id_entry = home
+            .path()
+            .join(".local/share/applications/whatszan.desktop");
+        assert!(id_entry.exists());
+        let id_content = fs::read_to_string(&id_entry).unwrap();
+        assert!(id_content.contains("StartupWMClass=whatszan"));
+        assert!(id_content.contains(&format!("Icon={}", icon.display())));
+
+        let shortcut = desktop.join("WhatsZan.desktop");
+        assert!(shortcut.exists());
+        let shortcut_content = fs::read_to_string(&shortcut).unwrap();
+        assert!(shortcut_content.contains(&format!("Icon={}", icon.display())));
     }
 }
