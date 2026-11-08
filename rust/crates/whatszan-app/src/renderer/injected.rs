@@ -22,16 +22,40 @@ function ewHijackNotif(prefix) {
       dummy.close = () => { };
 
       const sendToMain = async () => {
-        // Rust resolves the icon from the current desktop branding. WhatsApp
-        // often sends no icon at all, or only a contact avatar, so there is
-        // nothing useful to forward here.
+        // Electron used `opts.icon` as the notification image. Keep that
+        // image (usually the sender's profile picture) as a data URL so Rust
+        // can attach it as `image-path`, while the desktop branding icon is
+        // sent separately as `app_icon`.
+        let iconDataUrl = null;
+        const icon = typeof opts.icon === 'string' ? opts.icon : null;
+        if (icon) {
+          if (icon.startsWith('data:')) {
+            iconDataUrl = icon;
+          } else {
+            try {
+              const res = await fetch(icon);
+              if (res.ok) {
+                const blob = await res.blob();
+                iconDataUrl = await new Promise((resolve) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result);
+                  reader.onerror = () => resolve(null);
+                  reader.readAsDataURL(blob);
+                });
+              }
+            } catch (e) {
+              console.error("Failed to convert notification icon", e);
+            }
+          }
+        }
+
         const id = Date.now().toString() + Math.random();
         window.__notifs = window.__notifs || {};
         window.__notifs[id] = dummy;
 
         if (window?.ipc?.notifySend) {
           window.ipc.logToMain?.(`[WZ Notif] Routing notification to main process: ${title}`);
-          window.ipc.notifySend(id, title, opts.body, null);
+          window.ipc.notifySend(id, title, opts.body, iconDataUrl);
         } else {
           const thing = new target(title, opts);
           thing.addEventListener("click", (ev) => {

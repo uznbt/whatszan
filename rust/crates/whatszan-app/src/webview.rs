@@ -51,12 +51,24 @@ const DEBUG_PAGE_JS: &str = r#"(function () {
       );
     },
     notify: () => {
+      // Draw a small avatar so the notification exercises the same
+      // `image-path` hint that WhatsApp uses for sender profile pictures.
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 64;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "rgb(0, 168, 132)";
+      ctx.fillRect(0, 0, 64, 64);
+      ctx.fillStyle = "white";
+      ctx.font = "bold 36px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("PP", 32, 32);
       window.__wzIpc
         .notifySend(
           "debug-notification",
           "My notification",
-          "Notification from the Rust debug page",
-          null,
+          "Notification with a test avatar",
+          canvas.toDataURL("image/png"),
         )
         .catch((err) => console.error("notify failed", err));
     },

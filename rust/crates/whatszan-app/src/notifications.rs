@@ -5,11 +5,17 @@
 //! protocol directly. Clicking the notification raises the main window and
 //! forwards the message id to the renderer so it can open the chat.
 //!
-//! The icon is always the one currently used by the desktop launcher. WhatsApp
-//! itself often omits `opts.icon`, and Electron's notification icon followed
-//! the contact avatar instead of the app. Resolving `icon-choice-app` here
-//! makes notifications keep the same logo as the launcher and pick up branding
-//! changes immediately, without restarting the app.
+//! Two images are involved:
+//!
+//! * `app_icon` is always the branding icon currently used by the desktop
+//!   launcher (`icon-choice-app`). WhatsApp often omits this icon entirely,
+//!   and Electron's notification icon followed the contact avatar instead of
+//!   the app. Resolving it at send time means a branding change applies to the
+//!   next notification without restarting the app.
+//! * `image-path` is the sender's profile picture when WhatsApp supplies one
+//!   through `opts.icon`. Quickshell renders it as the main avatar with the
+//!   app icon as a small badge; dunst/mako display it as the notification
+//!   image. If no avatar is available, the branding icon is used alone.
 //!
 //! Inline replies are a macOS-only concept in `notify-rust`; XDG
 //! notifications have no portable "reply text" action, so `notify-reply` is
@@ -22,6 +28,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use notify_rust::{Hint, Notification, NotificationResponse};
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -32,14 +39,17 @@ pub fn send(
     id: String,
     title: String,
     body: String,
-    _icon_data_url: Option<String>,
+    icon_data_url: Option<String>,
 ) {
     tauri::async_runtime::spawn(async move {
-        let (app_name, icon_path, desktop_entry) = {
+        let (app_name, app_icon, avatar, desktop_entry) = {
             let state = app.state::<AppState>();
             (
                 state.custom_app_name(),
                 branding_icon(&state),
+                icon_data_url
+                    .as_deref()
+                    .and_then(|data| cache_avatar(&state, data)),
                 desktop_entry_id(),
             )
         };
@@ -51,11 +61,12 @@ pub fn send(
             .body(&body)
             .action("default", "Open");
 
-        if let Some(path) = icon_path.as_deref().and_then(Path::to_str) {
-            // `app_icon` is the portable notification icon; Quickshell uses
-            // it for the small header logo. `image-path` covers servers that
-            // only render the image hint. Both point at the same artwork.
+        if let Some(path) = app_icon.as_deref().and_then(Path::to_str) {
+            // Small application logo. It also acts as the fallback when
+            // WhatsApp did not supply a sender avatar.
             notification.icon(path);
+        }
+        if let Some(path) = avatar.as_deref().and_then(Path::to_str) {
             notification.hint(Hint::ImagePath(path.to_string()));
         }
         if let Some(entry) = desktop_entry {
@@ -117,16 +128,49 @@ fn branding_icon(state: &AppState) -> Option<PathBuf> {
     cache_icon(state, &bytes)
 }
 
-/// Store the icon under a content-addressed name so changing the branding
-/// produces a new path instead of leaving notification servers with a cached
-/// copy of the old logo.
+/// Decode the `data:image/...;base64,...` URL produced by the renderer and
+/// store it as the notification's main image. Reject non-image payloads so a
+/// broken avatar does not replace the branding icon with an error placeholder.
+fn cache_avatar(state: &AppState, data_url: &str) -> Option<PathBuf> {
+    let (header, encoded) = data_url.split_once(',')?;
+    let mime = header.strip_prefix("data:")?.split(';').next()?;
+    if !mime.starts_with("image/") {
+        return None;
+    }
+    let bytes = BASE64.decode(encoded.trim()).ok()?;
+    if image::load_from_memory(&bytes).is_err() {
+        return None;
+    }
+
+    let extension = match mime {
+        "image/png" => "png",
+        "image/jpeg" | "image/jpg" => "jpg",
+        "image/webp" => "webp",
+        "image/gif" => "gif",
+        "image/bmp" => "bmp",
+        "image/tiff" => "tiff",
+        _ => "img",
+    };
+    cache_bytes(
+        state,
+        &bytes,
+        format!("notification-avatar-{:016x}.{extension}", hash(&bytes)),
+    )
+}
+
+/// Store the branding icon under a content-addressed name so changing the
+/// branding produces a new path instead of leaving notification servers with a
+/// cached copy of the old logo.
 fn cache_icon(state: &AppState, bytes: &[u8]) -> Option<PathBuf> {
-    let mut hasher = DefaultHasher::new();
-    bytes.hash(&mut hasher);
-    let path = state
-        .user_data
-        .join("cache")
-        .join(format!("notification-{:016x}.png", hasher.finish()));
+    cache_bytes(
+        state,
+        bytes,
+        format!("notification-{:016x}.png", hash(bytes)),
+    )
+}
+
+fn cache_bytes(state: &AppState, bytes: &[u8], name: String) -> Option<PathBuf> {
+    let path = state.user_data.join("cache").join(name);
 
     if let Some(dir) = path.parent() {
         fs::create_dir_all(dir).ok()?;
@@ -135,6 +179,12 @@ fn cache_icon(state: &AppState, bytes: &[u8]) -> Option<PathBuf> {
         fs::write(&path, bytes).ok()?;
     }
     Some(path)
+}
+
+fn hash(bytes: &[u8]) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    bytes.hash(&mut hasher);
+    hasher.finish()
 }
 
 /// Name of the launcher entry the notification belongs to. Quickshell and
@@ -161,16 +211,19 @@ fn desktop_entry_id() -> Option<String> {
 mod tests {
     use super::*;
 
+    fn test_state(dir: &Path) -> AppState {
+        let config = whatszan_core::JsonConfig::new(dir.join("config.json"), Default::default());
+        let persist =
+            whatszan_core::JsonConfig::new(dir.join("persistent-state.json"), Default::default());
+        AppState::new(dir.to_path_buf(), config, persist, false, false)
+    }
+
     #[test]
     fn notification_icon_follows_branding_choice() {
         let dir = std::env::temp_dir().join(format!("whatszan-notif-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
-
-        let config = whatszan_core::JsonConfig::new(dir.join("config.json"), Default::default());
-        let persist =
-            whatszan_core::JsonConfig::new(dir.join("persistent-state.json"), Default::default());
-        let state = AppState::new(dir.clone(), config, persist, false, false);
+        let state = test_state(&dir);
 
         let app_icon = branding_icon(&state).unwrap();
         assert_eq!(fs::read(&app_icon).unwrap(), assets::APP_ICON_PNG);
@@ -201,6 +254,27 @@ mod tests {
         }
         let whatsapp_icon = branding_icon(&state).unwrap();
         assert_eq!(fs::read(&whatsapp_icon).unwrap(), assets::WHATSAPP_ICON_PNG);
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn avatar_data_url_is_cached_and_validated() {
+        let dir = std::env::temp_dir().join(format!("whatszan-avatar-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let state = test_state(&dir);
+
+        let data_url = format!(
+            "data:image/png;base64,{}",
+            BASE64.encode(assets::WHATSAPP_ICON_PNG)
+        );
+        let path = cache_avatar(&state, &data_url).unwrap();
+        assert!(path.is_file());
+        assert!(image::load_from_memory(&fs::read(&path).unwrap()).is_ok());
+
+        assert!(cache_avatar(&state, "data:text/plain;base64,aGVsbG8=").is_none());
+        assert!(cache_avatar(&state, "data:image/png;base64,bm90IGFuIGltYWdl").is_none());
 
         let _ = fs::remove_dir_all(&dir);
     }
