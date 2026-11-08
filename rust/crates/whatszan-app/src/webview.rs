@@ -30,10 +30,9 @@ const BRIDGE_JS: &str = crate::renderer::bridge::BRIDGE_JS;
 static BOUNDS_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 static POPUP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
-/// `static/debug.html` was written for the Electron preload, whose `window.ipc`
-/// object is configurable. WRY freezes `window.ipc` on Linux, so the original
-/// `debug-renderer.js` cannot see the bridge. Install the same handlers against
-/// `window.__wzIpc` after the debug page has loaded.
+/// The Rust-owned `frontend/debug.html` has no script of its own. WRY freezes
+/// `window.ipc` on Linux, so the bridge lives on `window.__wzIpc`; install the
+/// ping/notify/but1 handlers there after the debug page has loaded.
 const DEBUG_PAGE_JS: &str = r#"(function () {
   if (window.__wzDebugPageInstalled) return;
   window.__wzDebugPageInstalled = true;

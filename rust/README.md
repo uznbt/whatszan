@@ -5,9 +5,12 @@ standalone Tauri 2 + WebKitGTK application and does **not** run Electron or
 Node.js at runtime.
 
 The original Electron sources (`src/`, `src-web/`, `static/`, `locales/`,
-`build/`, ...) are intentionally left untouched. The Rust build embeds the
-renderer shims it needs and uses the existing user profile, so the two
-front-ends can coexist during the migration.
+`build/`, ...) are intentionally left untouched. Everything the Rust binary
+needs at build time now lives under `rust/` (icons in
+`crates/whatszan-app/assets/`, locales in `locales/`, and the debug page in
+`crates/whatszan-app/frontend/`), so the Rust tree builds on its own. Both
+front-ends still share the existing user profile and can coexist during the
+migration.
 
 ## Status
 
@@ -117,33 +120,32 @@ Useful runtime flags:
 
 ### Debug mode
 
-`DEBUG=1 ./target/debug/whatszan` loads `static/debug.html`, opens WebKit
-developer tools, and matches the Electron `DEBUG=1` behaviour. The normal
-`open-dev-tools` config key also works.
+`DEBUG=1 ./target/debug/whatszan` loads the Rust-owned
+`crates/whatszan-app/frontend/debug.html`, opens WebKit developer tools, and
+matches the Electron `DEBUG=1` behaviour. The normal `open-dev-tools` config
+key also works.
 
-The original `static/debug-renderer.js` attaches to `window.ipc`, which WRY
-freezes on Linux. Rust therefore installs equivalent `ping`, `notify`, and
-`but1` handlers against `window.__wzIpc` after the debug page reports ready,
-and the bridge's `debug` flag is set from the Rust configuration snapshot.
-`static/debug.html` is the only frontend page still loaded through Tauri's
-`frontendDist`; the normal settings UI and production pages are native or
-embedded.
+The debug page has no external script: Rust installs the equivalent `ping`,
+`notify`, and `but1` handlers against `window.__wzIpc` after the page reports
+ready, and the bridge's `debug` flag is set from the Rust configuration
+snapshot. It is the only frontend page loaded through Tauri's `frontendDist`;
+the normal settings UI is native GTK and WhatsApp itself is remote.
 
 ## Asset and profile locations
 
 The Rust binary is self-contained for its normal pages and artwork:
 
-- Default icons (`static/app.png`, `static/whatsapp.png`, `build/icon.png`)
-  are embedded at compile time by `crates/whatszan-app/src/assets.rs`. Runtime
-  does not read the Electron `static/` or `build/` directories for them.
-- Locale catalogs are embedded by `whatszan-core/src/translations.rs`. The
-  source `locales/` directory and `WHATZAN_LOCALES_DIR` remain optional
-  filesystem overrides, which is useful while editing translations.
+- Default icons live in `crates/whatszan-app/assets/` and are embedded at
+  compile time by `crates/whatszan-app/src/assets.rs`.
+- Locale catalogs live in `rust/locales/` and are embedded by
+  `whatszan-core/src/translations.rs`. `WHATZAN_LOCALES_DIR` remains an
+  optional filesystem override, which is useful while editing translations.
 - Renderer JavaScript and privacy CSS come from the embedded
   `crates/whatszan-app/src/renderer/` modules. The Electron `src-web/` files
   are not read at runtime.
-- `static/debug.html` is embedded through Tauri's `frontendDist` at build time
-  and is only used by `DEBUG=1`.
+- The debug page lives in `crates/whatszan-app/frontend/debug.html` and is
+  embedded through Tauri's `frontendDist` at build time; it is only used by
+  `DEBUG=1`.
 - User data comes from `~/.config/WhatsZan` (or `WHATZAN_USER_DATA`).
 - The WebKit profile lives in `<userData>/webkit`.
 - Tauri bundle icons live in `rust/crates/whatszan-app/icons/` and must be

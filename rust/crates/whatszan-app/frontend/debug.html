@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src https://web.whatsapp.com https://static.whatsapp.net; style-src 'unsafe-inline'"
+    />
+    <title>WhatsZan Debug</title>
+    <link
+      data-default-icon="https://static.whatsapp.net/rsrc.php/v3/yP/r/rYZqPCBaG70.png"
+      rel="shortcut icon"
+      href="https://static.whatsapp.net/rsrc.php/v3/yP/r/rYZqPCBaG70.png"
+    />
+    <link
+      id="favicon"
+      rel="shortcut icon"
+      type="image/png"
+      href="https://web.whatsapp.com/favicon/1x/f01/"
+      src="/favicon/1x/f01/"
+    />
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, sans-serif;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-width: 640px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 8px;
+      }
+      button {
+        align-self: flex-start;
+        padding: 8px 16px;
+        border: 1px solid #d3d9dc;
+        border-radius: 8px;
+        background: #f8f5f3;
+        cursor: pointer;
+      }
+      textarea {
+        min-height: 120px;
+      }
+      code {
+        opacity: 0.7;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WhatsZan debug page</h1>
+    <p>
+      Tombol di bawah memakai bridge Rust yang sama dengan halaman WhatsApp:
+      <code>__wzIpc</code> / Tauri IPC.
+    </p>
+    <button id="ping">ping</button>
+    <button id="notify">notify</button>
+    <button id="but1">but1</button>
+    <br />
+    <a href="https://google.com" target="_blank" rel="noreferrer">google.com</a>
+    <textarea spellcheck="true" id="story" name="story" rows="5" cols="33">It was a dark and stormy night...</textarea>
+  </body>
+</html>

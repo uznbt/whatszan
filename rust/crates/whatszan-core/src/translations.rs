@@ -1,22 +1,22 @@
 //! Locale loading, ported from `loadTranslations` in `src/util.mjs`.
 //!
-//! Catalogs are compiled into `whatszan-core` so an installed Rust build does
-//! not depend on the Electron `locales/` directory. A `WHATZAN_LOCALES_DIR`
-//! override (or the source-checkout `locales/` directory) still takes
+//! Catalogs are compiled into `whatszan-core` from `rust/locales`, so the Rust
+//! tree is self-contained and an installed build does not need any files from
+//! the Electron sources. A `WHATZAN_LOCALES_DIR` override still takes
 //! precedence, which keeps translation work and testing convenient.
 
 use std::{fs, io::ErrorKind, path::Path};
 
 use serde_json::{Map, Value};
 
-/// Keep these in sync with the files in the repository's `locales/` directory.
+/// Mirrors the JSON files in `rust/locales`.
 const EMBEDDED_LOCALES: &[(&str, &str)] = &[
-    ("de", include_str!("../../../../locales/de.json")),
-    ("en", include_str!("../../../../locales/en.json")),
-    ("fr", include_str!("../../../../locales/fr.json")),
-    ("id", include_str!("../../../../locales/id.json")),
-    ("it", include_str!("../../../../locales/it.json")),
-    ("pt", include_str!("../../../../locales/pt.json")),
+    ("de", include_str!("../../../locales/de.json")),
+    ("en", include_str!("../../../locales/en.json")),
+    ("fr", include_str!("../../../locales/fr.json")),
+    ("id", include_str!("../../../locales/id.json")),
+    ("it", include_str!("../../../locales/it.json")),
+    ("pt", include_str!("../../../locales/pt.json")),
 ];
 
 fn parse_catalog(raw: &str, source: &str) -> Option<Map<String, Value>> {
@@ -79,7 +79,7 @@ mod tests {
 
     #[test]
     fn loads_indonesian_and_falls_back() {
-        let locales = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../locales");
+        let locales = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../locales");
         let id = load_translations("id-ID", &locales);
         assert_eq!(
             translation(&id, "show_hide"),

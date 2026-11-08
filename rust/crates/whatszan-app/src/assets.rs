@@ -1,23 +1,21 @@
 //! Default artwork compiled into the binary.
 //!
-//! The Electron build read `static/app.png`, `static/whatsapp.png`, and
-//! `build/icon.png` from disk. Embedding them keeps an installed Rust build
-//! self-contained: branding still works when `/usr/share/whatszan` is absent,
-//! and user-selected custom icons remain ordinary files on disk.
+//! Every image lives under `rust/crates/whatszan-app/assets`, so the Rust tree
+//! no longer borrows files from the Electron sources at build time. Branding
+//! still works when `/usr/share/whatszan` is absent, and user-selected custom
+//! icons remain ordinary files on disk.
 
 /// Default application/tray icon (512×512 PNG).
-pub const APP_ICON_PNG: &[u8] = include_bytes!("../../../../static/app.png");
+pub const APP_ICON_PNG: &[u8] = include_bytes!("../assets/app.png");
 
 /// Default "WhatsApp" branding choice used by the settings window.
-pub const WHATSAPP_ICON_PNG: &[u8] = include_bytes!("../../../../static/whatsapp.png");
+pub const WHATSAPP_ICON_PNG: &[u8] = include_bytes!("../assets/whatsapp.png");
 
 /// Badged artwork used as the preview for the unread tray icon choice.
-pub const APP_BADGED_ICON_PNG: &[u8] = include_bytes!("../../../../static/app-badged.png");
+pub const APP_BADGED_ICON_PNG: &[u8] = include_bytes!("../assets/app-badged.png");
 
-/// Window/taskbar icon. In the Electron tree this is `build/icon.png`; the
-/// Rust tree keeps its own copy under `icons/` for bundlers, while this
-/// constant embeds the same artwork for runtime use.
-pub const WINDOW_ICON_PNG: &[u8] = include_bytes!("../../../../build/icon.png");
+/// Window/taskbar icon; same artwork as the Electron `build/icon.png`.
+pub const WINDOW_ICON_PNG: &[u8] = include_bytes!("../assets/app.png");
 
 #[cfg(test)]
 mod tests {
