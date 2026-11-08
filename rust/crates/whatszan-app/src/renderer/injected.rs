@@ -18,6 +18,59 @@ function ewHijackNotif(prefix) {
       const title = `${prefix}${args[0]}`;
       const opts = args[1] || {};
 
+      // WhatsApp's notification fallback for a chat without a profile picture
+      // is a static asset rather than the initial-based avatar used in the
+      // chat list. Detect that asset and draw the same kind of initial badge
+      // locally so notifications match the list.
+      const isDefaultIcon = (icon) => {
+        if (!icon) return true;
+        try {
+          const url = new URL(icon, location.href);
+          return url.pathname.includes('/rsrc.php/');
+        } catch (e) {
+          return false;
+        }
+      };
+
+      const initialsAvatar = (name) => {
+        const words = String(name || '')
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean);
+        let initials = '';
+        for (const word of words) {
+          const char = Array.from(word).find((c) => /[\p{L}\p{N}]/u.test(c));
+          if (!char) continue;
+          initials += char.toUpperCase();
+          if (initials.length === 2) break;
+        }
+        if (!initials) return null;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 192;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+
+        let hash = 0;
+        for (const char of String(name || '')) {
+          hash = (hash * 31 + char.codePointAt(0)) >>> 0;
+        }
+        const palette = [
+          '#1f4e79', '#2e7d32', '#6a1b9a', '#ad1457',
+          '#ef6c00', '#00838f', '#4e342e', '#283593',
+        ];
+        ctx.fillStyle = palette[hash % palette.length];
+        ctx.beginPath();
+        ctx.arc(96, 96, 96, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'white';
+        ctx.font = `bold ${initials.length === 1 ? 104 : 78}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(initials, 96, 100);
+        return canvas.toDataURL('image/png');
+      };
+
       const dummy = new EventTarget();
       dummy.close = () => { };
 
@@ -28,7 +81,9 @@ function ewHijackNotif(prefix) {
         // sent separately as `app_icon`.
         let iconDataUrl = null;
         const icon = typeof opts.icon === 'string' ? opts.icon : null;
-        if (icon) {
+        if (isDefaultIcon(icon)) {
+          iconDataUrl = initialsAvatar(args[0]);
+        } else if (icon) {
           if (icon.startsWith('data:')) {
             iconDataUrl = icon;
           } else {
@@ -46,6 +101,7 @@ function ewHijackNotif(prefix) {
             } catch (e) {
               console.error("Failed to convert notification icon", e);
             }
+            if (!iconDataUrl) iconDataUrl = initialsAvatar(args[0]);
           }
         }
 

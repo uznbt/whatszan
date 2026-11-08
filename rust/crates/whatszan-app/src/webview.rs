@@ -72,6 +72,15 @@ const DEBUG_PAGE_JS: &str = r#"(function () {
         )
         .catch((err) => console.error("notify failed", err));
     },
+    "notify-initials": () => {
+      // Use the real Notification shim with WhatsApp's default-icon URL so
+      // the initials fallback is exercised exactly like a no-avatar chat.
+      const notification = new Notification("Kurniawan Rizkiyansyah", {
+        body: "Notification with initials fallback",
+        icon: "https://static.whatsapp.net/rsrc.php/v3/yP/r/rYZqPCBaG70.png",
+      });
+      notification.addEventListener("click", (event) => console.log("click", event));
+    },
     but1: () => console.log("but1"),
   };
 
