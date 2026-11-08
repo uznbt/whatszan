@@ -22,28 +22,16 @@ function ewHijackNotif(prefix) {
       dummy.close = () => { };
 
       const sendToMain = async () => {
-        let iconDataUrl = null;
-        if (opts.icon && opts.icon.startsWith('blob:')) {
-          try {
-            const res = await fetch(opts.icon);
-            const blob = await res.blob();
-            iconDataUrl = await new Promise(r => {
-              const reader = new FileReader();
-              reader.onloadend = () => r(reader.result);
-              reader.readAsDataURL(blob);
-            });
-          } catch (e) { console.error("Failed to convert blob icon", e); }
-        } else {
-          iconDataUrl = opts.icon;
-        }
-
+        // Rust resolves the icon from the current desktop branding. WhatsApp
+        // often sends no icon at all, or only a contact avatar, so there is
+        // nothing useful to forward here.
         const id = Date.now().toString() + Math.random();
         window.__notifs = window.__notifs || {};
         window.__notifs[id] = dummy;
 
         if (window?.ipc?.notifySend) {
           window.ipc.logToMain?.(`[WZ Notif] Routing notification to main process: ${title}`);
-          window.ipc.notifySend(id, title, opts.body, iconDataUrl);
+          window.ipc.notifySend(id, title, opts.body, null);
         } else {
           const thing = new target(title, opts);
           thing.addEventListener("click", (ev) => {

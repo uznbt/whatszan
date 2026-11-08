@@ -51,8 +51,14 @@ const DEBUG_PAGE_JS: &str = r#"(function () {
       );
     },
     notify: () => {
-      const notification = new Notification("My notification");
-      notification.addEventListener("click", (event) => console.log("click", event));
+      window.__wzIpc
+        .notifySend(
+          "debug-notification",
+          "My notification",
+          "Notification from the Rust debug page",
+          null,
+        )
+        .catch((err) => console.error("notify failed", err));
     },
     but1: () => console.log("but1"),
   };

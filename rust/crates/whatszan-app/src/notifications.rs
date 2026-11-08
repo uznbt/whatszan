@@ -5,6 +5,12 @@
 //! protocol directly. Clicking the notification raises the main window and
 //! forwards the message id to the renderer so it can open the chat.
 //!
+//! The icon is always the one currently used by the desktop launcher. WhatsApp
+//! itself often omits `opts.icon`, and Electron's notification icon followed
+//! the contact avatar instead of the app. Resolving `icon-choice-app` here
+//! makes notifications keep the same logo as the launcher and pick up branding
+//! changes immediately, without restarting the app.
+//!
 //! Inline replies are a macOS-only concept in `notify-rust`; XDG
 //! notifications have no portable "reply text" action, so `notify-reply` is
 //! intentionally not emitted here.
@@ -13,26 +19,29 @@ use std::{
     collections::hash_map::DefaultHasher,
     fs,
     hash::{Hash, Hasher},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
-use notify_rust::{Notification, NotificationResponse};
+use notify_rust::{Hint, Notification, NotificationResponse};
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::app_state::AppState;
+use crate::{app_state::AppState, assets};
 
 pub fn send(
     app: AppHandle,
     id: String,
     title: String,
     body: String,
-    icon_data_url: Option<String>,
+    _icon_data_url: Option<String>,
 ) {
     tauri::async_runtime::spawn(async move {
-        let app_name = {
+        let (app_name, icon_path, desktop_entry) = {
             let state = app.state::<AppState>();
-            state.custom_app_name()
+            (
+                state.custom_app_name(),
+                branding_icon(&state),
+                desktop_entry_id(),
+            )
         };
 
         let mut notification = Notification::new();
@@ -42,13 +51,15 @@ pub fn send(
             .body(&body)
             .action("default", "Open");
 
-        if let Some(path) = icon_data_url
-            .as_deref()
-            .and_then(|data| write_icon(&app, data))
-        {
-            if let Some(path) = path.to_str() {
-                notification.icon(path);
-            }
+        if let Some(path) = icon_path.as_deref().and_then(Path::to_str) {
+            // `app_icon` is the portable notification icon; Quickshell uses
+            // it for the small header logo. `image-path` covers servers that
+            // only render the image hint. Both point at the same artwork.
+            notification.icon(path);
+            notification.hint(Hint::ImagePath(path.to_string()));
+        }
+        if let Some(entry) = desktop_entry {
+            notification.hint(Hint::DesktopEntry(entry));
         }
 
         match notification.show_async().await {
@@ -74,23 +85,123 @@ pub fn send(
     });
 }
 
-/// Decode a `data:image/...;base64,...` URL and store it in the cache folder.
-/// XDG notifications accept an icon path, not an in-memory image.
-fn write_icon(app: &AppHandle, data_url: &str) -> Option<PathBuf> {
-    let (prefix, encoded) = data_url.split_once(',')?;
-    if !prefix.starts_with("data:image/") {
-        return None;
-    }
-    let bytes = BASE64.decode(encoded).ok()?;
+/// Resolve the icon currently used by the desktop launcher.
+///
+/// Branding stores the choice in `icon-choice-app` and the uploaded image in
+/// `custom_tray_app`; `apply_desktop_shortcut` writes the same values into the
+/// `.desktop` `Icon=` field. Reading them when a notification is sent means a
+/// branding change applies to the next notification without a restart.
+fn branding_icon(state: &AppState) -> Option<PathBuf> {
+    let (choice, custom) = {
+        let persist = state.persist.read().unwrap();
+        (
+            persist.get_str("icon-choice-app", "whatszan").to_string(),
+            persist.get_str("custom_tray_app", "").to_string(),
+        )
+    };
 
+    let bytes = if choice == "custom" && !custom.is_empty() {
+        match fs::read(&custom) {
+            Ok(bytes) => bytes,
+            Err(err) => {
+                tracing::warn!(path = %custom, %err, "custom notification icon is unreadable");
+                assets::APP_ICON_PNG.to_vec()
+            }
+        }
+    } else if choice == "whatsapp" {
+        assets::WHATSAPP_ICON_PNG.to_vec()
+    } else {
+        assets::APP_ICON_PNG.to_vec()
+    };
+
+    cache_icon(state, &bytes)
+}
+
+/// Store the icon under a content-addressed name so changing the branding
+/// produces a new path instead of leaving notification servers with a cached
+/// copy of the old logo.
+fn cache_icon(state: &AppState, bytes: &[u8]) -> Option<PathBuf> {
     let mut hasher = DefaultHasher::new();
     bytes.hash(&mut hasher);
-    let name = format!("notification-{:016x}.png", hasher.finish());
+    let path = state
+        .user_data
+        .join("cache")
+        .join(format!("notification-{:016x}.png", hasher.finish()));
 
-    let state = app.state::<AppState>();
-    let dir = state.user_data.join("cache");
-    fs::create_dir_all(&dir).ok()?;
-    let path = dir.join(name);
-    fs::write(&path, bytes).ok()?;
+    if let Some(dir) = path.parent() {
+        fs::create_dir_all(dir).ok()?;
+    }
+    if !path.is_file() {
+        fs::write(&path, bytes).ok()?;
+    }
     Some(path)
+}
+
+/// Name of the launcher entry the notification belongs to. Quickshell and
+/// other servers use this hint for grouping and for their fallback icon.
+fn desktop_entry_id() -> Option<String> {
+    const USER_ENTRY: &str = "WhatsZan.desktop";
+    const SYSTEM_ENTRY: &str = "whatszan-native.desktop";
+
+    let applications = dirs::data_dir()?.join("applications");
+    if applications.join(USER_ENTRY).is_file() {
+        return Some("WhatsZan".into());
+    }
+    if applications.join(SYSTEM_ENTRY).is_file()
+        || Path::new("/usr/share/applications")
+            .join(SYSTEM_ENTRY)
+            .is_file()
+    {
+        return Some("whatszan-native".into());
+    }
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn notification_icon_follows_branding_choice() {
+        let dir = std::env::temp_dir().join(format!("whatszan-notif-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+
+        let config = whatszan_core::JsonConfig::new(dir.join("config.json"), Default::default());
+        let persist =
+            whatszan_core::JsonConfig::new(dir.join("persistent-state.json"), Default::default());
+        let state = AppState::new(dir.clone(), config, persist, false, false);
+
+        let app_icon = branding_icon(&state).unwrap();
+        assert_eq!(fs::read(&app_icon).unwrap(), assets::APP_ICON_PNG);
+
+        let custom_path = dir.join("custom.png");
+        fs::write(&custom_path, b"custom-bytes").unwrap();
+        {
+            let mut persist = state.persist.write().unwrap();
+            persist
+                .set("icon-choice-app", serde_json::json!("custom"))
+                .unwrap();
+            persist
+                .set(
+                    "custom_tray_app",
+                    serde_json::json!(custom_path.display().to_string()),
+                )
+                .unwrap();
+        }
+        let custom_icon = branding_icon(&state).unwrap();
+        assert_ne!(custom_icon, app_icon);
+        assert_eq!(fs::read(&custom_icon).unwrap(), b"custom-bytes");
+
+        {
+            let mut persist = state.persist.write().unwrap();
+            persist
+                .set("icon-choice-app", serde_json::json!("whatsapp"))
+                .unwrap();
+        }
+        let whatsapp_icon = branding_icon(&state).unwrap();
+        assert_eq!(fs::read(&whatsapp_icon).unwrap(), assets::WHATSAPP_ICON_PNG);
+
+        let _ = fs::remove_dir_all(&dir);
+    }
 }
