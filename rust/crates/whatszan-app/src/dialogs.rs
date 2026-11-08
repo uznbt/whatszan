@@ -14,6 +14,7 @@ pub enum Level {
 
 #[derive(Debug, Clone)]
 pub struct Buttons {
+    #[cfg_attr(target_os = "windows", allow(dead_code))]
     pub yes: String,
     pub no: Option<String>,
 }

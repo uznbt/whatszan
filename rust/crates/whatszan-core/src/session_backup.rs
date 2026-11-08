@@ -13,7 +13,7 @@ use std::{
 use chrono::Utc;
 use walkdir::WalkDir;
 
-pub const ITEMS: [&str; 7] = [
+pub const ITEMS: [&str; 8] = [
     // Chromium (Electron) profile data.
     "IndexedDB",
     "Local Storage",
@@ -25,6 +25,8 @@ pub const ITEMS: [&str; 7] = [
     // linked WhatsApp session.
     "webkit",
     "webkit-settings",
+    // WebView2 profile used by the Windows Rust build.
+    "webview2",
 ];
 pub const KEEP: usize = 5;
 pub const FLAG: &str = "restore-session.flag";

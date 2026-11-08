@@ -11,6 +11,7 @@ pub mod keys;
 pub mod mime;
 pub mod paths;
 pub mod session_backup;
+#[cfg(target_os = "linux")]
 pub mod shortcuts;
 pub mod translations;
 pub mod url;
@@ -36,6 +37,15 @@ pub use url::{
 /// browser name is mapped to `DeviceProps$PlatformType.DESKTOP`, which is what
 /// the Electron build reports. A plain Chrome UA would instead be shown as
 /// "Chrome" (with a browser logo) on the linked-devices screen.
+#[cfg(target_os = "windows")]
+pub const DEFAULT_USER_AGENT: &str = concat!(
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ",
+    "WhatsZan/",
+    env!("CARGO_PKG_VERSION"),
+    " Chrome/144.0.7559.236 Electron/40.10.5 Safari/537.36"
+);
+
+#[cfg(not(target_os = "windows"))]
 pub const DEFAULT_USER_AGENT: &str = concat!(
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) ",
     "WhatsZan/",

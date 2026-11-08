@@ -47,7 +47,11 @@ pub struct AppState {
     pub show_at_startup: bool,
     pub is_debug: bool,
     pub renderer_shortcuts: bool,
+    #[cfg(target_os = "linux")]
     pub tray: Mutex<Option<ksni::Handle<crate::tray::WhatsZanTray>>>,
+    #[cfg(target_os = "windows")]
+    pub tray: Mutex<Option<tauri::tray::TrayIcon<tauri::Wry>>>,
+    #[cfg(target_os = "linux")]
     pub dbus: Mutex<Option<zbus::Connection>>,
     pub main_window: RwLock<Option<WebviewWindow>>,
 }
@@ -90,7 +94,11 @@ impl AppState {
             show_at_startup,
             is_debug,
             renderer_shortcuts: is_wayland_session(),
+            #[cfg(target_os = "linux")]
             tray: Mutex::new(None),
+            #[cfg(target_os = "windows")]
+            tray: Mutex::new(None),
+            #[cfg(target_os = "linux")]
             dbus: Mutex::new(None),
             main_window: RwLock::new(None),
         }
@@ -123,6 +131,7 @@ impl AppState {
     /// Languages WebKit should advertise in `Accept-Language` and use for
     /// text rendering. Electron appends `,en;q=0.9` when `app-language` is not
     /// `auto`; otherwise it uses the system preference list.
+    #[allow(dead_code)]
     pub fn preferred_languages(&self) -> Vec<String> {
         let configured = {
             let config = self.config.read().unwrap();
@@ -142,6 +151,7 @@ impl AppState {
 
     /// Languages for WebKit's spellchecker. The Electron build defaults to the
     /// system languages when `spellcheck-languages` is not configured.
+    #[allow(dead_code)]
     pub fn spellcheck_languages(&self) -> Vec<String> {
         let configured: Vec<String> = {
             let config = self.config.read().unwrap();
@@ -272,7 +282,7 @@ impl AppState {
             "rendererShortcuts": self.renderer_shortcuts,
             // Windows jump lists have no Linux equivalent; skipping the
             // feature avoids a 24-hour localStorage scan and IPC calls.
-            "jumpList": false,
+            "jumpList": cfg!(target_os = "windows"),
         })
     }
 
@@ -384,6 +394,13 @@ impl EmptyString for String {
 
 /// Chromium's globalShortcut uses XGrabKey and therefore only works on X11.
 /// On Wayland the privacy shortcuts are handled by the renderer instead.
+/// Windows has working system-wide shortcuts, so the Rust plugin is used.
+#[cfg(target_os = "windows")]
+pub fn is_wayland_session() -> bool {
+    false
+}
+
+#[cfg(not(target_os = "windows"))]
 pub fn is_wayland_session() -> bool {
     std::env::var("XDG_SESSION_TYPE")
         .map(|value| value.eq_ignore_ascii_case("wayland"))
@@ -393,10 +410,50 @@ pub fn is_wayland_session() -> bool {
 
 /// Best-effort equivalent of Electron's `app.getPreferredSystemLanguages()`.
 ///
+/// Windows returns the user's UI language list from `GetUserPreferredUILanguages`.
+#[cfg(target_os = "windows")]
+#[allow(dead_code)]
+pub fn system_preferred_languages() -> Vec<String> {
+    use windows::core::PWSTR;
+    use windows::Win32::Globalization::{GetUserPreferredUILanguages, MUI_LANGUAGE_NAME};
+
+    let mut count = 0u32;
+    let mut size = 0u32;
+    unsafe {
+        let _ = GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &mut count, None, &mut size);
+        if size > 0 {
+            let mut buffer = vec![0u16; size as usize];
+            if GetUserPreferredUILanguages(
+                MUI_LANGUAGE_NAME,
+                &mut count,
+                Some(PWSTR(buffer.as_mut_ptr())),
+                &mut size,
+            )
+            .is_ok()
+            {
+                let raw: Vec<String> = buffer
+                    .split(|value| *value == 0)
+                    .filter(|part| !part.is_empty())
+                    .map(String::from_utf16_lossy)
+                    .collect();
+                if !raw.is_empty() {
+                    return normalize_preferred_languages(&raw);
+                }
+            }
+        }
+    }
+
+    normalize_preferred_languages(&[system_locale()])
+}
+
+/// Best-effort equivalent of Electron's `app.getPreferredSystemLanguages()`.
+///
 /// `LANGUAGE` is a colon-separated priority list on glibc systems. When it is
 /// unset, the usual `LC_ALL` / `LC_MESSAGES` / `LANG` fallback is used. Tags
 /// are normalized from `id_ID.UTF-8` to `id-ID`, and the bare language tag is
 /// appended as a lower-priority fallback.
+#[cfg(not(target_os = "windows"))]
+#[allow(dead_code)]
 pub fn system_preferred_languages() -> Vec<String> {
     let mut raw: Vec<String> = Vec::new();
     if let Ok(language) = std::env::var("LANGUAGE") {
@@ -424,6 +481,7 @@ pub fn system_preferred_languages() -> Vec<String> {
 
 /// Normalize locale tags such as `id_ID.UTF-8` into the `id-ID` + `id` pair
 /// WebKit expects, dropping duplicates and `C`/`POSIX` placeholders.
+#[allow(dead_code)]
 fn normalize_preferred_languages(raw: &[String]) -> Vec<String> {
     let mut languages: Vec<String> = Vec::new();
     for entry in raw {
@@ -494,6 +552,32 @@ mod tests {
 }
 
 /// Best-effort equivalent of Electron's `app.getLocale()`.
+#[cfg(target_os = "windows")]
+pub fn system_locale() -> String {
+    use windows::Win32::Globalization::GetUserDefaultLocaleName;
+
+    let mut buffer = [0u16; 85];
+    let length = unsafe { GetUserDefaultLocaleName(&mut buffer) };
+    if length > 0 {
+        let end = (length as usize).saturating_sub(1).min(buffer.len());
+        let tag = String::from_utf16_lossy(&buffer[..end]);
+        if let Some(language) = tag.split('-').next() {
+            if !language.is_empty() {
+                return language.to_string();
+            }
+        }
+    }
+
+    sys_locale::get_locale()
+        .as_deref()
+        .and_then(|locale| locale.split('-').next())
+        .filter(|language| !language.is_empty())
+        .unwrap_or("en")
+        .to_string()
+}
+
+/// Best-effort equivalent of Electron's `app.getLocale()`.
+#[cfg(not(target_os = "windows"))]
 pub fn system_locale() -> String {
     for key in ["LC_ALL", "LC_MESSAGES", "LANG"] {
         if let Ok(value) = std::env::var(key) {

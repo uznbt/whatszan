@@ -7,14 +7,15 @@ use std::{
     sync::Mutex,
 };
 
+#[cfg(target_os = "windows")]
+use crate::shell_windows::DesktopIntegration;
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use tauri::{AppHandle, Emitter, Manager, State};
-use whatszan_core::{
-    mime_for_name,
-    shortcuts::{stable_exe_path, DesktopIntegration},
-};
+use whatszan_core::mime_for_name;
+#[cfg(target_os = "linux")]
+use whatszan_core::shortcuts::{stable_exe_path, DesktopIntegration};
 
 use crate::{
     app_state::{AppState, ShareRequest},
@@ -235,9 +236,13 @@ pub fn insert_text(app: AppHandle, text: String) {
 }
 
 #[tauri::command]
-pub fn update_recent_chats(_chats: Vec<String>) {
+pub fn update_recent_chats(app: AppHandle, chats: Vec<String>) {
     // Jump lists are a Windows shell feature; the Linux build has no direct
     // equivalent. Keep the IPC method available so injected.js stays happy.
+    #[cfg(target_os = "windows")]
+    crate::shell_windows::update_recent_chats(&app, &chats);
+    #[cfg(not(target_os = "windows"))]
+    let _ = (app, chats);
 }
 
 #[tauri::command]
@@ -259,6 +264,7 @@ pub fn update_unread(app: AppHandle, favicon: String) -> u32 {
         let app_handle = app.clone();
         tauri::async_runtime::spawn(async move {
             tray::set_unread(&app_handle, unread).await;
+            #[cfg(target_os = "linux")]
             crate::dbus::set_badge_count(&app_handle, unread).await;
         });
     }
@@ -338,13 +344,13 @@ pub fn open_webstore() {
 pub async fn install_extension(app: AppHandle, extension_id: String) -> bool {
     tracing::warn!(
         %extension_id,
-        "Chrome extensions cannot be installed in WebKitGTK; ignoring request"
+        "Chrome extensions are not supported by the Rust webview backend; ignoring request"
     );
     let _ = app;
     crate::dialogs::message(
         crate::dialogs::Level::Error,
         "Ekstensi tidak didukung",
-        "WhatsZan versi Rust memakai WebKitGTK, yang tidak mendukung ekstensi Chrome. \
+        "WhatsZan versi Rust tidak mendukung ekstensi Chrome. \
          Fitur ekstensi hanya tersedia pada versi Electron.",
         crate::dialogs::Buttons::ok("OK"),
     )
@@ -439,9 +445,13 @@ pub fn save_settings(app: &AppHandle, new_settings: Value) -> Result<(), String>
     if old_auto_run != auto_run {
         apply_auto_run(app, auto_run, false);
     }
-    if old_desktop_shortcut != desktop_shortcut
-        || (desktop_shortcut && old_app_name != new_app_name)
-    {
+    // Windows keeps the Start Menu shortcut even when desktop shortcuts are
+    // disabled, because it registers the AppUserModelID used by toasts and
+    // jump lists. Renaming the app therefore has to refresh that shortcut on
+    // Windows even when `desktop-shortcut` is off.
+    let rename_needs_refresh =
+        old_app_name != new_app_name && (desktop_shortcut || cfg!(target_os = "windows"));
+    if old_desktop_shortcut != desktop_shortcut || rename_needs_refresh {
         apply_desktop_integration(app, true, Some(&old_app_name));
     }
 
@@ -532,15 +542,22 @@ fn apply_app_name(window: &tauri::WebviewWindow, old_name: &str, new_name: &str)
     let _ = window.eval(script);
 }
 
+#[cfg(target_os = "linux")]
 fn desktop_integration() -> DesktopIntegration {
     let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
     let desktop = dirs::desktop_dir().unwrap_or_else(|| home.join("Desktop"));
     DesktopIntegration::new(home, desktop, stable_exe_path())
 }
 
+#[cfg(target_os = "windows")]
+fn desktop_integration() -> DesktopIntegration {
+    crate::shell_windows::desktop_integration()
+}
+
 /// Write the current app branding to a stable-per-content PNG and return its
 /// path. `.desktop` files cannot embed the image, and icon names such as
 /// `whatszan` resolve to the package artwork, which never follows branding.
+#[cfg(target_os = "linux")]
 fn resolve_desktop_icon(state: &AppState) -> Result<PathBuf, String> {
     use std::{
         collections::hash_map::DefaultHasher,
@@ -606,10 +623,18 @@ fn resolve_desktop_icon(state: &AppState) -> Result<PathBuf, String> {
     Ok(destination)
 }
 
+/// Windows shortcuts use `.ico` files; the conversion and cache live in
+/// `shell_windows`, but `commands.rs` keeps the same helper name.
+#[cfg(target_os = "windows")]
+fn resolve_desktop_icon(state: &AppState) -> Result<PathBuf, String> {
+    crate::shell_windows::resolve_app_icon(state)
+}
+
 /// Create the desktop entry named after the window's app id when it is
 /// missing or still points at an older branding. Upgrades from versions that
 /// only wrote `WhatsZan.desktop` rely on this to fix the dock icon without
 /// requiring the user to change settings first.
+#[cfg(target_os = "linux")]
 fn ensure_app_desktop_entry(app: &AppHandle) {
     let state = app.state::<AppState>();
     let integration = desktop_integration();
@@ -646,6 +671,11 @@ fn ensure_app_desktop_entry(app: &AppHandle) {
     if !up_to_date || duplicate {
         apply_desktop_shortcut(app);
     }
+}
+
+#[cfg(target_os = "windows")]
+fn ensure_app_desktop_entry(app: &AppHandle) {
+    crate::shell_windows::ensure_shortcuts(app);
 }
 
 fn apply_auto_run(app: &AppHandle, auto_run: bool, startup_run: bool) {
@@ -761,9 +791,10 @@ pub fn upload_branding_path(app: &AppHandle, kind: &str, path: &str) -> Result<(
 pub fn branding_upload_bytes(
     app: AppHandle,
     kind: String,
-    _name: String,
+    name: String,
     data: String,
 ) -> Result<bool, String> {
+    let _ = name;
     upload_branding_bytes(&app, &kind, &data)?;
     Ok(true)
 }

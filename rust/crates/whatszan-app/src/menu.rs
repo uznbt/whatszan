@@ -270,8 +270,13 @@ fn show_about(app: &AppHandle) {
         .map(|state| state.custom_app_name())
         .unwrap_or_else(|| "WhatsZan".to_string());
     let version = env!("CARGO_PKG_VERSION");
+    let platform = if cfg!(target_os = "windows") {
+        "Windows"
+    } else {
+        "Linux"
+    };
     let description = format!(
-        "{name} {version}\n\nUnofficial WhatsApp desktop client for Linux.\n\
+        "{name} {version}\n\nUnofficial WhatsApp desktop client for {platform}.\n\
          Rust/Tauri rewrite of the original Electron application."
     );
     tauri::async_runtime::spawn(async move {

@@ -20,11 +20,12 @@
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
-      "icons/icon.png"
+      "icons/icon.png",
+      "icons/icon.ico"
     ],
     "category": "Network",
-    "shortDescription": "Unofficial WhatsApp desktop client for Linux",
-    "longDescription": "WhatsZan is an unofficial WhatsApp Web client for Linux. This is the Rust/Tauri rewrite; the original Electron sources are kept in the repository root.",
+    "shortDescription": "Unofficial WhatsApp desktop client for Linux and Windows",
+    "longDescription": "WhatsZan is an unofficial WhatsApp Web client for Linux and Windows. This is the Rust/Tauri rewrite; the original Electron sources are kept in the repository root.",
     "linux": {
       "deb": {
         "depends": []

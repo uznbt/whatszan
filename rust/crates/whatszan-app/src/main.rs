@@ -1,22 +1,48 @@
 //! WhatsZan — Rust/Tauri rewrite of the original Electron client.
 //!
 //! The original JavaScript sources are intentionally left untouched. This
-//! binary embeds the small DOM shim it needs, builds the settings UI with GTK,
-//! and uses the existing `~/.config/WhatsZan` profile while running entirely on
-//! Rust, Tauri, and WebKitGTK.
+//! binary embeds the small DOM shim it needs, uses a native GTK settings window
+//! on Linux and an HTML settings window on Windows, and keeps the existing
+//! `WhatsZan` profile while running entirely on Rust, Tauri, WebKitGTK, or
+//! WebView2.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod app_state;
 mod assets;
 mod commands;
+#[cfg(target_os = "linux")]
 mod dbus;
 mod dialogs;
 mod menu;
+#[cfg(target_os = "linux")]
+#[path = "notifications.rs"]
 mod notifications;
+#[cfg(target_os = "windows")]
+#[path = "notifications_windows.rs"]
+mod notifications;
+mod notifications_common;
 mod renderer;
+#[cfg(target_os = "linux")]
 mod settings_ui;
+#[cfg(target_os = "windows")]
+mod settings_window;
+#[cfg(target_os = "windows")]
+mod shell_windows;
+#[cfg(target_os = "linux")]
+#[path = "theme.rs"]
 mod theme;
+#[cfg(target_os = "windows")]
+#[path = "theme_windows.rs"]
+mod theme;
+#[cfg(target_os = "linux")]
+#[path = "tray.rs"]
+mod tray;
+#[cfg(target_os = "windows")]
+#[path = "tray_windows.rs"]
 mod tray;
 mod webview;
+#[cfg(target_os = "windows")]
+mod webview2;
 
 use serde_json::Map;
 use tauri::{AppHandle, Manager};
@@ -30,6 +56,11 @@ use whatszan_core::{
 use crate::app_state::AppState;
 
 fn main() {
+    // The AppUserModelID must be set before the first window is created so
+    // Windows groups taskbar buttons, jump lists, and toasts under one app.
+    #[cfg(target_os = "windows")]
+    shell_windows::set_process_app_id();
+
     let args: Vec<String> = std::env::args().collect();
     let is_debug = std::env::var("DEBUG").as_deref() == Ok("1");
     let hidden_startup = args.iter().any(|arg| arg == "--hide");
@@ -69,11 +100,14 @@ fn main() {
     tracing::info!(config = %config.file().display(), "starting WhatsZan");
     tracing::info!(state = %persist.file().display(), "persistent state");
 
-    // WebKitGTK reads these before the first web process starts. Chromium's
-    // `app.disableHardwareAcceleration()` has no direct Tauri equivalent.
+    // WebKitGTK reads these before the first web process starts. WebView2 gets
+    // the equivalent `--disable-gpu` switch when the main window is built.
     if config.get_bool("disable-gpu", false) {
-        std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
-        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        #[cfg(target_os = "linux")]
+        {
+            std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+            std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        }
         tracing::info!("GPU acceleration disabled by configuration");
     }
 
@@ -85,6 +119,7 @@ fn main() {
     // prevents it from stealing focus and closing the transient settings
     // window while WhatsApp Web finishes loading.
     let window_visible = !hidden_startup && !settings_startup;
+    #[cfg(target_os = "linux")]
     let enable_dbus = config.get_bool("dbus", true);
 
     let setup_args = args.clone();
@@ -146,9 +181,15 @@ fn main() {
             .unwrap_or(false);
             app.state::<AppState>().set_theme_dark(dark);
 
+            // Register the AppUserModelId and its branding before the first
+            // toast or shortcut is created.
+            #[cfg(target_os = "windows")]
+            shell_windows::register_app_identity(&handle);
+
             webview::create_main_window(&handle, window_visible)?;
             show_config_error_dialog(&handle);
             tray::spawn(handle.clone());
+            #[cfg(target_os = "linux")]
             if enable_dbus {
                 tauri::async_runtime::spawn(dbus::start(handle.clone()));
             }

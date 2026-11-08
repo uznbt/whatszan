@@ -1,6 +1,6 @@
 [package]
 name = "whatszan"
-description = "Unofficial WhatsApp desktop client for Linux, rewritten in Rust"
+description = "Unofficial WhatsApp desktop client for Linux and Windows, rewritten in Rust"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -30,18 +30,40 @@ dirs.workspace = true
 tokio = { version = "1", features = ["time", "sync", "rt-multi-thread", "macros", "process", "signal"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 anyhow = "1"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "bmp", "ico", "webp", "tiff"] }
+base64 = "0.22"
+open = "5"
+ureq = { version = "2.12", default-features = false, features = ["tls"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
 zbus = { version = "6", features = ["tokio"] }
 ksni = "0.3.7"
 notify-rust = { version = "4", default-features = false, features = ["z-with-tokio"] }
 ashpd = { version = "0.14", default-features = false, features = ["tokio", "settings"] }
-image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "bmp", "ico", "webp", "tiff"] }
-base64 = "0.22"
-open = "5"
 rfd = { version = "0.17", default-features = false, features = ["xdg-portal"] }
-ureq = { version = "2.12", default-features = false, features = ["tls"] }
-
-[target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk = { version = "2", features = ["v2_40"] }
 # Tauri already links GTK 3; using it directly lets the settings window be a
 # native GTK dialog instead of an embedded HTML page.
 gtk = "0.18"
+
+[target.'cfg(windows)'.dependencies]
+# `tray-icon` is not part of Tauri's default feature set.
+tauri = { version = "2.12.5", features = ["devtools", "tray-icon"] }
+tauri-winrt-notification = "0.8.1"
+webview2-com = "0.39"
+windows = { version = "0.62.2", features = [
+    "Win32_Foundation",
+    "Win32_Globalization",
+    "Win32_Storage_EnhancedStorage",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Variant",
+    "Win32_System_WinRT",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_Common",
+    "Win32_UI_Shell_PropertiesSystem",
+    "Win32_UI_WindowsAndMessaging",
+] }
+winreg = "0.56"
+rfd = { version = "0.17", default-features = false, features = ["common-controls-v6"] }
+sys-locale = "0.3"

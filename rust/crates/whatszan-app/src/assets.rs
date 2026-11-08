@@ -12,6 +12,7 @@ pub const APP_ICON_PNG: &[u8] = include_bytes!("../assets/app.png");
 pub const WHATSAPP_ICON_PNG: &[u8] = include_bytes!("../assets/whatsapp.png");
 
 /// Badged artwork used as the preview for the unread tray icon choice.
+#[cfg_attr(target_os = "windows", allow(dead_code))]
 pub const APP_BADGED_ICON_PNG: &[u8] = include_bytes!("../assets/app-badged.png");
 
 /// Window/taskbar icon; same artwork as the Electron `build/icon.png`.

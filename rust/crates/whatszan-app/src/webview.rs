@@ -107,11 +107,16 @@ fn configured_url(state: &AppState) -> Url {
 /// user agent inside `window.open()` and offers the macOS application.
 fn identity_init_script(state: &AppState) -> String {
     let user_agent = state.user_agent();
+    let platform = if cfg!(target_os = "windows") {
+        "Win32"
+    } else {
+        "Linux x86_64"
+    };
     format!(
         "window.__wzIdentity = {};\n{BRIDGE_JS}",
         json!({
             "userAgent": user_agent,
-            "platform": "Linux x86_64",
+            "platform": platform,
         })
     )
 }
@@ -125,6 +130,45 @@ fn window_background(state: &AppState) -> tauri::webview::Color {
     } else {
         tauri::webview::Color(248, 245, 243, 255)
     }
+}
+
+/// Chromium switches applied to WebView2, mirroring Electron's low-resource
+/// mode. WRY replaces its defaults when `additional_browser_args` is used, so
+/// the three default feature disables are repeated here.
+#[cfg(target_os = "windows")]
+fn browser_args(state: &AppState) -> String {
+    let config = state.config.read().unwrap();
+    let mut disabled = vec!["msWebOOUI", "msPdfOOUI", "msSmartScreenProtection"];
+    let low_resource = config.get_bool("low-resource-mode", true);
+    if low_resource {
+        disabled.extend([
+            "Translate",
+            "MediaRouter",
+            "DialMediaRouteProvider",
+            "GlobalMediaControls",
+            "HardwareMediaKeyHandling",
+            "OptimizationHints",
+            "CalculateNativeWinOcclusion",
+            "InterestFeedContentSuggestions",
+            "CertificateTransparencyComponentUpdater",
+            "UseChromeOSDirectVideoDecoder",
+        ]);
+    }
+
+    let mut args = format!("--disable-features={}", disabled.join(","));
+    args.push_str(if low_resource {
+        " --renderer-process-limit=2"
+    } else {
+        " --renderer-process-limit=3"
+    });
+    if config.get_bool("disable-gpu", false) {
+        args.push_str(" --disable-gpu");
+    }
+    let language = config.get_str("app-language", "auto");
+    if language != "auto" && !language.is_empty() {
+        args.push_str(&format!(" --lang={language}"));
+    }
+    args
 }
 
 /// Build the main WhatsApp window.
@@ -188,7 +232,11 @@ pub fn create_main_window(app: &AppHandle, visible: bool) -> tauri::Result<Webvi
         .theme(Some(theme))
         .background_color(background)
         .user_agent(&user_agent)
-        .data_directory(user_data.join("webkit"))
+        .data_directory(user_data.join(if cfg!(target_os = "windows") {
+            "webview2"
+        } else {
+            "webkit"
+        }))
         .initialization_script(init_script)
         .on_navigation(move |url| on_navigation(&navigation_app, url))
         .on_new_window(move |url, features| on_new_window(&new_window_app, &url, features))
@@ -223,6 +271,11 @@ pub fn create_main_window(app: &AppHandle, visible: bool) -> tauri::Result<Webvi
             }
         });
 
+    #[cfg(target_os = "windows")]
+    {
+        builder = builder.additional_browser_args(&browser_args(&state));
+    }
+
     if let (Some(x), Some(y)) = (x, y) {
         builder = builder.position(x, y);
     }
@@ -237,6 +290,8 @@ pub fn create_main_window(app: &AppHandle, visible: bool) -> tauri::Result<Webvi
     install_webkit_handlers(&window);
     attach_main_window_events(app.clone(), &window);
     set_window_icon(&window);
+    #[cfg(target_os = "windows")]
+    crate::shell_windows::apply_window_identity(&window);
     set_dnd_mute(&window, state.is_dnd());
     crate::menu::apply_menu(app, &window);
 
@@ -337,9 +392,12 @@ pub fn close_popup_windows(app: &AppHandle) {
     }
 }
 
-/// Open the native GTK settings window.
+/// Open the settings window (GTK on Linux, HTML page on Windows).
 pub fn open_settings(app: &AppHandle) {
+    #[cfg(target_os = "linux")]
     crate::settings_ui::open(app);
+    #[cfg(target_os = "windows")]
+    crate::settings_window::open(app);
 }
 
 pub fn toggle_main_window(app: &AppHandle) -> bool {
@@ -411,7 +469,7 @@ pub fn show_toast(window: &WebviewWindow, message: &str) {
     let _ = window.eval(script);
 }
 
-/// Mute/unmute the WebKit view for Do Not Disturb.
+/// Mute/unmute the webview for Do Not Disturb.
 pub fn set_dnd_mute(window: &WebviewWindow, muted: bool) {
     #[cfg(target_os = "linux")]
     {
@@ -420,7 +478,11 @@ pub fn set_dnd_mute(window: &WebviewWindow, muted: bool) {
             webview.inner().set_is_muted(muted);
         });
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(target_os = "windows")]
+    {
+        crate::webview2::set_muted(window, muted);
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "windows")))]
     {
         let _ = (window, muted);
     }
@@ -438,7 +500,11 @@ pub fn update_user_agent(window: &WebviewWindow, user_agent: &str) {
             }
         });
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(target_os = "windows")]
+    {
+        crate::webview2::set_user_agent(window, user_agent);
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "windows")))]
     {
         let _ = (window, user_agent);
     }
@@ -546,6 +612,10 @@ fn install_webkit_handlers(window: &WebviewWindow) {
             });
         });
     }
+    #[cfg(target_os = "windows")]
+    {
+        crate::webview2::install(window, true);
+    }
 }
 
 /// Configure a WebKit view the way Electron configures its renderer:
@@ -626,7 +696,11 @@ fn install_popup_webkit_handlers(window: &WebviewWindow) {
             configure_webkit_view(&app, &view);
         });
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(target_os = "windows")]
+    {
+        crate::webview2::install(window, false);
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "windows")))]
     {
         let _ = window;
     }
@@ -893,6 +967,7 @@ pub(crate) fn inject_page_scripts(window: WebviewWindow) {
     tracing::info!(app = %app_name, %window_url, "injecting WhatsApp integration");
 
     if tracing::enabled!(tracing::Level::DEBUG) {
+        #[cfg(target_os = "linux")]
         let _ = window.with_webview(|webview| {
             use webkit2gtk::WebViewExt;
             tracing::info!(uri = ?webview.inner().uri(), "webview URI at injection");
@@ -1333,12 +1408,30 @@ pub fn handle_share_args(app: &AppHandle, args: &[String]) -> bool {
 fn zip_directory(path: &Path) -> Option<PathBuf> {
     let name = path.file_name()?.to_string_lossy();
     let destination = std::env::temp_dir().join(format!("WhatsZan_{name}.zip"));
+
+    #[cfg(target_os = "windows")]
+    let status = {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        let quote = |value: &Path| value.display().to_string().replace('\'', "''");
+        std::process::Command::new("powershell")
+            .args(["-NoProfile", "-NonInteractive", "-Command"])
+            .arg(format!(
+                "Compress-Archive -LiteralPath '{}' -DestinationPath '{}' -Force",
+                quote(path),
+                quote(&destination)
+            ))
+            .creation_flags(CREATE_NO_WINDOW)
+            .status()
+    };
+    #[cfg(not(target_os = "windows"))]
     let status = std::process::Command::new("zip")
         .arg("-r")
         .arg("-q")
         .arg(&destination)
         .arg(path)
         .status();
+
     match status {
         Ok(status) if status.success() => Some(destination),
         _ => {
