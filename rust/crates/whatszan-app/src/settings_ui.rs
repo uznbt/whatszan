@@ -155,7 +155,7 @@ fn build_window(app: &AppHandle) -> Option<gtk::Window> {
         0,
     );
 
-    let quit_on_close = gtk::Switch::new();
+    let close_to_tray = gtk::Switch::new();
     general.pack_start(
         &row(
             &tr(app, "settings_quit_tray_title", "Tutup ke Tray"),
@@ -164,7 +164,7 @@ fn build_window(app: &AppHandle) -> Option<gtk::Window> {
                 "settings_quit_tray_desc",
                 "Aplikasi ke tray saat ditutup",
             )),
-            &quit_on_close,
+            &close_to_tray,
         ),
         false,
         false,
@@ -716,7 +716,7 @@ fn build_window(app: &AppHandle) -> Option<gtk::Window> {
         app_language,
         auto_run,
         esc_toggle,
-        quit_on_close,
+        close_to_tray,
         smart_download,
         smart_paths,
         download_path_image,
@@ -1232,7 +1232,7 @@ fn connect_signals(form: &Rc<Form>, saver: &Saver) {
     for switch in [
         &form.auto_run,
         &form.esc_toggle,
-        &form.quit_on_close,
+        &form.close_to_tray,
         &form.blur_contacts,
         &form.blur_pp,
         &form.blur_messages,
@@ -1648,7 +1648,7 @@ struct Form {
     app_language: gtk::ComboBoxText,
     auto_run: gtk::Switch,
     esc_toggle: gtk::Switch,
-    quit_on_close: gtk::Switch,
+    close_to_tray: gtk::Switch,
     smart_download: gtk::Switch,
     smart_paths: gtk::Box,
     download_path_image: gtk::Entry,
@@ -1718,9 +1718,11 @@ impl Form {
             json!(self.notif_prefix.text().to_string()),
         );
         settings.insert("auto-run".into(), json!(self.auto_run.is_active()));
+        // The switch is labelled "Close to Tray", while the stored key keeps
+        // the Electron meaning (`quit-on-close`), so the value is inverted.
         settings.insert(
             "quit-on-close".into(),
-            json!(self.quit_on_close.is_active()),
+            json!(quit_on_close_from_switch(self.close_to_tray.is_active())),
         );
         settings.insert(
             "esc-toggle-window".into(),
@@ -1820,6 +1822,17 @@ impl Form {
     }
 }
 
+/// The switch is labelled "Close to Tray", while `quit-on-close` is the
+/// Electron-compatible storage key with the opposite meaning. Keep the
+/// translation in one place so the UI cannot drift from the config again.
+fn quit_on_close_from_switch(close_to_tray: bool) -> bool {
+    !close_to_tray
+}
+
+fn close_to_tray_from_config(quit_on_close: bool) -> bool {
+    !quit_on_close
+}
+
 fn load_values(form: &Rc<Form>, settings: &Value, _translations: &Map<String, Value>) {
     let language = get_str(settings, "app-language", "auto").to_string();
     form.app_language.set_active_id(Some(&language));
@@ -1828,8 +1841,12 @@ fn load_values(form: &Rc<Form>, settings: &Value, _translations: &Map<String, Va
         .set_active(get_bool(settings, "auto-run", false));
     form.esc_toggle
         .set_active(get_bool(settings, "esc-toggle-window", false));
-    form.quit_on_close
-        .set_active(get_bool(settings, "quit-on-close", false));
+    form.close_to_tray
+        .set_active(close_to_tray_from_config(get_bool(
+            settings,
+            "quit-on-close",
+            false,
+        )));
     form.smart_download
         .set_active(get_bool(settings, "smart-download", true));
     form.notif_prefix
@@ -2528,5 +2545,18 @@ fn install_css() {
             &provider,
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn close_to_tray_is_the_inverse_of_quit_on_close() {
+        assert!(close_to_tray_from_config(false));
+        assert!(!close_to_tray_from_config(true));
+        assert!(!quit_on_close_from_switch(true));
+        assert!(quit_on_close_from_switch(false));
     }
 }
