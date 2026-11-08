@@ -4989,7 +4989,6 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-global-shortcut",
  "tauri-plugin-single-instance",
- "tauri-winrt-notification",
  "thiserror 2.0.21",
  "tokio",
  "tracing",

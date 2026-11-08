@@ -180,7 +180,14 @@ pub const BRIDGE_JS: &str = r###"/*
     onJumpListAction: (callback) => listen("jump-list-action", callback),
     onSettingsSaved: (callback) => listen("settings-saved", callback),
     onNotifyClick: (callback) => listen("notify-click", callback),
-    onNotifyReply: (callback) => listen("notify-reply", callback),
+    // Electron sent `notify-reply` as two IPC arguments; Tauri events carry a
+    // single payload, so the Windows backend emits `[id, reply]`.
+    onNotifyReply: (callback) =>
+      listen("notify-reply", (payload) =>
+        Array.isArray(payload)
+          ? callback(...payload)
+          : callback(payload?.id, payload?.reply),
+      ),
     onShareFiles: (callback) => listen("share-files-ready", callback),
 
     notifySend: (id, title, body, iconDataUrl) =>

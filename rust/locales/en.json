@@ -110,6 +110,8 @@
   "settings_smart_dl_path_document_title": "Documents",
   "settings_smart_dl_path_document_desc": "System Documents folder",
   "settings_btn_browse": "Browse",
+  "notification_reply_placeholder": "Reply to message...",
+  "notification_reply_send": "Send",
   "dnd_mode": "Do Not Disturb (DND)",
   "settings": "Settings..."
 }

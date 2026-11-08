@@ -1447,16 +1447,18 @@ pub fn set_window_icon(window: &WebviewWindow) {
     let Some(state) = app.try_state::<AppState>() else {
         return;
     };
-    let custom = state
-        .persist
-        .read()
-        .unwrap()
-        .get_str("custom_tray_app", "")
-        .to_string();
-    let icon = if custom.is_empty() {
-        load_tauri_icon_bytes(crate::assets::WINDOW_ICON_PNG)
-    } else {
-        load_tauri_icon(Path::new(&custom))
+    let (choice, custom) = {
+        let persist = state.persist.read().unwrap();
+        (
+            persist.get_str("icon-choice-app", "whatszan").to_string(),
+            persist.get_str("custom_tray_app", "").to_string(),
+        )
+    };
+    let icon = match choice.as_str() {
+        "custom" if !custom.is_empty() => load_tauri_icon(Path::new(&custom))
+            .or_else(|| load_tauri_icon_bytes(crate::assets::WINDOW_ICON_PNG)),
+        "whatsapp" => load_tauri_icon_bytes(crate::assets::WHATSAPP_ICON_PNG),
+        _ => load_tauri_icon_bytes(crate::assets::WINDOW_ICON_PNG),
     };
     if let Some(icon) = icon {
         let _ = window.set_icon(icon);
