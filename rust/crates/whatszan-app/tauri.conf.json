@@ -23,7 +23,7 @@
       "icons/icon.png",
       "icons/icon.ico"
     ],
-    "category": "Network",
+    "category": "SocialNetworking",
     "shortDescription": "Unofficial WhatsApp desktop client for Linux and Windows",
     "longDescription": "WhatsZan is an unofficial WhatsApp Web client for Linux and Windows. This is the Rust/Tauri rewrite; the original Electron sources are kept in the repository root.",
     "linux": {
