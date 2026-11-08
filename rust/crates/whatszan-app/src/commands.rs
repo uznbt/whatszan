@@ -442,7 +442,7 @@ pub fn save_settings(app: &AppHandle, new_settings: Value) -> Result<(), String>
     if old_desktop_shortcut != desktop_shortcut
         || (desktop_shortcut && old_app_name != new_app_name)
     {
-        apply_desktop_shortcut(app);
+        apply_desktop_integration(app, true, Some(&old_app_name));
     }
 
     // Reload translations before rebuilding the menu and tray so both pick up
@@ -638,8 +638,13 @@ fn ensure_app_desktop_entry(app: &AppHandle) {
     let up_to_date = current.contains(&format!("\nName={name}\n"))
         && current.contains(&format!("\nIcon={icon}\n"))
         && current.contains(&format!("\nStartupWMClass={app_id}\n"));
-    if !up_to_date {
-        apply_branding_shortcut(app);
+    // Older builds also wrote a `WhatsZan.desktop` entry, so launchers listed
+    // the app twice. Remove it and re-register the URL handler because that
+    // entry may still be the default `whatsapp://` handler.
+    let legacy = path.with_file_name("WhatsZan.desktop");
+    let duplicate = legacy != path && legacy.exists();
+    if !up_to_date || duplicate {
+        apply_desktop_shortcut(app);
     }
 }
 
@@ -651,17 +656,17 @@ fn apply_auto_run(app: &AppHandle, auto_run: bool, startup_run: bool) {
 }
 
 fn apply_desktop_shortcut(app: &AppHandle) {
-    apply_desktop_integration(app, true);
+    apply_desktop_integration(app, true, None);
 }
 
 /// Branding changes only need to rewrite the icon in the `.desktop` entry.
 /// Registering the URL handler again calls `xdg-mime` and is unnecessary (and
 /// can block on broken desktop setups).
 fn apply_branding_shortcut(app: &AppHandle) {
-    apply_desktop_integration(app, false);
+    apply_desktop_integration(app, false, None);
 }
 
-fn apply_desktop_integration(app: &AppHandle, register_url_handler: bool) {
+fn apply_desktop_integration(app: &AppHandle, register_url_handler: bool, old_name: Option<&str>) {
     let _guard = DESKTOP_INTEGRATION_LOCK
         .lock()
         .unwrap_or_else(|err| err.into_inner());
@@ -700,9 +705,13 @@ fn apply_desktop_integration(app: &AppHandle, register_url_handler: bool) {
     };
 
     let integration = desktop_integration();
-    if let Err(err) =
-        integration.apply_desktop_shortcut(create, &name, &name, &icon_location, &translations)
-    {
+    if let Err(err) = integration.apply_desktop_shortcut(
+        create,
+        old_name.unwrap_or(&name),
+        &name,
+        &icon_location,
+        &translations,
+    ) {
         tracing::warn!(%err, "cannot update desktop shortcut");
     }
     if register_url_handler && register_scheme {

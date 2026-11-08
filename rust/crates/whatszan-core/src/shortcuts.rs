@@ -16,8 +16,13 @@ use serde_json::{Map, Value};
 
 use crate::translations::t;
 
-const USER_DESKTOP_FILENAME: &str = "WhatsZan.desktop";
-const LEGACY_DESKTOP_FILENAME: &str = "whatszan.desktop";
+/// Autostart entry name.
+const AUTOSTART_FILENAME: &str = "WhatsZan.desktop";
+/// Older autostart entry name kept for cleanup.
+const LEGACY_AUTOSTART_FILENAME: &str = "whatszan.desktop";
+/// Application-menu entry used before entries were named after the app id.
+/// The app rewrites it as `<app-id>.desktop` and removes this duplicate.
+const LEGACY_APP_DESKTOP_FILENAME: &str = "WhatsZan.desktop";
 
 /// Paths needed to create user-level desktop integration files.
 #[derive(Debug, Clone)]
@@ -85,8 +90,8 @@ impl DesktopIntegration {
     /// user toggle (`auto_run = false`, `startup_run = false`) removes it.
     pub fn apply_auto_run(&self, auto_run: bool, startup_run: bool) -> std::io::Result<()> {
         let autostart_dir = self.autostart_dir();
-        let desktop_file = autostart_dir.join(USER_DESKTOP_FILENAME);
-        let legacy_file = autostart_dir.join(LEGACY_DESKTOP_FILENAME);
+        let desktop_file = autostart_dir.join(AUTOSTART_FILENAME);
+        let legacy_file = autostart_dir.join(LEGACY_AUTOSTART_FILENAME);
 
         fs::create_dir_all(&autostart_dir)?;
         let _ = fs::remove_file(&legacy_file);
@@ -128,8 +133,8 @@ impl DesktopIntegration {
         let applications = self.applications_dir();
         let old_desktop = self.desktop_dir.join(format!("{old_name}.desktop"));
         let new_desktop = self.desktop_dir.join(format!("{new_name}.desktop"));
-        let app_desktop = applications.join(USER_DESKTOP_FILENAME);
-        let legacy_app_desktop = applications.join(LEGACY_DESKTOP_FILENAME);
+        let app_desktop = self.app_desktop_path();
+        let legacy_app_desktop = applications.join(LEGACY_APP_DESKTOP_FILENAME);
 
         let old_name = if old_name.is_empty() {
             "WhatsZan"
@@ -188,12 +193,11 @@ impl DesktopIntegration {
 
         fs::create_dir_all(&applications)?;
         write_atomic(&app_desktop, final_entry.as_bytes())?;
-        let _ = fs::remove_file(&legacy_app_desktop);
-
-        // Keep an entry under the window's app id so docks and launchers show
-        // the branded icon instead of the static package artwork. This is
-        // written after the legacy cleanup in case the app id is `whatszan`.
-        write_atomic(&self.app_desktop_path(), final_entry.as_bytes())?;
+        // Older builds always wrote `WhatsZan.desktop`, which made launchers
+        // list the app twice next to the app-id entry. Keep only one entry.
+        if legacy_app_desktop != app_desktop {
+            let _ = fs::remove_file(&legacy_app_desktop);
+        }
 
         if create {
             fs::create_dir_all(&self.desktop_dir)?;
@@ -257,10 +261,11 @@ impl DesktopIntegration {
     /// advertises `x-scheme-handler/whatsapp`; `xdg-mime` tells the desktop
     /// environment to actually use it.
     pub fn register_url_handler(&self) -> std::io::Result<()> {
+        let desktop_file = format!("{}.desktop", self.app_id());
         let status = run_with_timeout(
             Command::new("xdg-mime")
                 .arg("default")
-                .arg(USER_DESKTOP_FILENAME)
+                .arg(desktop_file)
                 .arg("x-scheme-handler/whatsapp"),
             Duration::from_secs(5),
         )?;
@@ -488,25 +493,54 @@ mod tests {
 
         let app_entry = home
             .path()
-            .join(".local/share/applications/WhatsZan.desktop");
+            .join(".local/share/applications/whatszan.desktop");
         assert!(app_entry.exists());
         let app_content = fs::read_to_string(&app_entry).unwrap();
         assert!(app_content.contains("MimeType=x-scheme-handler/whatsapp;"));
         assert!(app_content.contains("StartupWMClass=whatszan"));
         assert!(app_content.contains(&format!("Icon={}", icon.display())));
 
-        // The id-named entry is what docks resolve the running window to.
-        let id_entry = home
+        // Only one launcher entry: the app-id name used by docks.
+        assert!(!home
             .path()
-            .join(".local/share/applications/whatszan.desktop");
-        assert!(id_entry.exists());
-        let id_content = fs::read_to_string(&id_entry).unwrap();
-        assert!(id_content.contains("StartupWMClass=whatszan"));
-        assert!(id_content.contains(&format!("Icon={}", icon.display())));
+            .join(".local/share/applications/WhatsZan.desktop")
+            .exists());
 
         let shortcut = desktop.join("WhatsZan.desktop");
         assert!(shortcut.exists());
         let shortcut_content = fs::read_to_string(&shortcut).unwrap();
         assert!(shortcut_content.contains(&format!("Icon={}", icon.display())));
+    }
+
+    #[test]
+    fn renaming_removes_the_old_desktop_shortcut() {
+        let home = tempfile::tempdir().unwrap();
+        let desktop = home.path().join("Desktop");
+        let exe = home.path().join("whatszan");
+        fs::write(&exe, b"#!/bin/sh\n").unwrap();
+        let integration = DesktopIntegration::new(home.path(), &desktop, &exe);
+        let translations = Map::new();
+        let icon = home.path().join("icon.png");
+
+        fs::create_dir_all(&desktop).unwrap();
+        fs::write(desktop.join("WhatsApp.desktop"), "old").unwrap();
+        let applications = home.path().join(".local/share/applications");
+        fs::create_dir_all(&applications).unwrap();
+        fs::write(applications.join("WhatsZan.desktop"), "old").unwrap();
+
+        integration
+            .apply_desktop_shortcut(
+                true,
+                "WhatsApp",
+                "WhatsZan",
+                &icon.display().to_string(),
+                &translations,
+            )
+            .unwrap();
+
+        assert!(!desktop.join("WhatsApp.desktop").exists());
+        assert!(desktop.join("WhatsZan.desktop").exists());
+        assert!(!applications.join("WhatsZan.desktop").exists());
+        assert!(applications.join("whatszan.desktop").exists());
     }
 }
