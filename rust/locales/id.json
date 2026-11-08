@@ -121,6 +121,7 @@
   "notification_reply_placeholder": "Balas pesan...",
   "notification_reply_action": "Balas",
   "notification_reply_send": "Kirim",
+  "notification_reply_open": "Buka chat",
   "dnd_mode": "Mode Jangan Ganggu (DND)",
   "settings": "Pengaturan..."
 }

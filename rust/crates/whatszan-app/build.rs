@@ -35,6 +35,10 @@ fn main() {
         "branding_upload_icon",
         "branding_upload_bytes",
         "branding_reset_icons",
+        "notification_reply_context",
+        "notification_reply_submit",
+        "notification_reply_open_chat",
+        "notification_reply_cancel",
     ];
 
     tauri_build::try_build(

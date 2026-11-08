@@ -121,6 +121,7 @@
   "notification_reply_placeholder": "Rispondi al messaggio...",
   "notification_reply_action": "Rispondi",
   "notification_reply_send": "Invia",
+  "notification_reply_open": "Apri chat",
   "dnd_mode": "Non Disturbare (DND)",
   "settings": "Impostazioni..."
 }

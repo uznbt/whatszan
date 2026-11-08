@@ -37,4 +37,8 @@ permissions = [
   "allow-branding-upload-icon",
   "allow-branding-upload-bytes",
   "allow-branding-reset-icons",
+  "allow-notification-reply-context",
+  "allow-notification-reply-submit",
+  "allow-notification-reply-open-chat",
+  "allow-notification-reply-cancel",
 ]

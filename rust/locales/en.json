@@ -113,6 +113,7 @@
   "notification_reply_placeholder": "Reply to message...",
   "notification_reply_action": "Reply",
   "notification_reply_send": "Send",
+  "notification_reply_open": "Open chat",
   "dnd_mode": "Do Not Disturb (DND)",
   "settings": "Settings..."
 }

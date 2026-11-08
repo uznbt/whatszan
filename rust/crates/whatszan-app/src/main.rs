@@ -21,6 +21,8 @@ mod notifications;
 #[path = "notifications_windows.rs"]
 mod notifications;
 mod notifications_common;
+#[cfg(target_os = "linux")]
+mod notifications_reply_window;
 mod renderer;
 #[cfg(target_os = "linux")]
 mod settings_ui;
@@ -161,6 +163,14 @@ fn main() {
             commands::branding_upload_icon,
             commands::branding_upload_bytes,
             commands::branding_reset_icons,
+            #[cfg(target_os = "linux")]
+            notifications_reply_window::notification_reply_context,
+            #[cfg(target_os = "linux")]
+            notifications_reply_window::notification_reply_submit,
+            #[cfg(target_os = "linux")]
+            notifications_reply_window::notification_reply_open_chat,
+            #[cfg(target_os = "linux")]
+            notifications_reply_window::notification_reply_cancel,
         ])
         .on_menu_event(menu::on_menu_event)
         .setup(move |app| {

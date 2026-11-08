@@ -121,6 +121,7 @@
   "notification_reply_placeholder": "Répondre au message...",
   "notification_reply_action": "Répondre",
   "notification_reply_send": "Envoyer",
+  "notification_reply_open": "Ouvrir la discussion",
   "dnd_mode": "Ne pas deranger (DND)",
   "settings": "Parametres..."
 }

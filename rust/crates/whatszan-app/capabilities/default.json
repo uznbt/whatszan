@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the WhatsApp webview and the local settings window.",
-  "windows": ["main", "settings", "screen-picker", "popup-*"],
+  "description": "Capability for the WhatsApp webview and the local settings/quick-reply windows.",
+  "windows": ["main", "settings", "screen-picker", "popup-*", "notification-reply"],
   "remote": {
     "urls": [
       "https://web.whatsapp.com/*",

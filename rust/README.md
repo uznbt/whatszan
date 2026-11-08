@@ -44,9 +44,10 @@ Implemented:
 - Desktop notifications via XDG (`notify-rust`) on Linux and WinRT toasts on
   Windows, including click-to-open and sender avatars. Inline replies work on
   Windows and on notification servers that implement the KDE `inline-reply`
-  extension (KDE Plasma 5.18+, SwayNotificationCenter); the reply text routes
-  through the renderer's `notify-reply` handler. Branding and avatar caching is
-  shared in `notifications_common.rs`.
+  extension (KDE Plasma 5.18+, SwayNotificationCenter). Servers without that
+  extension get a "Reply" action that opens a small WhatsZan quick-reply
+  window; the reply text routes through the renderer's `notify-reply` handler.
+  Branding and avatar caching is shared in `notifications_common.rs`.
 - System theme detection through the XDG Settings portal with
   `gsettings` / KDE fallbacks on Linux, and the
   `AppsUseLightTheme` registry value on Windows.
@@ -298,8 +299,11 @@ WHATZAN_LOCALES_DIR=/usr/share/whatszan/locales
   a no-op that reports the limitation.
 - **Notification inline replies depend on the notification server.** WinRT
   toasts and the KDE `inline-reply` extension (KDE Plasma 5.18+,
-  SwayNotificationCenter) provide a reply field. GNOME Shell does not advertise
-  that capability, so there the notification only opens the chat; Discord on
+  SwayNotificationCenter) provide a reply field. GNOME Shell, Cinnamon, MATE,
+  XFCE, LXQt, dunst, mako, and fnott do not advertise that capability; on
+  those servers WhatsZan adds a "Reply" action that opens a small quick-reply
+  window. Dunst exposes the action through its context menu, and mako uses the
+  notification body click because it renders no action buttons. Discord on
   Linux likewise has no inline reply. On Windows, a stale toast activated from
   Action Center after WhatsZan has exited does not carry the reply text,
   because that cold-start path needs a registered COM activator.
@@ -369,6 +373,7 @@ rust/
     dialogs.rs               native message dialogs
     notifications.rs         XDG notifications (Linux)
     notifications_windows.rs WinRT toasts (Windows)
+    notifications_reply_window.rs  quick-reply window fallback (Linux)
     notifications_common.rs  branding/avatar cache shared by both
     theme.rs                 portal/gsettings/KDE theme detection (Linux)
     theme_windows.rs         registry theme detection (Windows)
