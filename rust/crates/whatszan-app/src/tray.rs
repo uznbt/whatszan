@@ -110,9 +110,11 @@ impl Tray for WhatsZanTray {
     }
 
     fn tool_tip(&self) -> ksni::ToolTip {
+        // Shells such as Quickshell render this as `title • description`.
+        // Leaving the description empty avoids showing the app name twice.
         ksni::ToolTip {
             title: self.app_name.clone(),
-            description: self.app_name.clone(),
+            description: String::new(),
             ..Default::default()
         }
     }
@@ -206,11 +208,16 @@ pub async fn set_unread(app: &AppHandle, unread: u32) {
     }
 }
 
-/// Re-read custom icon paths after the settings window changes branding.
+/// Re-read branding (name, icons, translations) after the settings window
+/// changes it, so the tray updates without restarting the app.
 pub async fn refresh(app: &AppHandle) {
-    let (normal, unread, translations) = {
+    let (normal, unread, translations, app_name) = {
         let state = app.state::<AppState>();
         let persist = state.persist.read().unwrap();
+        let app_name = persist
+            .get_str("custom-app-name", "WhatsZan")
+            .trim()
+            .to_string();
         (
             persist
                 .get_str("custom_tray_normal", "")
@@ -221,6 +228,11 @@ pub async fn refresh(app: &AppHandle) {
                 .to_string()
                 .into_option(),
             state.translations(),
+            if app_name.is_empty() {
+                "WhatsZan".to_string()
+            } else {
+                app_name
+            },
         )
     };
 
@@ -236,6 +248,7 @@ pub async fn refresh(app: &AppHandle) {
                 tray.normal_icon = normal;
                 tray.unread_icon = unread;
                 tray.translations = translations;
+                tray.app_name = app_name;
             })
             .await;
     }
