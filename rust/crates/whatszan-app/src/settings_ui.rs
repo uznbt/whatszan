@@ -1430,8 +1430,27 @@ fn connect_icon_picker(
         let last = last.clone();
         let choose = choose.clone();
         let choice = choice.clone();
-        button.connect_clicked(move |_| {
+        // `clicked` fires for both activation and deactivation, including
+        // programmatic `set_active` calls. React to `toggled` only when the
+        // tile actually becomes active, and suppress the updates performed
+        // while normalising the toggle group; otherwise selecting one tile
+        // deselects another, re-enters this handler and recurses until the
+        // stack overflows.
+        button.connect_toggled(move |button| {
+            if form.updating.get() {
+                return;
+            }
+            if !button.is_active() {
+                // The tiles behave like a radio group: clicking the selected
+                // tile must not leave every tile deselected.
+                form.updating.set(true);
+                button.set_active(true);
+                form.updating.set(false);
+                return;
+            }
+            form.updating.set(true);
             picker.set_active_id(&choice);
+            form.updating.set(false);
             if choice == "custom" {
                 choose.clicked();
                 return;
@@ -1984,6 +2003,10 @@ fn pick_image(parent: &gtk::Window) -> Option<PathBuf> {
         .transient_for(parent)
         .action(gtk::FileChooserAction::Open)
         .build();
+    // Keep the chooser inside small laptop screens; GTK's default size can
+    // exceed the display and push the action buttons off-screen.
+    dialog.set_default_size(900, 600);
+    dialog.set_position(gtk::WindowPosition::CenterOnParent);
     dialog.add_button("Batal", gtk::ResponseType::Cancel);
     dialog.add_button("Pilih", gtk::ResponseType::Accept);
     let filter = gtk::FileFilter::new();
@@ -2011,6 +2034,8 @@ fn pick_folder(parent: &gtk::Window) -> Option<PathBuf> {
         .transient_for(parent)
         .action(gtk::FileChooserAction::SelectFolder)
         .build();
+    dialog.set_default_size(900, 600);
+    dialog.set_position(gtk::WindowPosition::CenterOnParent);
     dialog.add_button("Batal", gtk::ResponseType::Cancel);
     dialog.add_button("Pilih", gtk::ResponseType::Accept);
     let response = dialog.run();
